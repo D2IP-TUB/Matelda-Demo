@@ -7,20 +7,12 @@ We present Matelda, an interactive system for multi-table error detection that c
 
 ## Screenshots 
 
-<<<<<<< HEAD
 ![Pipeline](https://github.com/D2IP-TUB/Matelda-Demo/Screenshots/pipeline-git.png)
 ![Labeling](https://github.com/D2IP-TUB/Matelda-Demo/Screenshots/labeling-git.png)
 
 ## Video
 
-=======
-![Pipeline](https://github.com/D2IP-TUB/Matelda-Demo/blob/main/Screenshots/demo.png)
-![Domain Folding](Matelda-Demo/Screenshots/domain_folding.png)
-![Quality Folding](/Users/fatemehahmadi/Documents/VLDB-Demo-2025/data-tinder/Matelda-Demo/Screenshots/qf.drawio.png)
-![Labeling](/Users/fatemehahmadi/Documents/VLDB-Demo-2025/data-tinder/Matelda-Demo/Screenshots/labeling-2.png)
-![Mobile](/Users/fatemehahmadi/Documents/VLDB-Demo-2025/data-tinder/Matelda-Demo/Screenshots/mobile.png)
->>>>>>> 83b3c80719ee9d423d089c57a4c82ca74ff85947
-
+![video](https://github.com/D2IP-TUB/Matelda-Demo/blob/a925cb5ec1a6ce19c63ecb7e9bf6d7c0c45025d5/Video/Matelda-Demo.mp4)
 
 ## Installation 
 
