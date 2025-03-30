@@ -1,9 +1,18 @@
-# MaTElDa
+# Demonstrating Matelda for Multi-Table Error Detection
 
-As data-driven applications gain popularity, ensuring high data quality is a growing concern. This requirement involves not only the quality of primary data sources but also external data sources used for data enrichment purposes. 
-Yet, data cleaning techniques are limited to treating one table at a time. A table-by-table application of such methods is cumbersome, because these methods either require previous knowledge about constraints or often require labor-intensive configurations and manual labeling for each individual table. As a result, they hardly scale beyond a few tables and miss the chance for optimizing the cleaning process.
-To tackle these issues, we introduce a novel semi-supervised error detection approach, Matelda, that organizes a given set of tables by folding their cells with regard to domain and quality similarity to facilitate user supervision. The idea is to identify groups of data cells across all tables that can benefit from the same user label. For this purpose, we identify a feature embedding that makes cell values comparable across many different tables. 
-Experimental evaluations demonstrate that Matelda outperforms various configurations of existing single-table cleaning methodologies in cleaning multiple tables at a time, in particular when the ratio of labeling budget to number of tables is very low.
+Real-world datasets are often fragmented across multiple heterogeneous tables, managed by different teams or organizations. Ensuring data quality in such environments is challenging, as traditional error detection tools typically operate on isolated tables and overlook cross-table relationships. To address this gap, we investigate how cleaning multiple tables simultaneously, combined with structured user collaboration, can reduce annotation effort and enhance the effectiveness and efficiency of error detection.
+
+We present Matelda, an interactive system for multi-table error detection that combines automated error detection with human-in-the-loop refinement. Matelda guides users through Inspection \& Action, allowing them to explore system-generated insights, refine decisions, and annotate data with contextual support. It organizes tables using domain-based and quality-based folding and leverages semi-supervised learning to propagate labels across related tables efficiently. Our demonstration showcases Matelda’s capabilities for collaborative error detection and resolution by leveraging shared knowledge, contextual similarity, and structured user interactions across multiple tables.
+
+
+## Screenshots 
+
+![Pipeline](Matelda-Demo/Screenshots/demo.png)
+![Domain Folding](Matelda-Demo/Screenshots/domain_folding.png)
+![Quality Folding](/Users/fatemehahmadi/Documents/VLDB-Demo-2025/data-tinder/Matelda-Demo/Screenshots/qf.drawio.png)
+![Labeling](/Users/fatemehahmadi/Documents/VLDB-Demo-2025/data-tinder/Matelda-Demo/Screenshots/labeling-2.png)
+![Mobile](/Users/fatemehahmadi/Documents/VLDB-Demo-2025/data-tinder/Matelda-Demo/Screenshots/mobile.png)
+
 
 ## Installation 
 
