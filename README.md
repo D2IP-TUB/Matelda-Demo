@@ -7,8 +7,8 @@ We present Matelda, an interactive system for multi-table error detection that c
 
 ## Screenshots 
 
-![Pipeline](https://github.com/D2IP-TUB/Matelda-Demo/Screenshots/pipeline-git.png)
-![Labeling](https://github.com/D2IP-TUB/Matelda-Demo/Screenshots/labeling-git.png)
+![Pipeline](https://github.com/D2IP-TUB/Matelda-Demo/blob/main/Screenshots/pipeline-git.png)
+![Labeling](https://github.com/D2IP-TUB/Matelda-Demo/blob/main/Screenshots/labeling-git.png)
 
 ## Video
 
