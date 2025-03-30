@@ -12,7 +12,7 @@ We present Matelda, an interactive system for multi-table error detection that c
 
 ## Video
 
-![video](https://github.com/D2IP-TUB/Matelda-Demo/blob/main/Video/Matelda-Demo.mp4)
+Link to the Vide: https://github.com/D2IP-TUB/Matelda-Demo/blob/main/Video/Matelda-Demo.mp4
 
 ## Installation 
 
