@@ -1,5 +1,8 @@
+import backend.cache_utils as cache_utils
 import streamlit as st
-from components import render_sidebar, apply_base_styles
+from components import apply_base_styles, render_sidebar
+
+cache_utils.set_cache_dir("/home/fatemeh/matelda-demo/temp-cache")
 
 st.set_page_config(page_title="Matelda", layout="wide")
 
@@ -8,7 +11,9 @@ apply_base_styles()
 
 st.title("Matelda")
 st.write("Welcome to Matelda!")
-st.markdown("""Read the full paper [here](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf) or click the button below to continue with configurations.""")
+st.markdown(
+    """Read the full paper [here](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf) or click the button below to continue with configurations."""
+)
 
 # Sidebar Navigation
 render_sidebar()

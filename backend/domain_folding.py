@@ -5,9 +5,11 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import torch
+
 # from sklearn.cluster import HDBSCAN
 from hdbscan import HDBSCAN
+from transformers import BertModel, BertTokenizer
+
 
 def get_tables_hash(tables):
     """
@@ -87,35 +89,13 @@ def matelda_domain_folding(datasets_path, tables):
     2. Generate BERT embeddings
     3. Apply HDBSCAN clustering
     """
-    # Step 1: Initialize BERT model with fallback options
-    model_name = "bert-base-uncased"
-
     try:
-        # Try PyTorch first
-        from transformers import AutoModel, AutoTokenizer
+        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        model = BertModel.from_pretrained("bert-base-uncased")
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModel.from_pretrained(model_name)
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device)
-        model.eval()
-        framework = "pytorch"
-
-    except Exception as pytorch_error:
-        print(f"ERROR:root:Error loading model {model_name}: {pytorch_error}")
-        try:
-            # Fallback to TensorFlow
-            from transformers import AutoTokenizer, TFAutoModel
-
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = TFAutoModel.from_pretrained(model_name, from_tf=True)
-            framework = "tensorflow"
-            print("Using TensorFlow backend as fallback")
-
-        except Exception as tf_error:
-            print(f"TensorFlow fallback also failed: {tf_error}")
-            return None
+    except Exception as tf_error:
+        print(f"embeddding failed: {tf_error}")
+        return None
 
     # Step 2: Generate contextual embeddings (CE)
     CE = []  # Set of contextual embeddings
@@ -136,10 +116,7 @@ def matelda_domain_folding(datasets_path, tables):
             st = serialize_table(df)
 
             if st:
-                if framework == "pytorch":
-                    ce = obtain_BERT_Embedding_pytorch(st, tokenizer, model, device)
-                else:
-                    ce = obtain_BERT_Embedding_tensorflow(st, tokenizer, model)
+                ce = obtain_BERT_Embedding(st, tokenizer, model)
 
                 CE.append(ce)
                 valid_tables.append(table)
@@ -154,7 +131,7 @@ def matelda_domain_folding(datasets_path, tables):
     # Step 3: HDBSCAN(CE)
     embeddings_array = np.array(CE)
 
-    clustering = HDBSCAN(min_cluster_size=2, min_samples=1)
+    clustering = HDBSCAN(min_cluster_size=2)
     cluster_labels = clustering.fit_predict(embeddings_array)
 
     # Organize into domain folds - each cluster is a Domain Fold df
@@ -268,41 +245,15 @@ def preprocess_text(text):
     return " ".join(words)
 
 
-def obtain_BERT_Embedding_pytorch(st, tokenizer, model, device):
+def obtain_BERT_Embedding(st, tokenizer, model):
     """
     Generate BERT feature vector for the serialized table to capture
     its semantic characteristics.
     """
-    with torch.no_grad():
-        # Tokenize the serialized table string
-        inputs = tokenizer(
-            st, return_tensors="pt", max_length=512, truncation=True, padding=True
-        )
-        inputs = {k: v.to(device) for k, v in inputs.items()}
-
-        # Get BERT output
-        outputs = model(**inputs)
-
-        embedding = outputs.last_hidden_state[:, 0, :].squeeze()
-
-        return embedding.cpu().numpy()
-
-
-def obtain_BERT_Embedding_tensorflow(st, tokenizer, model):
-    """
-    Generate BERT feature vector for the serialized table to capture
-    its semantic characteristics.
-    """
-
-    # Tokenize the serialized table string
     inputs = tokenizer(
-        st, return_tensors="tf", max_length=512, truncation=True, padding=True
+        st, return_tensors="pt", truncation=True, padding=True, max_length=512
     )
-
-    # Get BERT output
     outputs = model(**inputs)
+    embeddings = outputs.last_hidden_state.mean(dim=1).squeeze().detach().numpy()
 
-    # Use [CLS] token embedding as table representation
-    embedding = outputs.last_hidden_state[:, 0, :].numpy().squeeze()
-
-    return embedding
+    return embeddings

@@ -1,0 +1,10 @@
+time_control,end_time,rated,time_class,rules,gm_username,white_username,white_rating,white_result,black_username,black_rating,black_result
+60,2021-05-27 19:56:45,True,bullet,chess,ehsan_ghaemmaghami,Ehsan_GhaemMaghami,2727,checkmated,ForTheGloryOfTheKing,2922,win
+180,2021-10-18 00:40:36,True,blitz,chess,khatanbaatarbazar,KhatanbaatarBazar,2702,win,Garbancivoro,2593,abandoned
+60,2021-01-14 23:08:14,True,bullet,chess,brandonjacobson,BrandonJacobson,3057,win,Yaacovn,2971,timeout
+180,2021-07-17 17:05:42,True,blitz,chess,mnikolov,semisem,2502,win,MNikolov,2525,timeout
+180+2,2021-02-26 12:46:55,True,blitz,chess,hercules64,Hercules64,2361,win,YarikYalta,2350,resigned
+60,2021-10-28 03:01:52,True,bullet,chess,praveenb2002,praveenb2002,2760,win,asms9699,2788,resigned
+30,2021-04-08 18:18:29,True,bullet,chess,mitrabhaa,OlimpusMaximus,3049,timeout,mitrabhaa,2970,win
+60,2021-08-07 00:17:03,True,bullet,chess,theexpertpatzer,theexpertpatzer,2798,checkmated,gamblerrrrro,2707,win
+30,2021-05-31 12:14:09,True,bullet,chess,champ2005,champ2005,3016,timeout,shrek4life02,2823,win

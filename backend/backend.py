@@ -1,10 +1,18 @@
 import json
+import logging
 import os
-import random
 from typing import Any, Dict, List
 
 import streamlit as st
-from .domain_folding import load_from_cache, matelda_domain_folding, save_to_cache
+
+from backend.fold_system.core.cell_sampler import CellSampler
+from backend.fold_system.core.data_reader import DataReader
+from backend.fold_system.core.label_propagation import LabelPropagator
+from backend.fold_system.core.labeling_budget_distribution import (
+    LabelingBudgetDistributor,
+)
+from backend.fold_system.domain.domain_cell_fold import DomainCellFold
+from backend.fold_system.quality.quality_cell_fold import QualityCellFold
 
 
 def backend_dbf(dataset: str, labeling_budget: int) -> dict:
@@ -24,175 +32,158 @@ def backend_dbf(dataset: str, labeling_budget: int) -> dict:
         }
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
-    datasets_path = os.path.join(root_dir, "datasets", dataset)
+    root_dir = os.path.dirname(
+        current_dir
+    )  # Go up one level since we're in backend/ folder
+    base_path = os.path.join(root_dir, "datasets", dataset)
 
-    if not os.path.exists(datasets_path):
-        print(f"Dataset path does not exist: {datasets_path}")
+    logging.info(f"Starting domain-based folding for dataset: {dataset}")
+    logging.info(f"Labeling budget: {labeling_budget}")
+
+    if not os.path.exists(base_path):
+        logging.error(f"Dataset path does not exist: {base_path}")
         return {"domain_folds": {}}
 
     try:
-        tables = [
-            d
-            for d in os.listdir(datasets_path)
-            if os.path.isdir(os.path.join(datasets_path, d))
-        ]
+        # Step 1: Read all cells from all tables
+        reader = DataReader()
+        all_cells = reader.read_all_tables(base_path)
+        logging.info(f"Loaded {len(all_cells)} total cells")
+
+        # Step 2: Perform domain folding
+        domain_fold = DomainCellFold()
+        domain_groups = domain_fold.fold_cells(all_cells)
+        logging.info(f"Created {len(domain_groups)} domain groups")
+
+        # Step 3: Convert to required output format
+        domain_folds = {}
+        for domain_id, cells in domain_groups.items():
+            # Get unique table names in this domain
+            tables_in_domain = list(set(cell.table_id for cell in cells))
+            domain_name = f"Domain Fold {domain_id.replace('domain_', '')}"
+            domain_folds[domain_name] = tables_in_domain
+
+            # Log domain statistics
+            error_count = sum(1 for cell in cells if cell.is_error)
+            logging.info(
+                f"{domain_name}: {len(tables_in_domain)} tables, {len(cells)} cells, {error_count} errors"
+            )
+
+        return {"domain_folds": domain_folds}
+
     except Exception as e:
-        print(f"Error reading dataset directory: {e}")
+        logging.error(f"Error in domain folding: {e}")
         return {"domain_folds": {}}
-
-    if not tables:
-        print(f"No tables found in dataset: {dataset}")
-        return {"domain_folds": {}}
-
-    # Setup cache directory
-    cache_dir = os.path.join(datasets_path, "cache")
-    os.makedirs(cache_dir, exist_ok=True)
-
-    # Check for cached results
-    cached_result = load_from_cache(cache_dir, tables)
-    if cached_result:
-        print("Loading domain folds from cache...")
-        return {"domain_folds": cached_result}
-
-    print("Cache not found or invalid. Computing domain folds from scratch...")
-
-    try:
-        domain_folds = matelda_domain_folding(datasets_path, tables)
-        if domain_folds:
-            # Save to cache
-            save_to_cache(cache_dir, tables, domain_folds)
-            return {"domain_folds": domain_folds}
-    except Exception as e:
-        print(f"Error in domain folding: {e}")
-        print("Falling back to original random assignment")
-
-    # Fallback logic
-    num_folds = min(1, len(tables))
-    folds = [f"Domain Fold {i + 1}" for i in range(num_folds)]
-
-    # Randomly assign tables to folds
-    domain_folds = {fold: [] for fold in folds}
-    for table in tables:
-        fold = random.choice(folds)
-        domain_folds[fold].append(table)
-
-    # Remove empty folds
-    domain_folds = {k: v for k, v in domain_folds.items() if v}
-
-    # Save fallback result to cache as well
-    save_to_cache(cache_dir, tables, domain_folds)
-
-    return {"domain_folds": domain_folds}
 
 
 def backend_qbf(
-    selected_dataset: str, labeling_budget: int, domain_folds: Dict[str, List[str]]
+    selected_dataset: str,
+    labeling_budget: int,
+    domain_folds: Dict[str, List[str]],
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     """
-    Backend function that performs quality-based folding.
-    This is a dummy implementation that will be replaced with actual logic in the future.
-
-    Args:
-        selected_dataset (str): Name of the dataset to process
-        labeling_budget (int): Budget for labeling
-        domain_folds (Dict[str, List[str]]): Dictionary mapping domain fold names to lists of table names
-            Example: {
-                "Domain Fold 1": ["beers", "rayyan"],
-                "Domain Fold 2": ["lichess", "pokemon"]
-            }
-
-    Returns:
-        Dict[str, Dict[str, List[Dict[str, Any]]]]: Dictionary containing cell folds in the format:
-        {
-            "Domain Fold 1": {
-                "Domain Fold 1 / Cell Fold 1": [
-                    {
-                        "table": "beers",
-                        "row": 42,
-                        "col": "name",
-                        "val": "Heineken",
-                        "strategies": {
-                            "strategy01": true,
-                            "strategy02": false,
-                            ...
-                        }
-                    },
-                    ...
-                ],
-                "Domain Fold 1 / Cell Fold 2": [...],
-            },
-            "Domain Fold 2": {...}
-        }
+    Backend function that performs quality-based folding with real labeling budget distribution.
     """
-    # Get the actual tables from the dataset directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
-    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
+    logging.info(f"Starting quality-based folding for dataset: {selected_dataset}")
+    logging.info(f"Labeling budget: {labeling_budget}")
 
-    cell_folds = {}
+    # Setup
+    base_path = os.path.join("datasets", selected_dataset)
+    raha_config = {
+        "save_results": False,
+        "strategy_filtering": False,
+        "error_detection_algorithms": ["OD", "RVD", "RVD_orig"],
+    }
 
-    # For each domain fold, create cell folds
-    for domain_fold, tables in domain_folds.items():
-        # Randomly decide to create 1 or 2 cell folds per domain fold
-        num_cell_folds = random.randint(1, 2)
-        cell_fold_names = [
-            f"{domain_fold} / Cell Fold {i + 1}" for i in range(num_cell_folds)
-        ]
+    try:
+        # Read all cells
+        reader = DataReader()
+        all_cells = reader.read_all_tables(base_path)
 
-        # Collect cells from each table
-        cells = []
-        for table in tables:
-            try:
-                # Read the CSV file
-                table_path = os.path.join(datasets_path, table, "clean.csv")
-                with open(table_path, "r") as f:
-                    # Read header line
-                    header = f.readline().strip().split(",")
-                    # Read a few random lines
-                    lines = f.readlines()
-                    if lines:
-                        # Generate 3-5 random cells from this table
-                        for _ in range(random.randint(3, 5)):
-                            row = random.randint(0, len(lines) - 1)
-                            col = random.choice(header)
-                            # Get the value from the CSV line
-                            values = lines[row].strip().split(",")
-                            col_idx = header.index(col)
-                            if col_idx < len(values):
-                                val = values[col_idx]
-                                # Generate random strategies
-                                num_strategies = random.randint(3, 5)
-                                strategies = {
-                                    f"strategy{i:02d}": random.choice([True, False])
-                                    for i in range(1, num_strategies + 1)
-                                }
-                                cells.append(
-                                    {
-                                        "table": table,
-                                        "row": row,
-                                        "col": col,
-                                        "val": val,
-                                        "strategies": strategies,
-                                    }
-                                )
-            except Exception as e:
-                print(f"Error processing table {table}: {e}")
-                continue
+        # Create cell lookup by table
+        cells_by_table = {}
+        for cell in all_cells:
+            if cell.table_id not in cells_by_table:
+                cells_by_table[cell.table_id] = []
+            cells_by_table[cell.table_id].append(cell)
 
-        # Randomly distribute cells among cell folds
-        random.shuffle(cells)
-        cell_fold_dict = {}
-        for i, name in enumerate(cell_fold_names):
-            # Distribute cells evenly among folds
-            fold_cells = cells[i::num_cell_folds]
-            if fold_cells:  # Only add non-empty folds
-                cell_fold_dict[name] = fold_cells
+        # Perform quality folding for all domains
+        all_quality_groups = {}
+        quality_fold = QualityCellFold(base_path, raha_config, n_cores=1)
 
-        if cell_fold_dict:  # Only add domain folds that have cell folds
-            cell_folds[domain_fold] = cell_fold_dict
+        for domain_fold_name, table_names in domain_folds.items():
+            # Get cells for this domain
+            domain_cells = []
+            for table_name in table_names:
+                if table_name in cells_by_table:
+                    domain_cells.extend(cells_by_table[table_name])
 
-    return cell_folds
+            if domain_cells:
+                # Perform quality folding
+                domain_groups = {domain_fold_name: domain_cells}
+                quality_groups = quality_fold.fold_cells(domain_groups)
+                all_quality_groups.update(quality_groups)
+
+        # Distribute labeling budget across quality clusters
+        budget_distributor = LabelingBudgetDistributor(
+            labeling_budget, min_labels_per_cluster=2
+        )
+        budget_distribution = budget_distributor.distribute_budget(all_quality_groups)
+
+        # Convert to output format with budget information
+        result = {}
+        for domain_name, quality_clusters in all_quality_groups.items():
+            domain_result = {}
+
+            for quality_group_name, quality_cells in quality_clusters.items():
+                # Get assigned budget for this cluster
+                assigned_budget = budget_distribution.get(domain_name, {}).get(
+                    quality_group_name, 0
+                )
+
+                cell_fold_name = f"{domain_name} / Cell Fold {quality_group_name.replace('quality_', '')}"
+
+                cell_fold_data = []
+                for i, cell in enumerate(quality_cells):
+                    # Mark cells as selected for labeling based on budget
+                    is_selected_for_labeling = i < assigned_budget
+
+                    cell_dict = {
+                        "table": cell.table_id,
+                        "row": cell.row_idx,
+                        "col": cell.col_name,
+                        "val": cell.dirty_value,
+                        "strategies": _convert_features_to_strategies(cell.features),
+                        "selected_for_labeling": is_selected_for_labeling,
+                        "assigned_budget": assigned_budget
+                        if i == 0
+                        else None,  # Only show budget on first cell
+                    }
+                    cell_fold_data.append(cell_dict)
+
+                domain_result[cell_fold_name] = cell_fold_data
+                logging.info(
+                    f"Created {cell_fold_name} with {len(cell_fold_data)} cells, budget: {assigned_budget}"
+                )
+
+            result[domain_name] = domain_result
+
+        return result
+
+    except Exception as e:
+        logging.error(f"Error in quality-based folding: {e}")
+        return {}
+
+
+def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
+    """Convert RAHA feature vector to strategy dictionary"""
+    strategies = {}
+
+    for i, feature_value in enumerate(features):
+        strategy_name = f"strategy{i:02d}"
+        strategies[strategy_name] = bool(feature_value > 0)
+
+    return strategies
 
 
 def backend_sample_labeling(
@@ -201,173 +192,119 @@ def backend_sample_labeling(
     cell_folds: Dict[str, Dict[str, List[Dict[str, Any]]]],
     domain_folds: Dict[str, List[str]],
 ) -> List[Dict[str, Any]]:
-    """
-    Backend function that samples cells for labeling.
-    This is a dummy implementation that will be replaced with actual logic in the future.
+    """Backend function that samples cells for labeling using your sophisticated sampling strategies."""
 
-    Args:
-        selected_dataset (str): Name of the dataset to process
-        labeling_budget (int): Number of cells to sample for labeling
-        cell_folds (Dict[str, Dict[str, List[Dict[str, Any]]]]): Cell folds from quality-based folding
-        domain_folds (Dict[str, List[str]]): Domain folds mapping
+    logging.info(f"Starting cell sampling for dataset: {selected_dataset}")
+    logging.info(f"Labeling budget: {labeling_budget}")
 
-    Returns:
-        List[Dict[str, Any]]: List of sampled cells in the format:
-        [
-            {
-                "id": 1,
-                "name": "Domain Fold 1 / Cell Fold 1 - Table1",
-                "table": "Table1",
-                "row": 42,
-                "col": "name",
-                "val": "Example",
-                "domain_fold": "Domain Fold 1",
-                "cell_fold": "Domain Fold 1 / Cell Fold 1",
-                "cell_fold_label": "correct"|"false"|"neutral",  # Label from bulk annotation
-                "strategies": {
-                    "strategy01": true,
-                    "strategy02": false,
-                    ...
-                }
-            },
-            ...
-        ]
-    """
-    # Get the actual tables from the dataset directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
-    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
+    try:
+        # Step 1: Calculate budget distribution across cell folds (simplified)
+        cluster_info = []
+        for domain_name, domain_cell_folds in cell_folds.items():
+            for cell_fold_name, cells_data in domain_cell_folds.items():
+                cluster_info.append(
+                    {
+                        "domain": domain_name,
+                        "cell_fold": cell_fold_name,
+                        "n_cells": len(cells_data),
+                        "error_rate": 0.1,  # Default error rate for budget calculation
+                    }
+                )
 
-    def generate_strategies():
-        """Helper function to generate exactly 8 strategies"""
-        return {
-            f"strategy{i:02d}": random.choice([True, False])
-            for i in range(1, 9)  # Generate strategies 01-08
-        }
+        # Simple proportional budget distribution
+        total_cells = sum(info["n_cells"] for info in cluster_info)
+        budget_distribution = {}
 
-    # Load cell fold labels from configurations.json
-    config_path = os.path.join(
-        root_dir,
-        "pipelines",
-        os.path.basename(os.path.dirname(datasets_path)),
-        "configurations.json",
-    )
-    cell_fold_labels = {}
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, "r") as f:
-                config = json.load(f)
-                cell_fold_labels = config.get("cell_fold_labels", {})
-        except Exception as e:
-            print(f"Error loading cell fold labels: {e}")
+        for info in cluster_info:
+            domain = info["domain"]
+            cell_fold = info["cell_fold"]
+            proportion = info["n_cells"] / total_cells if total_cells > 0 else 0
+            allocated_budget = max(
+                1, int(labeling_budget * proportion)
+            )  # At least 1 sample
 
-    # Collect all available cells from cell folds
-    all_cells = []
-    for domain_fold, cell_fold_dict in cell_folds.items():
-        for cell_fold_name, cells in cell_fold_dict.items():
-            # Get the label for this cell fold
-            cell_fold_label = cell_fold_labels.get(cell_fold_name, "neutral")
+            if domain not in budget_distribution:
+                budget_distribution[domain] = {}
+            budget_distribution[domain][cell_fold] = allocated_budget
 
-            for cell in cells:
-                # If cell has strategies, ensure it has exactly 8
-                existing_strategies = cell.get("strategies", {})
-                strategies = {
-                    f"strategy{i:02d}": existing_strategies.get(
-                        f"strategy{i:02d}", random.choice([True, False])
-                    )
-                    for i in range(1, 9)
-                }
+        # Step 2: Sample cells using your sophisticated sampling strategies
+        sampler = CellSampler(sampling_strategy="mixed")
+        sampled_cells = sampler.sample_cells_from_cell_folds_direct(
+            cell_folds, budget_distribution
+        )
 
-                cell_info = {
-                    "table": cell["table"],
-                    "row": cell["row"],
-                    "col": cell["col"],
-                    "val": cell["val"],
-                    "domain_fold": domain_fold,
-                    "cell_fold": cell_fold_name,
-                    "cell_fold_label": cell_fold_label,  # Include the cell fold label
-                    "strategies": strategies,
-                }
-                all_cells.append(cell_info)
+        # Step 3: Validate budget usage
+        if len(sampled_cells) > labeling_budget:
+            sampled_cells = sampled_cells[:labeling_budget]
 
-    # If we don't have enough cells in cell_folds, generate additional random cells
-    if len(all_cells) < labeling_budget:
-        # Get all tables from domain folds
-        all_tables = []
-        for tables in domain_folds.values():
-            all_tables.extend(tables)
+        logging.info(f"Successfully sampled {len(sampled_cells)} cells for labeling")
+        return sampled_cells
 
-        # Generate additional random cells
-        while len(all_cells) < labeling_budget:
-            table = random.choice(all_tables)
-            try:
-                # Read the CSV file
-                table_path = os.path.join(datasets_path, table, "clean.csv")
-                with open(table_path, "r") as f:
-                    header = f.readline().strip().split(",")
-                    lines = f.readlines()
-                    if lines:
-                        row = random.randint(0, len(lines) - 1)
-                        col = random.choice(header)
-                        values = lines[row].strip().split(",")
-                        col_idx = header.index(col)
-                        if col_idx < len(values):
-                            val = values[col_idx]
-                            # Find the domain fold for this table
-                            domain_fold = next(
-                                (
-                                    fold
-                                    for fold, tables in domain_folds.items()
-                                    if table in tables
-                                ),
-                                "Unknown Domain",
-                            )
-                            cell_fold_name = f"{domain_fold} / Random Sample"
-                            cell_info = {
-                                "table": table,
-                                "row": row,
-                                "col": col,
-                                "val": val,
-                                "domain_fold": domain_fold,
-                                "cell_fold": cell_fold_name,
-                                "cell_fold_label": cell_fold_labels.get(
-                                    cell_fold_name, "neutral"
-                                ),
-                                "strategies": generate_strategies(),
-                            }
-                            if cell_info not in all_cells:  # Avoid duplicates
-                                all_cells.append(cell_info)
-            except Exception as e:
-                print(f"Error processing table {table}: {e}")
-                continue
+    except Exception as e:
+        logging.error(f"Error in cell sampling: {e}")
+        return []
 
-    # Randomly sample labeling_budget cells
-    sampled_cells = random.sample(all_cells, min(labeling_budget, len(all_cells)))
 
-    # Format the output
-    return [
-        {
-            "id": i,
-            "name": f"{cell['domain_fold']} – {cell['table']}",
-            "table": cell["table"],
-            "row": cell["row"],
-            "col": cell["col"],
-            "val": cell["val"],
-            "domain_fold": cell["domain_fold"],
-            "cell_fold": cell["cell_fold"],
-            "cell_fold_label": cell["cell_fold_label"],
-            "strategies": cell["strategies"],
-        }
-        for i, cell in enumerate(sampled_cells)
+def _convert_cell_folds_to_quality_groups(
+    cell_folds: Dict[str, Dict[str, List[Dict[str, Any]]]],
+) -> Dict[str, Dict[str, List]]:
+    """Convert cell_folds format to quality_groups format for budget distributor"""
+    quality_groups = {}
+
+    for domain_name, domain_cell_folds in cell_folds.items():
+        quality_groups[domain_name] = {}
+
+        for cell_fold_name, cells_data in domain_cell_folds.items():
+            # Extract quality cluster name
+            if " / Cell Fold " in cell_fold_name:
+                quality_name = f"quality_{cell_fold_name.split(' / Cell Fold ')[-1]}"
+            else:
+                quality_name = "quality_0"
+
+            # Create mock Cell objects for budget calculation
+            mock_cells = [
+                {"is_error": False} for _ in cells_data
+            ]  # Simplified for budget calc
+            quality_groups[domain_name][quality_name] = mock_cells
+
+    return quality_groups
+
+
+def _log_sampling_statistics(
+    sampled_cells: List[Dict[str, Any]], budget_distribution: Dict[str, Dict[str, int]]
+):
+    """Log detailed sampling statistics"""
+
+    # Count samples by domain
+    domain_counts = {}
+    for cell in sampled_cells:
+        domain = cell["domain_fold"]
+        domain_counts[domain] = domain_counts.get(domain, 0) + 1
+
+    logging.info("=== Sampling Statistics ===")
+    for domain, count in domain_counts.items():
+        total_budget = sum(budget_distribution.get(domain, {}).values())
+        logging.info(f"Domain {domain}: {count} samples (budget: {total_budget})")
+
+    # Count samples by cell fold
+    cell_fold_counts = {}
+    for cell in sampled_cells:
+        cell_fold = cell["cell_fold"]
+        cell_fold_counts[cell_fold] = cell_fold_counts.get(cell_fold, 0) + 1
+
+    logging.info("Top cell folds by sample count:")
+    sorted_folds = sorted(cell_fold_counts.items(), key=lambda x: x[1], reverse=True)[
+        :5
     ]
+    for cell_fold, count in sorted_folds:
+        logging.info(f"  {cell_fold}: {count} samples")
 
 
 def backend_label_propagation(
     selected_dataset: str, labeled_cells: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Backend function that propagates errors based on labeled cells.
-    This is a dummy implementation that will be replaced with actual logic in the future.
+    Backend function that propagates errors based on labeled cells using your majority voting logic.
 
     Args:
         selected_dataset (str): Name of the dataset to process
@@ -378,10 +315,10 @@ def backend_label_propagation(
                 "row": int,
                 "col": str,
                 "val": Any,
-                "is_error": bool,  # True if labeled as error, False if labeled as correct
+                "is_error": bool, # True if labeled as error, False if labeled as correct
                 "domain_fold": str,
                 "cell_fold": str,
-                "cell_fold_label": str  # "correct", "false", or "neutral"
+                "cell_fold_label": str # "correct", "false", or "neutral"
             }
 
     Returns:
@@ -400,8 +337,8 @@ def backend_label_propagation(
                             "row": int,
                             "col": str,
                             "val": Any,
-                            "confidence": float,  # confidence score for this being an error
-                            "reason": str  # explanation of why this was propagated
+                            "confidence": float, # confidence score for this being an error
+                            "reason": str # explanation of why this was propagated
                         },
                         ...
                     ]
@@ -410,67 +347,104 @@ def backend_label_propagation(
             ]
         }
     """
-    # Get the actual tables from the dataset directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
-    datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
+    logging.info(f"Starting label propagation for dataset: {selected_dataset}")
+    logging.info(f"Processing {len(labeled_cells)} labeled cells")
 
-    # Initialize results structure
-    labeled_cells_with_propagation = []
+    try:
+        # Step 1: Convert cell_fold_label to is_error boolean
+        processed_labeled_cells = []
+        for cell in labeled_cells:
+            processed_cell = cell.copy()
 
-    # For each labeled cell, generate some random propagated cells
+            # Convert cell_fold_label to is_error
+            if "cell_fold_label" in cell:
+                if cell["cell_fold_label"] == "false":
+                    processed_cell["is_error"] = True
+                elif cell["cell_fold_label"] == "correct":
+                    processed_cell["is_error"] = False
+                else:  # neutral
+                    processed_cell["is_error"] = False  # Default to not error
+
+            processed_labeled_cells.append(processed_cell)
+
+        # Step 2: We need the cell_folds to know which cells to propagate to
+        # This should be passed from the previous step or reconstructed
+        # For now, let's reconstruct cell folds from labeled cells
+        cell_folds = _reconstruct_cell_folds_from_labeled_cells(processed_labeled_cells)
+
+        # Step 3: Perform label propagation using majority voting logic
+        propagator = LabelPropagator(propagation_method="majority")
+        propagation_results = propagator.propagate_labels(
+            processed_labeled_cells, cell_folds
+        )
+
+        # Step 4: Log propagation statistics
+        _log_propagation_statistics(propagation_results)
+
+        return propagation_results
+
+    except Exception as e:
+        logging.error(f"Error in label propagation: {e}")
+        return {"labeled_cells": []}
+
+
+def _reconstruct_cell_folds_from_labeled_cells(
+    labeled_cells: List[Dict[str, Any]],
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Reconstruct cell folds structure from labeled cells"""
+    cell_folds = {}
+
+    for cell in labeled_cells:
+        domain_fold = cell["domain_fold"]
+        cell_fold = cell["cell_fold"]
+
+        if domain_fold not in cell_folds:
+            cell_folds[domain_fold] = {}
+        if cell_fold not in cell_folds[domain_fold]:
+            cell_folds[domain_fold][cell_fold] = []
+
+        # Add this cell to the fold
+        cell_data = {
+            "table": cell["table"],
+            "row": cell["row"],
+            "col": cell["col"],
+            "val": cell["val"],
+        }
+        cell_folds[domain_fold][cell_fold].append(cell_data)
+
+    return cell_folds
+
+
+def _log_propagation_statistics(propagation_results: Dict[str, Any]):
+    """Log detailed propagation statistics"""
+    labeled_cells = propagation_results.get("labeled_cells", [])
+
+    total_labeled = len(labeled_cells)
+    total_propagated = sum(
+        len(cell.get("propagated_cells", [])) for cell in labeled_cells
+    )
+
+    # Count by error type
+    error_propagations = 0
+    correct_propagations = 0
+
     for labeled_cell in labeled_cells:
-        table = labeled_cell["table"]
-        try:
-            # Read the CSV file
-            table_path = os.path.join(datasets_path, table, "clean.csv")
-            with open(table_path, "r") as f:
-                header = f.readline().strip().split(",")
-                lines = f.readlines()
+        is_source_error = labeled_cell.get("is_error", False)
+        propagated_count = len(labeled_cell.get("propagated_cells", []))
 
-                # Generate 2-4 random propagated cells for this labeled cell
-                num_propagated = random.randint(2, 4)
-                propagated_cells = []
+        if is_source_error:
+            error_propagations += propagated_count
+        else:
+            correct_propagations += propagated_count
 
-                for _ in range(num_propagated):
-                    if lines:
-                        row = random.randint(0, len(lines) - 1)
-                        col = random.choice(header)
-                        values = lines[row].strip().split(",")
-                        col_idx = header.index(col)
-                        if col_idx < len(values):
-                            val = values[col_idx]
-                            propagated = {
-                                "table": table,
-                                "row": row,
-                                "col": col,
-                                "val": val,
-                                "confidence": round(
-                                    random.uniform(0.6, 0.95), 2
-                                ),  # Random confidence score
-                                "reason": random.choice(
-                                    [
-                                        "Similar value pattern",
-                                        "Same column characteristics",
-                                        "Domain similarity",
-                                        "Statistical correlation",
-                                    ]
-                                ),
-                            }
-                            propagated_cells.append(propagated)
-
-                labeled_cells_with_propagation.append(
-                    {
-                        **labeled_cell,  # Include all original labeled cell info
-                        "propagated_cells": propagated_cells,
-                    }
-                )
-
-        except Exception as e:
-            print(f"Error processing table {table}: {e}")
-            continue
-
-    return {"labeled_cells": labeled_cells_with_propagation}
+    logging.info("=== Label Propagation Statistics ===")
+    logging.info(f"Labeled cells: {total_labeled}")
+    logging.info(f"Total propagated cells: {total_propagated}")
+    logging.info(f"Error propagations: {error_propagations}")
+    logging.info(f"Correct propagations: {correct_propagations}")
+    logging.info(
+        f"Average propagations per labeled cell: {total_propagated / total_labeled:.2f}"
+    )
 
 
 def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
@@ -508,7 +482,9 @@ def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
     """
     # Get the actual tables from the dataset directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(current_dir)  # Go up one level since we're in backend/ folder
+    root_dir = os.path.dirname(
+        current_dir
+    )  # Go up one level since we're in backend/ folder
 
     # Get the pipeline path from session state
     if "pipeline_path" not in st.session_state:

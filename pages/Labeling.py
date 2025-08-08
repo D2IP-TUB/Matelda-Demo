@@ -1,12 +1,13 @@
-import streamlit as st
-import time
 import json
+import logging
 import os
-from typing import Dict, Any, List
+import time
+from typing import Any, Dict, List
 
+import streamlit as st
+from backend import backend_label_propagation, backend_sample_labeling
+from components import apply_base_styles, get_datasets_path, render_sidebar
 from streamlit_swipecards import streamlit_swipecards
-from backend import backend_sample_labeling, backend_label_propagation
-from components import render_sidebar, apply_base_styles, get_datasets_path
 
 # Page setup
 st.set_page_config(page_title="Labeling", layout="wide")
@@ -99,10 +100,11 @@ if st.session_state.run_quality_folding:
     cards: List[Dict[str, Any]] = st.session_state.get("sampled_cells", [])
     card_data = [c for c in (make_card(card) for card in cards) if c]
 
-    st.info(
-        "Swipe left to mark as error, swipe right to mark as correct.")
+    st.info("Swipe left to mark as error, swipe right to mark as correct.")
 
-    results = streamlit_swipecards(cards=card_data, display_mode="table", key="labeling_cards")
+    results = streamlit_swipecards(
+        cards=card_data, display_mode="table", key="labeling_cards"
+    )
 
     if "labeling_results" not in st.session_state:
         st.session_state.labeling_results = {}
@@ -133,6 +135,9 @@ if st.session_state.run_quality_folding:
             labeled_cells.append(cell_info)
 
         propagation_results = backend_label_propagation(dataset, labeled_cells)
+        logging.info(
+            f"Label propagation completed with {len(propagation_results['labeled_cells'])} labeled cells."
+        )
         st.session_state.propagation_results = propagation_results
         st.session_state.propagation_saved = False
         st.switch_page("pages/PropagatedErrors.py")
