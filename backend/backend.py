@@ -428,10 +428,12 @@ def backend_label_propagation(
 
             processed_labeled_cells.append(processed_cell)
 
-        # Step 2: We need the cell_folds to know which cells to propagate to
-        # This should be passed from the previous step or reconstructed
-        # For now, let's reconstruct cell folds from labeled cells
-        cell_folds = _reconstruct_cell_folds_from_labeled_cells(processed_labeled_cells)
+        # Step 2: Load the complete cell_folds structure from cache or configuration
+        cell_folds = _load_complete_cell_folds_structure(selected_dataset)
+
+        if not cell_folds:
+            logging.error("Could not load complete cell folds structure")
+            return {"labeled_cells": []}
 
         # Step 3: Perform label propagation using majority voting logic
         propagator = LabelPropagator(propagation_method="majority")
@@ -442,6 +444,18 @@ def backend_label_propagation(
         # Step 4: Log propagation statistics
         _log_propagation_statistics(propagation_results)
 
+        # Step 5: Cache the propagation results for later use by error detection
+        _cache_propagation_results(selected_dataset, propagation_results)
+
+        # Step 6: Also save to session state for immediate access
+        try:
+            import streamlit as st
+
+            if hasattr(st, "session_state"):
+                st.session_state.cached_propagation_results = propagation_results
+        except ImportError:
+            pass
+
         return propagation_results
 
     except Exception as e:
@@ -449,10 +463,190 @@ def backend_label_propagation(
         return {"labeled_cells": []}
 
 
+def _load_propagated_labels_from_session_or_cache(
+    selected_dataset: str,
+) -> Dict[str, Any]:
+    """Load propagated labels from session state or cache"""
+
+    # First try session state (most current)
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state"):
+            if "propagation_results" in st.session_state:
+                logging.info("Loaded propagation results from session state")
+                return st.session_state.propagation_results
+            elif "cached_propagation_results" in st.session_state:
+                logging.info("Loaded cached propagation results from session state")
+                return st.session_state.cached_propagation_results
+    except ImportError:
+        pass
+
+    # Fallback to cache
+    try:
+        pipeline_name = f"label_propagation_{selected_dataset}"
+        cache_filename = "latest_propagation.pickle"
+
+        propagated_labels = load_from_cache(pipeline_name, cache_filename)
+        if propagated_labels:
+            logging.info("Loaded propagated labels from cache")
+            return propagated_labels
+    except Exception as e:
+        logging.warning(f"Failed to load propagated labels from cache: {e}")
+
+    return None
+
+
+def _load_complete_cell_folds_structure(
+    selected_dataset: str,
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Load the complete cell folds structure from cache or configuration
+
+    This function attempts to load the cell_folds in the following priority:
+    1. From session state (if available in Streamlit context)
+    2. From saved configuration file
+    3. From cache (QBF results)
+    4. Reconstruct from current data if all else fails
+    """
+
+    # Try to get from session state first (Streamlit context)
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and "cell_folds" in st.session_state:
+            logging.info("Loaded cell_folds from session state")
+            return st.session_state.cell_folds
+    except ImportError:
+        pass
+
+    # Try to load from configuration file
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and "pipeline_path" in st.session_state:
+            config_path = os.path.join(
+                st.session_state.pipeline_path, "configurations.json"
+            )
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                if "cell_folds" in config:
+                    logging.info("Loaded cell_folds from configuration file")
+                    return config["cell_folds"]
+    except (ImportError, Exception) as e:
+        logging.warning(f"Could not load from config: {e}")
+
+    # Try to load from cache (QBF results)
+    try:
+        pipeline_name = f"qbf_{selected_dataset}"
+        # Get cache files for this pipeline
+        cache_files = _get_recent_cache_files(pipeline_name)
+
+        for cache_file in cache_files:
+            cached_result = load_from_cache(pipeline_name, cache_file)
+            if cached_result and isinstance(cached_result, dict):
+                logging.info(f"Loaded cell_folds from cache: {cache_file}")
+                return cached_result
+
+    except Exception as e:
+        logging.warning(f"Could not load from cache: {e}")
+
+    # Last resort: reconstruct from current data
+    logging.warning(
+        "Reconstructing cell_folds from current data - this may be incomplete"
+    )
+    return _reconstruct_complete_cell_folds(selected_dataset)
+
+
+def _get_recent_cache_files(pipeline_name: str) -> List[str]:
+    """Get recent cache files for a pipeline, sorted by modification time"""
+    try:
+        cache_dir = os.path.join("cache", pipeline_name)
+        if not os.path.exists(cache_dir):
+            return []
+
+        cache_files = []
+        for filename in os.listdir(cache_dir):
+            if filename.endswith(".pickle"):
+                filepath = os.path.join(cache_dir, filename)
+                mtime = os.path.getmtime(filepath)
+                cache_files.append((filename, mtime))
+
+        # Sort by modification time (newest first)
+        cache_files.sort(key=lambda x: x[1], reverse=True)
+        return [filename for filename, _ in cache_files]
+
+    except Exception as e:
+        logging.warning(f"Error getting cache files: {e}")
+        return []
+
+
+def _reconstruct_complete_cell_folds(
+    selected_dataset: str,
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Reconstruct complete cell folds by re-running the folding process
+
+    This is a fallback method that re-runs DBF and QBF to get the complete structure
+    """
+    try:
+        logging.info("Reconstructing cell_folds by re-running folding process")
+
+        # Get domain folds first
+        dbf_results = backend_dbf(
+            selected_dataset, labeling_budget=10
+        )  # Use default budget
+        domain_folds = dbf_results.get("domain_folds", {})
+
+        if not domain_folds:
+            logging.error("Could not get domain folds for reconstruction")
+            return {}
+
+        # Get quality-based cell folds
+        qbf_results = backend_qbf(
+            selected_dataset=selected_dataset,
+            labeling_budget=10,  # Use default budget
+            domain_folds=domain_folds,
+        )
+
+        if qbf_results:
+            logging.info("Successfully reconstructed cell_folds")
+            return qbf_results
+        else:
+            logging.error("Failed to reconstruct cell_folds")
+            return {}
+
+    except Exception as e:
+        logging.error(f"Error reconstructing cell_folds: {e}")
+        return {}
+
+
+def _cache_propagation_results(
+    selected_dataset: str, propagation_results: Dict[str, Any]
+):
+    """Cache the propagation results for use by backend_pull_errors"""
+    try:
+        pipeline_name = f"label_propagation_{selected_dataset}"
+        cache_filename = "latest_propagation.pickle"
+
+        save_to_cache(pipeline_name, cache_filename, propagation_results)
+        logging.info("Cached propagation results successfully")
+
+    except Exception as e:
+        logging.warning(f"Failed to cache propagation results: {e}")
+
+
 def _reconstruct_cell_folds_from_labeled_cells(
     labeled_cells: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
-    """Reconstruct cell folds structure from labeled cells"""
+    """Reconstruct cell folds structure from labeled cells
+
+    NOTE: This function is kept for backward compatibility but should not be used
+    as it only contains labeled cells, not the complete fold structure.
+    """
+    logging.warning(
+        "Using incomplete cell_folds reconstruction - this may cause issues"
+    )
+
     cell_folds = {}
 
     for cell in labeled_cells:
@@ -474,6 +668,282 @@ def _reconstruct_cell_folds_from_labeled_cells(
         cell_folds[domain_fold][cell_fold].append(cell_data)
 
     return cell_folds
+
+
+def _load_complete_cell_folds_structure(
+    selected_dataset: str,
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Load the complete cell folds structure from cache or configuration
+
+    This function attempts to load the cell_folds in the following priority:
+    1. From session state (if available in Streamlit context)
+    2. From saved configuration file
+    3. From cache (QBF results)
+    4. Reconstruct from current data if all else fails
+    """
+
+    # Try to get from session state first (Streamlit context)
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and "cell_folds" in st.session_state:
+            logging.info("Loaded cell_folds from session state")
+            return st.session_state.cell_folds
+    except ImportError:
+        pass
+
+    # Try to load from configuration file
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and "pipeline_path" in st.session_state:
+            config_path = os.path.join(
+                st.session_state.pipeline_path, "configurations.json"
+            )
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                if "cell_folds" in config:
+                    logging.info("Loaded cell_folds from configuration file")
+                    return config["cell_folds"]
+    except (ImportError, Exception) as e:
+        logging.warning(f"Could not load from config: {e}")
+
+    # Try to load from cache (QBF results)
+    try:
+        pipeline_name = f"qbf_{selected_dataset}"
+        # Get cache files for this pipeline
+        cache_files = _get_recent_cache_files(pipeline_name)
+
+        for cache_file in cache_files:
+            cached_result = load_from_cache(pipeline_name, cache_file)
+            if cached_result and isinstance(cached_result, dict):
+                logging.info(f"Loaded cell_folds from cache: {cache_file}")
+                return cached_result
+
+    except Exception as e:
+        logging.warning(f"Could not load from cache: {e}")
+
+    # Last resort: reconstruct from current data
+    logging.warning(
+        "Reconstructing cell_folds from current data - this may be incomplete"
+    )
+    return _reconstruct_complete_cell_folds(selected_dataset)
+
+
+def _get_recent_cache_files(pipeline_name: str) -> List[str]:
+    """Get recent cache files for a pipeline, sorted by modification time"""
+    try:
+        cache_dir = os.path.join("cache", pipeline_name)
+        if not os.path.exists(cache_dir):
+            return []
+
+        cache_files = []
+        for filename in os.listdir(cache_dir):
+            if filename.endswith(".pickle"):
+                filepath = os.path.join(cache_dir, filename)
+                mtime = os.path.getmtime(filepath)
+                cache_files.append((filename, mtime))
+
+        # Sort by modification time (newest first)
+        cache_files.sort(key=lambda x: x[1], reverse=True)
+        return [filename for filename, _ in cache_files]
+
+    except Exception as e:
+        logging.warning(f"Error getting cache files: {e}")
+        return []
+
+
+def _reconstruct_complete_cell_folds(
+    selected_dataset: str,
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Reconstruct complete cell folds by re-running the folding process
+
+    This is a fallback method that re-runs DBF and QBF to get the complete structure
+    """
+    try:
+        logging.info("Reconstructing cell_folds by re-running folding process")
+
+        # Get domain folds first
+        dbf_results = backend_dbf(
+            selected_dataset, labeling_budget=10
+        )  # Use default budget
+        domain_folds = dbf_results.get("domain_folds", {})
+
+        if not domain_folds:
+            logging.error("Could not get domain folds for reconstruction")
+            return {}
+
+        # Get quality-based cell folds
+        qbf_results = backend_qbf(
+            selected_dataset=selected_dataset,
+            labeling_budget=10,  # Use default budget
+            domain_folds=domain_folds,
+        )
+
+        if qbf_results:
+            logging.info("Successfully reconstructed cell_folds")
+            return qbf_results
+        else:
+            logging.error("Failed to reconstruct cell_folds")
+            return {}
+
+    except Exception as e:
+        logging.error(f"Error reconstructing cell_folds: {e}")
+        return {}
+
+
+def _cache_propagation_results(
+    selected_dataset: str, propagation_results: Dict[str, Any]
+):
+    """Cache the propagation results for use by backend_pull_errors"""
+    try:
+        pipeline_name = f"label_propagation_{selected_dataset}"
+        cache_filename = "latest_propagation.pickle"
+
+        save_to_cache(pipeline_name, cache_filename, propagation_results)
+        logging.info("Cached propagation results successfully")
+
+    except Exception as e:
+        logging.warning(f"Failed to cache propagation results: {e}")
+
+
+def _load_complete_cell_folds_structure(
+    selected_dataset: str,
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Load the complete cell folds structure from cache or configuration
+
+    This function attempts to load the cell_folds in the following priority:
+    1. From session state (if available in Streamlit context)
+    2. From saved configuration file
+    3. From cache (QBF results)
+    4. Reconstruct from current data if all else fails
+    """
+
+    # Try to get from session state first (Streamlit context)
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and "cell_folds" in st.session_state:
+            logging.info("Loaded cell_folds from session state")
+            return st.session_state.cell_folds
+    except ImportError:
+        pass
+
+    # Try to load from configuration file
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state") and "pipeline_path" in st.session_state:
+            config_path = os.path.join(
+                st.session_state.pipeline_path, "configurations.json"
+            )
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                if "cell_folds" in config:
+                    logging.info("Loaded cell_folds from configuration file")
+                    return config["cell_folds"]
+    except (ImportError, Exception) as e:
+        logging.warning(f"Could not load from config: {e}")
+
+    # Try to load from cache (QBF results)
+    try:
+        pipeline_name = f"qbf_{selected_dataset}"
+        # Get cache files for this pipeline
+        cache_files = _get_recent_cache_files(pipeline_name)
+
+        for cache_file in cache_files:
+            cached_result = load_from_cache(pipeline_name, cache_file)
+            if cached_result and isinstance(cached_result, dict):
+                logging.info(f"Loaded cell_folds from cache: {cache_file}")
+                return cached_result
+
+    except Exception as e:
+        logging.warning(f"Could not load from cache: {e}")
+
+    # Last resort: reconstruct from current data
+    logging.warning(
+        "Reconstructing cell_folds from current data - this may be incomplete"
+    )
+    return _reconstruct_complete_cell_folds(selected_dataset)
+
+
+def _get_recent_cache_files(pipeline_name: str) -> List[str]:
+    """Get recent cache files for a pipeline, sorted by modification time"""
+    try:
+        cache_dir = os.path.join("cache", pipeline_name)
+        if not os.path.exists(cache_dir):
+            return []
+
+        cache_files = []
+        for filename in os.listdir(cache_dir):
+            if filename.endswith(".pickle"):
+                filepath = os.path.join(cache_dir, filename)
+                mtime = os.path.getmtime(filepath)
+                cache_files.append((filename, mtime))
+
+        # Sort by modification time (newest first)
+        cache_files.sort(key=lambda x: x[1], reverse=True)
+        return [filename for filename, _ in cache_files]
+
+    except Exception as e:
+        logging.warning(f"Error getting cache files: {e}")
+        return []
+
+
+def _reconstruct_complete_cell_folds(
+    selected_dataset: str,
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Reconstruct complete cell folds by re-running the folding process
+
+    This is a fallback method that re-runs DBF and QBF to get the complete structure
+    """
+    try:
+        logging.info("Reconstructing cell_folds by re-running folding process")
+
+        # Get domain folds first
+        dbf_results = backend_dbf(
+            selected_dataset, labeling_budget=10
+        )  # Use default budget
+        domain_folds = dbf_results.get("domain_folds", {})
+
+        if not domain_folds:
+            logging.error("Could not get domain folds for reconstruction")
+            return {}
+
+        # Get quality-based cell folds
+        qbf_results = backend_qbf(
+            selected_dataset=selected_dataset,
+            labeling_budget=10,  # Use default budget
+            domain_folds=domain_folds,
+        )
+
+        if qbf_results:
+            logging.info("Successfully reconstructed cell_folds")
+            return qbf_results
+        else:
+            logging.error("Failed to reconstruct cell_folds")
+            return {}
+
+    except Exception as e:
+        logging.error(f"Error reconstructing cell_folds: {e}")
+        return {}
+
+
+def _cache_propagation_results(
+    selected_dataset: str, propagation_results: Dict[str, Any]
+):
+    """Cache the propagation results for use by backend_pull_errors"""
+    try:
+        pipeline_name = f"label_propagation_{selected_dataset}"
+        cache_filename = "latest_propagation.pickle"
+
+        save_to_cache(pipeline_name, propagation_results, cache_filename)
+        logging.info("Cached propagation results successfully")
+
+    except Exception as e:
+        logging.warning(f"Failed to cache propagation results: {e}")
 
 
 def _log_propagation_statistics(propagation_results: Dict[str, Any]):
@@ -565,39 +1035,6 @@ def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
     except Exception as e:
         logging.error(f"Error pulling detected errors: {e}")
         return _create_empty_error_response()
-
-
-def _run_complete_error_detection(selected_dataset: str) -> Dict[str, Any]:
-    """Run the complete error detection pipeline if not cached"""
-
-    try:
-        # Load pipeline configuration
-        pipeline_path = _get_current_pipeline_path()
-        config = _load_pipeline_config(pipeline_path)
-
-        # Check if we have propagated labels in cache
-        propagated_labels = _load_propagated_labels_from_cache(selected_dataset)
-
-        if not propagated_labels:
-            logging.warning(
-                "No propagated labels found - need to complete labeling step first"
-            )
-            return None
-
-        detection_results = backend_error_detection(
-            selected_dataset=selected_dataset,
-            propagated_labels=propagated_labels,
-            pipeline_config=config,
-        )
-
-        # Save results to configurations.json for Results page
-        _save_results_to_config(pipeline_path, detection_results)
-
-        return detection_results
-
-    except Exception as e:
-        logging.error(f"Error running complete error detection: {e}")
-        return None
 
 
 def _load_propagated_labels_from_cache(selected_dataset: str) -> Dict[str, Any]:
@@ -774,3 +1211,166 @@ def _create_empty_error_response() -> Dict[str, Any]:
             "fold_label_influence": 0.0,
         },
     }
+
+
+# Add these functions to backend/backend.py to fix the error detection pipeline
+
+
+def _run_complete_error_detection(selected_dataset: str) -> Dict[str, Any]:
+    """Run the complete error detection pipeline if not cached"""
+
+    try:
+        # Load pipeline configuration
+        pipeline_path = _get_current_pipeline_path()
+        config = _load_pipeline_config(pipeline_path)
+
+        # Get propagated labels from session state or cache
+        propagated_labels = _load_propagated_labels_from_session_or_cache(
+            selected_dataset
+        )
+
+        if not propagated_labels:
+            logging.warning(
+                "No propagated labels found - need to complete labeling step first"
+            )
+            return None
+
+        # Run the actual error detection
+        detection_results = backend_error_detection(
+            selected_dataset=selected_dataset,
+            propagated_labels=propagated_labels,
+            pipeline_config=config,
+        )
+
+        # Save results to configurations.json for Results page
+        if detection_results:
+            _save_results_to_config(pipeline_path, detection_results)
+
+        return detection_results
+
+    except Exception as e:
+        logging.error(f"Error running complete error detection: {e}")
+        return None
+
+
+def _load_propagated_labels_from_session_or_cache(
+    selected_dataset: str,
+) -> Dict[str, Any]:
+    """Load propagated labels from session state or cache - improved version"""
+
+    # First try session state (most current)
+    try:
+        import streamlit as st
+
+        if hasattr(st, "session_state"):
+            if "propagation_results" in st.session_state:
+                logging.info("Loaded propagation results from session state")
+                return st.session_state.propagation_results
+            elif "cached_propagation_results" in st.session_state:
+                logging.info("Loaded cached propagation results from session state")
+                return st.session_state.cached_propagation_results
+    except ImportError:
+        pass
+
+    # Fallback to cache
+    try:
+        pipeline_name = f"label_propagation_{selected_dataset}"
+        cache_filename = "latest_propagation.pickle"
+
+        propagated_labels = load_from_cache(pipeline_name, cache_filename)
+        if propagated_labels:
+            logging.info("Loaded propagated labels from cache")
+            return propagated_labels
+    except Exception as e:
+        logging.warning(f"Failed to load propagated labels from cache: {e}")
+
+    return None
+
+
+def _load_pipeline_config(pipeline_path: str) -> Dict[str, Any]:
+    """Load pipeline configuration from file"""
+    try:
+        config_path = os.path.join(pipeline_path, "configurations.json")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                return json.load(f)
+    except Exception as e:
+        logging.warning(f"Could not load pipeline config: {e}")
+
+    return {}
+
+
+def _save_results_to_config(pipeline_path: str, detection_results: Dict[str, Any]):
+    """Save detection results to the pipeline configuration"""
+    try:
+        config_path = os.path.join(pipeline_path, "configurations.json")
+
+        # Load existing config
+        config = {}
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config = json.load(f)
+
+        # Add detection results
+        import datetime
+
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        results_entry = {
+            "Time": current_time,
+            "metrics": detection_results.get("metrics", {}),
+            "detected_cells": detection_results.get("detected_cells", []),
+            "propagated_errors": _organize_errors_by_table(
+                detection_results.get("detected_cells", [])
+            ),
+        }
+
+        # Add to results list
+        if "results" not in config:
+            config["results"] = []
+
+        # Replace today's result if it exists, otherwise append
+        today = current_time.split(" ")[0]
+        config["results"] = [
+            r for r in config["results"] if r.get("Time", "").split(" ")[0] != today
+        ]
+        config["results"].append(results_entry)
+
+        # Save back to file
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+
+        logging.info("Saved detection results to configuration")
+
+    except Exception as e:
+        logging.error(f"Error saving results to config: {e}")
+
+
+def _load_latest_detection_results(pipeline_name: str) -> Dict[str, Any]:
+    """Load the latest error detection results from cache"""
+    try:
+        cache_dir = os.path.join("cache", pipeline_name)
+        if not os.path.exists(cache_dir):
+            return None
+
+        # Get all cache files sorted by modification time
+        cache_files = []
+        for filename in os.listdir(cache_dir):
+            if filename.endswith(".pickle"):
+                filepath = os.path.join(cache_dir, filename)
+                mtime = os.path.getmtime(filepath)
+                cache_files.append((filename, mtime))
+
+        if not cache_files:
+            return None
+
+        # Get the most recent file
+        latest_file = sorted(cache_files, key=lambda x: x[1], reverse=True)[0][0]
+
+        result = load_from_cache(pipeline_name, latest_file)
+        logging.info(f"Loaded latest error detection results from {latest_file}")
+        return result
+
+    except Exception as e:
+        logging.error(f"Failed to load latest detection results: {e}")
+        return None

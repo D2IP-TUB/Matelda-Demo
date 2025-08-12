@@ -38,6 +38,19 @@ if "dataset_select" not in st.session_state:
 selected_dataset = st.session_state.dataset_select
 datasets_path = os.path.join(os.path.dirname(__file__), "../datasets", selected_dataset)
 
+# Check if propagation results exist
+if "propagation_results" not in st.session_state:
+    st.warning(
+        "⚠️ No propagation results found. Please complete the label propagation step first."
+    )
+    if st.button("Go back to Propagated Errors"):
+        st.switch_page("pages/PropagatedErrors.py")
+    st.stop()
+
+# Initialize error detection state
+if "error_detection_completed" not in st.session_state:
+    st.session_state.error_detection_completed = False
+
 
 # Function to load and display table with propagated errors
 def display_table_with_errors(table_name, error_cells):
@@ -69,37 +82,112 @@ def display_table_with_errors(table_name, error_cells):
     return styled_df
 
 
-# Display loading message
-with st.spinner("🔍 Searching for possible errors in the datasets..."):
-    # Get errors using the new backend function
-    results = backend_pull_errors(selected_dataset)
-    propagated_errors = results["propagated_errors"]
+# Main interface
+st.markdown("### 🤖 Machine Learning Error Detection")
+st.markdown(
+    "Run the error detection classifier to automatically detect errors in your dataset based on the propagated labels."
+)
 
-    # Display tables with propagated errors
+# Show propagation summary
+propagation_results = st.session_state.propagation_results
+total_labeled = len(propagation_results.get("labeled_cells", []))
+total_propagated = sum(
+    len(cell.get("propagated_cells", []))
+    for cell in propagation_results.get("labeled_cells", [])
+)
+
+st.info(
+    f"📊 Ready to run error detection with {total_labeled} labeled cells and {total_propagated} propagated labels"
+)
+
+# Run Error Detection Button
+if not st.session_state.error_detection_completed:
+    if st.button("▶️ Run Error Detection", type="primary"):
+        with st.spinner(
+            "🔍 Training classifiers and detecting errors... This may take a moment..."
+        ):
+            try:
+                # Run the error detection pipeline
+                results = backend_pull_errors(selected_dataset)
+
+                if results and results.get("propagated_errors"):
+                    st.session_state.error_detection_results = results
+                    st.session_state.error_detection_completed = True
+                    st.success("✅ Error detection completed successfully!")
+                    st.rerun()
+                else:
+                    st.error(
+                        "❌ Error detection failed. Please check the logs for details."
+                    )
+
+            except Exception as e:
+                st.error(f"❌ Error occurred during error detection: {str(e)}")
+
+# Display results if error detection is completed
+if (
+    st.session_state.error_detection_completed
+    and "error_detection_results" in st.session_state
+):
+    results = st.session_state.error_detection_results
+    propagated_errors = results.get("propagated_errors", {})
+    metrics = results.get("metrics", {})
+
+    # Display metrics
+    st.markdown("### 📈 Detection Metrics")
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.metric("Precision", f"{metrics.get('precision', 0):.3f}")
+    with col2:
+        st.metric("Recall", f"{metrics.get('recall', 0):.3f}")
+    with col3:
+        st.metric("F1 Score", f"{metrics.get('f1', 0):.3f}")
+    with col4:
+        st.metric("Fold Influence", f"{metrics.get('fold_label_influence', 0):.3f}")
+
+    # Display detected errors in tables
     st.markdown("### 🔍 Detected Errors")
-    st.markdown(
-        "The intensity of the red highlighting indicates the confidence level of the error detection (darker = higher confidence)"
-    )
 
-    for table, errors in propagated_errors.items():
-        with st.expander(f"📊 {table} ({len(errors)} potential errors)"):
-            styled_df = display_table_with_errors(table, errors)
-            if styled_df is not None:
-                st.dataframe(styled_df)
+    if propagated_errors:
+        st.markdown(
+            "The intensity of the red highlighting indicates the confidence level of the error detection (darker = higher confidence)"
+        )
 
-                # Display error details
-                st.markdown("#### Error Details:")
-                for error in errors:
-                    confidence_percentage = int(error["confidence"] * 100)
-                    source = error.get("source", "Unknown")
-                    st.markdown(f"""
-                    - **Cell**: Row {error["row"]}, Column `{error["col"]}`
-                    - **Value**: `{error["val"]}`
-                    - **Confidence**: {confidence_percentage}%
-                    - **Source**: {source}
-                    ---
-                    """)
+        for table, errors in propagated_errors.items():
+            with st.expander(f"📊 {table} ({len(errors)} potential errors)"):
+                styled_df = display_table_with_errors(table, errors)
+                if styled_df is not None:
+                    st.dataframe(styled_df, use_container_width=True)
 
-# Navigation button to move to the next page
-if st.button("Next"):
-    st.switch_page("pages/Results.py")
+                    # Display error details
+                    st.markdown("#### Error Details:")
+                    for i, error in enumerate(errors):
+                        confidence_percentage = int(error["confidence"] * 100)
+                        source = error.get("source", "Unknown")
+                        st.markdown(f"""
+                        **Error {i + 1}:**
+                        - **Cell**: Row {error["row"]}, Column `{error["col"]}`
+                        - **Value**: `{error["val"]}`
+                        - **Confidence**: {confidence_percentage}%
+                        - **Source**: {source}
+                        """)
+                        if i < len(errors) - 1:
+                            st.markdown("---")
+    else:
+        st.info("🎉 No errors detected in the dataset!")
+
+    # Reset button for re-running detection
+    st.markdown("---")
+    if st.button("🔄 Re-run Error Detection"):
+        st.session_state.error_detection_completed = False
+        if "error_detection_results" in st.session_state:
+            del st.session_state.error_detection_results
+        st.rerun()
+
+# Navigation
+st.markdown("---")
+if st.session_state.error_detection_completed:
+    if st.button("Next: View Results"):
+        st.switch_page("pages/Results.py")
+else:
+    st.markdown("*Complete error detection to proceed to results.*")

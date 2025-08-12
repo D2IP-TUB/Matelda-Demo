@@ -1,12 +1,12 @@
-import streamlit as st
-import random
-import os
-import json
 import datetime
+import json
+import os
+
 import pandas as pd
-import urllib.parse
-from components import render_sidebar, apply_base_styles
-from streamlit_social_share import streamlit_social_share
+import streamlit as st
+from components import apply_base_styles, render_sidebar
+
+# from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Results", layout="wide")
@@ -18,6 +18,7 @@ render_sidebar()
 st.title("Results")
 st.write("### Model Performance Metrics")
 
+
 def load_config(path):
     if os.path.exists(path):
         try:
@@ -26,6 +27,7 @@ def load_config(path):
         except json.JSONDecodeError:
             return {}
     return {}
+
 
 if "pipeline_path" in st.session_state:
     current_pipeline_path = st.session_state.pipeline_path
@@ -39,7 +41,9 @@ if "pipeline_path" in st.session_state:
         recall_score = metrics.get("Recall", 0)
         f1_score = metrics.get("F1", 0)
         precision_score = metrics.get("Precision", 0)
-        current_time = latest_result.get("Time", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        current_time = latest_result.get(
+            "Time", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
     else:
         recall_score = 0
         f1_score = 0
@@ -56,7 +60,9 @@ col1, col2, col3 = st.columns(3)
 # -----------------------------------------------------------------------------
 current_dataset = st.session_state.get("dataset_select", None)
 if not current_dataset and "pipeline_path" in st.session_state:
-    cfg = load_config(os.path.join(st.session_state.pipeline_path, "configurations.json"))
+    cfg = load_config(
+        os.path.join(st.session_state.pipeline_path, "configurations.json")
+    )
     current_dataset = cfg.get("selected_dataset", None)
     if current_dataset:
         st.session_state.dataset_select = current_dataset
@@ -98,7 +104,7 @@ if dataset_configured:
                         "Labeling Budget": labeling_budget,
                         "Recall": metrics.get("Recall", ""),
                         "F1": metrics.get("F1", ""),
-                        "Precision": metrics.get("Precision", "")
+                        "Precision": metrics.get("Precision", ""),
                     }
                     same_dataset_rows.append(row)
 
@@ -107,7 +113,9 @@ if dataset_configured:
         for row in same_dataset_rows
     )
     if not found_current:
-        current_cfg = load_config(os.path.join(current_pipeline_path, "configurations.json"))
+        current_cfg = load_config(
+            os.path.join(current_pipeline_path, "configurations.json")
+        )
         current_labeling_budget = current_cfg.get("labeling_budget", "")
         current_row = {
             "Time": current_time,
@@ -115,32 +123,45 @@ if dataset_configured:
             "Labeling Budget": current_labeling_budget,
             "Recall": recall_score,
             "F1": f1_score,
-            "Precision": precision_score
+            "Precision": precision_score,
         }
         same_dataset_rows = [
-            r for r in same_dataset_rows
-            if not (r["Pipeline Name"] == current_pipeline_name and r["Time"].split(" ")[0] == current_time.split(" ")[0])
+            r
+            for r in same_dataset_rows
+            if not (
+                r["Pipeline Name"] == current_pipeline_name
+                and r["Time"].split(" ")[0] == current_time.split(" ")[0]
+            )
         ]
         same_dataset_rows.append(current_row)
 
     same_dataset_df = pd.DataFrame(same_dataset_rows)
     for col in ["Recall", "F1", "Precision", "Labeling Budget"]:
         if col in same_dataset_df.columns:
-            same_dataset_df[col] = pd.to_numeric(same_dataset_df[col], errors="coerce").round(2)
+            same_dataset_df[col] = pd.to_numeric(
+                same_dataset_df[col], errors="coerce"
+            ).round(2)
     same_dataset_df = same_dataset_df.sort_values(by="Time", ascending=False)
 
     def highlight_current(row):
-        if row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time:
-            return ['background-color: red'] * len(row)
+        if (
+            row["Pipeline Name"] == current_pipeline_name
+            and row["Time"] == current_time
+        ):
+            return ["background-color: red"] * len(row)
         else:
-            return [''] * len(row)
+            return [""] * len(row)
 
-    styled_same_dataset_df = same_dataset_df.style.apply(highlight_current, axis=1).format({
-        "Recall": "{:.2f}",
-        "F1": "{:.2f}",
-        "Precision": "{:.2f}",
-        "Labeling Budget": "{:}"
-    })
+    styled_same_dataset_df = same_dataset_df.style.apply(
+        highlight_current, axis=1
+    ).format(
+        {
+            "Recall": "{:.2f}",
+            "F1": "{:.2f}",
+            "Precision": "{:.2f}",
+            "Labeling Budget": "{:}",
+        }
+    )
 
     st.markdown("---")
     st.markdown(f"#### Result Comparison (Dataset: {current_dataset}):")
@@ -165,7 +186,7 @@ for pipeline in os.listdir(pipelines_folder):
                 "Labeling Budget": labeling_budget,
                 "Recall": metrics.get("Recall", ""),
                 "F1": metrics.get("F1", ""),
-                "Precision": metrics.get("Precision", "")
+                "Precision": metrics.get("Precision", ""),
             }
             all_rows.append(row)
 
@@ -174,7 +195,9 @@ found_current_all = any(
     for row in all_rows
 )
 if not found_current_all:
-    current_cfg_all = load_config(os.path.join(current_pipeline_path, "configurations.json"))
+    current_cfg_all = load_config(
+        os.path.join(current_pipeline_path, "configurations.json")
+    )
     current_labeling_budget_all = current_cfg_all.get("labeling_budget", "")
     current_row_all = {
         "Time": current_time,
@@ -183,11 +206,15 @@ if not found_current_all:
         "Labeling Budget": current_labeling_budget_all,
         "Recall": recall_score,
         "F1": f1_score,
-        "Precision": precision_score
+        "Precision": precision_score,
     }
     all_rows = [
-        r for r in all_rows
-        if not (r["Pipeline Name"] == current_pipeline_name and r["Time"].split(" ")[0] == current_time.split(" ")[0])
+        r
+        for r in all_rows
+        if not (
+            r["Pipeline Name"] == current_pipeline_name
+            and r["Time"].split(" ")[0] == current_time.split(" ")[0]
+        )
     ]
     all_rows.append(current_row_all)
 
@@ -197,12 +224,14 @@ for col in ["Recall", "F1", "Precision", "Labeling Budget"]:
         all_df[col] = pd.to_numeric(all_df[col], errors="coerce").round(2)
 all_df = all_df.sort_values(by="Time", ascending=False)
 
-styled_all_df = all_df.style.apply(highlight_current, axis=1).format({
-    "Recall": "{:.2f}",
-    "F1": "{:.2f}",
-    "Precision": "{:.2f}",
-    "Labeling Budget": "{:}"
-})
+styled_all_df = all_df.style.apply(highlight_current, axis=1).format(
+    {
+        "Recall": "{:.2f}",
+        "F1": "{:.2f}",
+        "Precision": "{:.2f}",
+        "Labeling Budget": "{:}",
+    }
+)
 
 st.markdown("---")
 st.markdown("#### Result Comparison (All Pipelines/Datasets):")
@@ -216,7 +245,7 @@ st.markdown("---")
 if dataset_configured:
     st.markdown("### 📤 Share Your Results")
     st.markdown("Share your Matelda performance metrics with the community!")
-    
+
     # Create share text with more detailed information
     share_text = (
         f"🎯 Just achieved some great results with Matelda! "
@@ -224,16 +253,16 @@ if dataset_configured:
         f"📈 Dataset: {current_dataset} | Pipeline: {current_pipeline_name} "
         f"#ErrorDetection #DataCleaning #D2IP #TUB #VLDB"
     )
-    
-    current_url = "https://www.tu.berlin/d2ip" 
-    
-    shared = streamlit_social_share(
-        text=share_text,
-        url=current_url,
-        networks=["linkedin", "reddit", "email", "whatsapp", "telegram"],
-        key="shared"
-    )
-    
+
+    current_url = "https://www.tu.berlin/d2ip"
+
+    # shared = streamlit_social_share(
+    #     text=share_text,
+    #     url=current_url,
+    #     networks=["linkedin", "reddit", "email", "whatsapp", "telegram"],
+    #     key="shared"
+    # )
+
     st.markdown("**📋 Copy Share Text:**")
     st.code(share_text, language=None)
 
