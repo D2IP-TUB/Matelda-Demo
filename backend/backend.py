@@ -1,10 +1,15 @@
+import hashlib
 import json
 import logging
 import os
 from typing import Any, Dict, List
 
-import streamlit as st
-
+from backend.cache_utils import (
+    exists_in_cache,
+    load_from_cache,
+    save_to_cache,
+)
+from backend.fold_system.core.backend_error_detection import backend_error_detection
 from backend.fold_system.core.cell_sampler import CellSampler
 from backend.fold_system.core.data_reader import DataReader
 from backend.fold_system.core.label_propagation import LabelPropagator
@@ -82,10 +87,28 @@ def backend_qbf(
     domain_folds: Dict[str, List[str]],
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     """
-    Backend function that performs quality-based folding with real labeling budget distribution.
+    Backend function that performs quality-based folding with caching support.
     """
     logging.info(f"Starting quality-based folding for dataset: {selected_dataset}")
     logging.info(f"Labeling budget: {labeling_budget}")
+
+    # Generate cache key based on inputs
+    cache_key = _generate_cache_key(selected_dataset, labeling_budget, domain_folds)
+    cache_filename = f"qbf_results_{cache_key}.pickle"
+    pipeline_name = f"quality_folding_{selected_dataset}"
+
+    # Try to load from cache first
+    if exists_in_cache(pipeline_name, cache_filename):
+        logging.info("Loading quality folding results from cache...")
+        try:
+            cached_result = load_from_cache(pipeline_name, cache_filename)
+            if cached_result is not None:
+                logging.info("Successfully loaded results from cache")
+                return cached_result
+        except Exception as e:
+            logging.warning(
+                f"Failed to load from cache: {e}, proceeding with fresh computation"
+            )
 
     # Setup
     base_path = os.path.join("datasets", selected_dataset)
@@ -96,6 +119,8 @@ def backend_qbf(
     }
 
     try:
+        logging.info("Cache miss - computing quality folding from scratch...")
+
         # Read all cells
         reader = DataReader()
         all_cells = reader.read_all_tables(base_path)
@@ -155,9 +180,7 @@ def backend_qbf(
                         "val": cell.dirty_value,
                         "strategies": _convert_features_to_strategies(cell.features),
                         "selected_for_labeling": is_selected_for_labeling,
-                        "assigned_budget": assigned_budget
-                        if i == 0
-                        else None,  # Only show budget on first cell
+                        "assigned_budget": assigned_budget if i == 0 else None,
                     }
                     cell_fold_data.append(cell_dict)
 
@@ -168,11 +191,49 @@ def backend_qbf(
 
             result[domain_name] = domain_result
 
+        # Save result to cache
+        logging.info("Saving quality folding results to cache...")
+        try:
+            save_to_cache(pipeline_name, result, cache_filename)
+            logging.info("Successfully saved results to cache")
+        except Exception as e:
+            logging.warning(f"Failed to save to cache: {e}")
+
         return result
 
     except Exception as e:
         logging.error(f"Error in quality-based folding: {e}")
         return {}
+
+
+def _generate_cache_key(
+    selected_dataset: str, labeling_budget: int, domain_folds: Dict[str, List[str]]
+) -> str:
+    """Generate a unique cache key based on inputs"""
+
+    # Create deterministic string from inputs
+    cache_input = {
+        "dataset": selected_dataset,
+        "budget": labeling_budget,
+        "domain_folds": sorted([(k, sorted(v)) for k, v in domain_folds.items()]),
+    }
+
+    # Create hash
+    cache_string = json.dumps(cache_input, sort_keys=True)
+    cache_hash = hashlib.md5(cache_string.encode()).hexdigest()[:12]
+
+    return cache_hash
+
+
+def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
+    """Convert RAHA feature vector to strategy dictionary"""
+    strategies = {}
+
+    for i, feature_value in enumerate(features):
+        strategy_name = f"strategy{i:02d}"
+        strategies[strategy_name] = bool(feature_value > 0)
+
+    return strategies
 
 
 def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
@@ -192,7 +253,7 @@ def backend_sample_labeling(
     cell_folds: Dict[str, Dict[str, List[Dict[str, Any]]]],
     domain_folds: Dict[str, List[str]],
 ) -> List[Dict[str, Any]]:
-    """Backend function that samples cells for labeling using your sophisticated sampling strategies."""
+    """Backend function that samples cells for labeling"""
 
     logging.info(f"Starting cell sampling for dataset: {selected_dataset}")
     logging.info(f"Labeling budget: {labeling_budget}")
@@ -227,7 +288,7 @@ def backend_sample_labeling(
                 budget_distribution[domain] = {}
             budget_distribution[domain][cell_fold] = allocated_budget
 
-        # Step 2: Sample cells using your sophisticated sampling strategies
+        # Step 2: Sample cells
         sampler = CellSampler(sampling_strategy="mixed")
         sampled_cells = sampler.sample_cells_from_cell_folds_direct(
             cell_folds, budget_distribution
@@ -304,7 +365,7 @@ def backend_label_propagation(
     selected_dataset: str, labeled_cells: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Backend function that propagates errors based on labeled cells using your majority voting logic.
+    Backend function that propagates errors based on labeled cells
 
     Args:
         selected_dataset (str): Name of the dataset to process
@@ -449,87 +510,267 @@ def _log_propagation_statistics(propagation_results: Dict[str, Any]):
 
 def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
     """
-    Backend function that retrieves all detected errors from the configurations.json file.
-    This is a dummy implementation that will be replaced with actual logic in the future.
+    Backend function that retrieves all detected errors from the error detection results.
+    Runs error detection if not already cached.
 
     Args:
         selected_dataset (str): Name of the dataset to process
 
     Returns:
-        Dict[str, Any]: Dictionary containing all detected errors and metrics:
-        {
-            "propagated_errors": {
-                "table1": [
-                    {
-                        "row": int,
-                        "col": str,
-                        "val": Any,
-                        "confidence": float,  # confidence score for this being an error
-                        "source": str  # e.g., "direct_label", "cell_fold_propagation", etc.
-                    },
-                    ...
-                ],
-                "table2": [...],
-                ...
-            },
-            "metrics": {
-                "precision": float,
-                "recall": float,
-                "f1": float,
-                "fold_label_influence": float  # measure of how cell fold labels influenced the results
-            }
-        }
+        Dict[str, Any]: Dictionary containing all detected errors and metrics
     """
-    # Get the actual tables from the dataset directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(
-        current_dir
-    )  # Go up one level since we're in backend/ folder
-
-    # Get the pipeline path from session state
-    if "pipeline_path" not in st.session_state:
-        print("No pipeline path in session state")
-        return {
-            "propagated_errors": {},
-            "metrics": {
-                "precision": 0.0,
-                "recall": 0.0,
-                "f1": 0.0,
-                "fold_label_influence": 0.0,
-            },
-        }
-
-    config_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    logging.info(f"Pulling detected errors for dataset: {selected_dataset}")
 
     try:
-        with open(config_path, "r") as f:
-            config = json.load(f)
+        # Try to load the latest error detection results from cache
+        pipeline_name = f"error_detection_{selected_dataset}"
+        detection_results = _load_latest_detection_results(pipeline_name)
 
-        # Get the propagated errors from the config
-        propagated_errors = config.get("propagated_errors", {})
+        if not detection_results:
+            logging.info(
+                "No cached error detection results found - running error detection..."
+            )
 
-        # Get the metrics from the latest result
-        results = config.get("results", [])
-        if results:
-            metrics = results[-1].get("metrics", {})
-        else:
-            metrics = {
-                "precision": 0.0,
-                "recall": 0.0,
-                "f1": 0.0,
-                "fold_label_influence": 0.0,
-            }
+            # Run the complete error detection pipeline
+            detection_results = _run_complete_error_detection(selected_dataset)
 
-        return {"propagated_errors": propagated_errors, "metrics": metrics}
+            if not detection_results:
+                logging.warning("Error detection failed")
+                return _create_empty_error_response()
+
+        # Extract detected cells and organize by table
+        detected_cells = detection_results.get("detected_cells", [])
+        propagated_errors = _organize_errors_by_table(detected_cells)
+
+        # Extract metrics
+        metrics = detection_results.get("metrics", {})
+        formatted_metrics = {
+            "precision": metrics.get("Precision", 0.0),
+            "recall": metrics.get("Recall", 0.0),
+            "f1": metrics.get("F1", 0.0),
+            "fold_label_influence": _calculate_fold_influence(detected_cells),
+        }
+
+        result = {"propagated_errors": propagated_errors, "metrics": formatted_metrics}
+
+        total_errors = sum(
+            len(table_errors) for table_errors in propagated_errors.values()
+        )
+        logging.info(
+            f"Retrieved {total_errors} detected errors across {len(propagated_errors)} tables"
+        )
+
+        return result
 
     except Exception as e:
-        print(f"Error loading configuration: {e}")
-        return {
-            "propagated_errors": {},
-            "metrics": {
-                "precision": 0.0,
-                "recall": 0.0,
-                "f1": 0.0,
-                "fold_label_influence": 0.0,
-            },
+        logging.error(f"Error pulling detected errors: {e}")
+        return _create_empty_error_response()
+
+
+def _run_complete_error_detection(selected_dataset: str) -> Dict[str, Any]:
+    """Run the complete error detection pipeline if not cached"""
+
+    try:
+        # Load pipeline configuration
+        pipeline_path = _get_current_pipeline_path()
+        config = _load_pipeline_config(pipeline_path)
+
+        # Check if we have propagated labels in cache
+        propagated_labels = _load_propagated_labels_from_cache(selected_dataset)
+
+        if not propagated_labels:
+            logging.warning(
+                "No propagated labels found - need to complete labeling step first"
+            )
+            return None
+
+        detection_results = backend_error_detection(
+            selected_dataset=selected_dataset,
+            propagated_labels=propagated_labels,
+            pipeline_config=config,
+        )
+
+        # Save results to configurations.json for Results page
+        _save_results_to_config(pipeline_path, detection_results)
+
+        return detection_results
+
+    except Exception as e:
+        logging.error(f"Error running complete error detection: {e}")
+        return None
+
+
+def _load_propagated_labels_from_cache(selected_dataset: str) -> Dict[str, Any]:
+    """Load propagated labels from cache"""
+    try:
+        pipeline_name = f"label_propagation_{selected_dataset}"
+
+        # Try to load latest propagation cache (simplified approach)
+        cache_filename = "latest_propagation.pickle"  # You might want to make this more sophisticated
+
+        propagated_labels = load_from_cache(pipeline_name, cache_filename)
+
+        if propagated_labels:
+            logging.info("Loaded propagated labels from cache")
+            return propagated_labels
+
+    except Exception as e:
+        logging.warning(f"Failed to load propagated labels: {e}")
+
+    return None
+
+
+def _get_current_pipeline_path() -> str:
+    """Get current pipeline path from session state or environment"""
+    # This would typically come from Streamlit session state
+    # For now, return a default path
+    import streamlit as st
+
+    if hasattr(st, "session_state") and "pipeline_path" in st.session_state:
+        return st.session_state.pipeline_path
+    else:
+        return "pipelines/default"
+
+
+def _load_pipeline_config(pipeline_path: str) -> Dict:
+    """Load pipeline configuration"""
+    config_path = os.path.join(pipeline_path, "configurations.json")
+
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            return json.load(f)
+    else:
+        return {}
+
+
+def _save_results_to_config(pipeline_path: str, detection_results: Dict[str, Any]):
+    """Save detection results to configurations.json"""
+    config_path = os.path.join(pipeline_path, "configurations.json")
+
+    # Load existing config
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+    else:
+        config = {}
+
+    # Add results
+    if "results" not in config:
+        config["results"] = []
+
+    result_entry = {
+        "Time": detection_results["Time"],
+        "metrics": detection_results["metrics"],
+    }
+
+    config["results"].append(result_entry)
+
+    # Save back to file
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+
+    logging.info(f"Saved results to {config_path}")
+
+
+def _load_latest_detection_results(pipeline_name: str) -> Dict[str, Any]:
+    """Load the most recent error detection results from cache"""
+
+    # Try to find the most recent cache file
+    # This is a simplified approach - in production you might want to track cache timestamps
+
+    cache_dir = os.path.join(
+        "/home/fatemeh/matelda-demo/temp-cache", pipeline_name
+    )  # Use your cache root
+
+    if not os.path.exists(cache_dir):
+        return None
+
+    # Find all error detection cache files
+    cache_files = [f for f in os.listdir(cache_dir) if f.startswith("error_detection_")]
+
+    if not cache_files:
+        return None
+
+    # Sort by modification time and get the latest
+    cache_files_with_time = []
+    for cache_file in cache_files:
+        file_path = os.path.join(cache_dir, cache_file)
+        mtime = os.path.getmtime(file_path)
+        cache_files_with_time.append((mtime, cache_file))
+
+    if cache_files_with_time:
+        # Get the most recent file
+        latest_file = sorted(cache_files_with_time, reverse=True)[0][1]
+
+        try:
+            result = load_from_cache(pipeline_name, latest_file)
+            logging.info(f"Loaded latest error detection results from {latest_file}")
+            return result
+        except Exception as e:
+            logging.error(f"Failed to load cache file {latest_file}: {e}")
+
+    return None
+
+
+def _organize_errors_by_table(
+    detected_cells: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Organize detected errors by table"""
+
+    errors_by_table = {}
+
+    for cell in detected_cells:
+        table_id = cell["table"]
+
+        if table_id not in errors_by_table:
+            errors_by_table[table_id] = []
+
+        error_info = {
+            "row": cell["row"],
+            "col": cell["col"],
+            "val": cell["val"],
+            "confidence": cell.get("confidence", 0.5),
+            "source": cell.get("source", "unknown"),
         }
+
+        errors_by_table[table_id].append(error_info)
+
+    return errors_by_table
+
+
+def _calculate_fold_influence(detected_cells: List[Dict[str, Any]]) -> float:
+    """Calculate measure of how cell fold labels influenced the results"""
+
+    if not detected_cells:
+        return 0.0
+
+    # Count errors by source
+    source_counts = {}
+    for cell in detected_cells:
+        source = cell.get("source", "unknown")
+        source_counts[source] = source_counts.get(source, 0) + 1
+
+    # Calculate influence as ratio of propagated vs direct
+    propagated_count = source_counts.get("propagated", 0)
+    total_count = len(detected_cells)
+
+    fold_influence = propagated_count / total_count if total_count > 0 else 0.0
+
+    logging.info(
+        f"Fold label influence: {fold_influence:.3f} ({propagated_count}/{total_count} propagated)"
+    )
+
+    return fold_influence
+
+
+def _create_empty_error_response() -> Dict[str, Any]:
+    """Create empty response when no results found"""
+    return {
+        "propagated_errors": {},
+        "metrics": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "fold_label_influence": 0.0,
+        },
+    }

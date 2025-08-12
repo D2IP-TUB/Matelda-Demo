@@ -48,9 +48,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+raha-baran-results*
 # Profiling
 .prof
 
+streamlit-swipecards
 # Docker
 docker-compose.override.yml
 .envrc

@@ -96,7 +96,7 @@ class CellSampler:
         return features
 
     def _sample_nearest_to_centroid(self, features: List[List[float]]) -> List[int]:
-        """Your get_the_nearest_point_to_centroid logic"""
+        """get_the_nearest_point_to_centroid logic"""
         if not features:
             return []
 
@@ -110,7 +110,7 @@ class CellSampler:
     def _sample_mixed_strategy(
         self, features: List[List[float]], n_samples: int
     ) -> List[int]:
-        """Your pick_samples_in_cell_cluster logic - mixed random + centroid"""
+        """pick_samples_in_cell_cluster logic - mixed random + centroid"""
         if not features or n_samples <= 0:
             return []
 
@@ -131,7 +131,7 @@ class CellSampler:
             and available_indices
             and trial_count > 0
         ):
-            # Random sampling with uniqueness check (your logic)
+            # Random sampling with uniqueness check
             sample_idx = random.choice(available_indices)
             selected_indices.append(sample_idx)
             available_indices.remove(sample_idx)

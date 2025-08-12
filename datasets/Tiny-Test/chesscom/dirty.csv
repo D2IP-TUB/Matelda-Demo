@@ -1,10 +1,3 @@
 time_control,end_time,rated,time_class,rules,username,white_username,white_rating,white_result,black_username,black_rating,black_result
 600,2021-05-23 15:57:57,True,rapid,chess,5091mtp,5091Mtp,1429,resigned,monnocuy,1453,win
 60+1,2021-05-10 07:56:58,True,bullet,chess,ahseng88,mydriasisdh,803,win,AhSeng88,787,timeout
-120+1,2021-01-31 04:40:31,True,bullet,chess,081326105333,LORDGENIO,1471,win,081326105333,1459,resigned
-300,2021-05-04 09:43:29,True,blitz,chess,aink3roet,HARICHAURASIYA,1542,win,aink3roet,1551,resigned
-300,2021-03-14 15:39:12,True,blitz,chess,19ajsh14,19AJSH14,1767,checkmated,Mustaf2000,1804,win
-300,2021-06-27 03:21:47,True,blitz,chess,alpasaribu,Alpasaribu,769,checkmated,Robster751,755,win
-600,2021-11-16 00:33:17,True,rapid,chess,aguzzaly,aguzzaly,1137,win,MathewMorocho,1142,resigned
-600,2021-10-15 00:26:17,True,rapid,chess,ajpion,FabianoSol,1468,win,AJPion,1396,resigned
-300,2021-06-26 04:09:13,True,blitz,chess,abd_faiz,24Bek,680,win,Abd_Faiz,686,resigned

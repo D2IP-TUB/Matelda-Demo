@@ -102,9 +102,7 @@ class DataReader:
             for row_idx in range(len(dirty_df)):
                 dirty_value = dirty_df.iloc[row_idx, col_idx]
                 clean_value = clean_df.iloc[row_idx, col_idx]
-                is_error = bool(
-                    label_df.iloc[row_idx, col_idx]
-                )  # Your sophisticated error detection
+                is_error = bool(label_df.iloc[row_idx, col_idx])
 
                 cell = Cell(
                     dirty_value=str(dirty_value) if pd.notna(dirty_value) else "",

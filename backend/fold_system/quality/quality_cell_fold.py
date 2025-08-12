@@ -59,7 +59,7 @@ class QualityCellFold(BaseCellFold):
             logging.warning(f"Domain {domain_name}: Insufficient cells with features")
             return {"quality_0": cells}
 
-        # Your MiniBatchKMeans clustering
+        # MiniBatchKMeans clustering
         X = np.array(feature_vectors)
         n_clusters = min(10, len(feature_vectors))
 

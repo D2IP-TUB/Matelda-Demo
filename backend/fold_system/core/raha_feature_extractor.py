@@ -24,7 +24,7 @@ class RAHAFeatureExtractor:
         for table_id, table_cells in tables_cells.items():
             logging.info(f"Extracting RAHA features for table {table_id}")
 
-            # Read table from disk again using your existing function
+            # Read table from disk again
             column_features, column_feature_names = generate_raha_features(
                 self.base_path, table_id
             )

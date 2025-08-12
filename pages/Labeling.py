@@ -44,7 +44,7 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     """Return a table-mode card configuration for streamlit-swipecards."""
 
     datasets_path = get_datasets_path(dataset)
-    dataset_path = os.path.join(datasets_path, cell["table"], "clean.csv")
+    dataset_path = os.path.join(datasets_path, cell["table"], "dirty.csv")
 
     row = int(cell.get("row", 0))
     column = cell.get("col", "")

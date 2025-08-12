@@ -138,66 +138,6 @@ def backend_qbf(
     print("Done generating cell features")
     cell_folds = {}
 
-    # For each domain fold, create cell folds
-    # for domain_fold, tables in domain_folds.items():
-    #     # Randomly decide to create 1 or 2 cell folds per domain fold
-    #     num_cell_folds = random.randint(1, 2)
-    #     cell_fold_names = [
-    #         f"{domain_fold} / Cell Fold {i + 1}" for i in range(num_cell_folds)
-    #     ]
-
-    #     # Collect cells from each table
-    #     cells = []
-    #     for table in tables:
-    #         try:
-    #             # Read the CSV file
-    #             table_path = os.path.join(selected_dataset, table, "clean.csv")
-    #             with open(table_path, "r") as f:
-    #                 # Read header line
-    #                 header = f.readline().strip().split(",")
-    #                 # Read a few random lines
-    #                 lines = f.readlines()
-    #                 if lines:
-    #                     # Generate 3-5 random cells from this table
-    #                     for _ in range(random.randint(3, 5)):
-    #                         row = random.randint(0, len(lines) - 1)
-    #                         col = random.choice(header)
-    #                         # Get the value from the CSV line
-    #                         values = lines[row].strip().split(",")
-    #                         col_idx = header.index(col)
-    #                         if col_idx < len(values):
-    #                             val = values[col_idx]
-    #                             # Generate random strategies
-    #                             num_strategies = random.randint(3, 5)
-    #                             strategies = {
-    #                                 f"strategy{i:02d}": random.choice([True, False])
-    #                                 for i in range(1, num_strategies + 1)
-    #                             }
-    #                             cells.append(
-    #                                 {
-    #                                     "table": table,
-    #                                     "row": row,
-    #                                     "col": col,
-    #                                     "val": val,
-    #                                     "strategies": strategies,
-    #                                 }
-    #                             )
-    #         except Exception as e:
-    #             print(f"Error processing table {table}: {e}")
-    #             continue
-
-    #     # Randomly distribute cells among cell folds
-    #     random.shuffle(cells)
-    #     cell_fold_dict = {}
-    #     for i, name in enumerate(cell_fold_names):
-    #         # Distribute cells evenly among folds
-    #         fold_cells = cells[i::num_cell_folds]
-    #         if fold_cells:  # Only add non-empty folds
-    #             cell_fold_dict[name] = fold_cells
-
-    #     if cell_fold_dict:  # Only add domain folds that have cell folds
-    #         cell_folds[domain_fold] = cell_fold_dict
-
     return cell_folds
 
 
@@ -310,7 +250,7 @@ def backend_sample_labeling(
             table = random.choice(all_tables)
             try:
                 # Read the CSV file
-                table_path = os.path.join(datasets_path, table, "clean.csv")
+                table_path = os.path.join(datasets_path, table, "dirty.csv")
                 with open(table_path, "r") as f:
                     header = f.readline().strip().split(",")
                     lines = f.readlines()
@@ -433,7 +373,7 @@ def backend_label_propagation(
         table = labeled_cell["table"]
         try:
             # Read the CSV file
-            table_path = os.path.join(datasets_path, table, "clean.csv")
+            table_path = os.path.join(datasets_path, table, "dirty.csv")
             with open(table_path, "r") as f:
                 header = f.readline().strip().split(",")
                 lines = f.readlines()
