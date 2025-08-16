@@ -1,9 +1,10 @@
-import streamlit as st
-import os
 import json
-import time
+import os
 import random
-from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
+import time
+
+import streamlit as st
+from components import apply_base_styles, render_inline_restart_button, render_sidebar
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Propagated Errors", layout="wide")
@@ -48,49 +49,55 @@ if "propagation_results" not in st.session_state:
 propagation_results = st.session_state.propagation_results
 
 st.markdown("### \U0001f501 Label Propagation Results")
-st.markdown("Below are the cells you labeled and how their labels were propagated to other cells:")
+st.markdown(
+    "Below are the cells you labeled and how their labels were propagated to other cells:"
+)
 
 for labeled_cell in propagation_results["labeled_cells"]:
-    cell_value = labeled_cell.get('val', 'Unknown Value')
-    is_error = labeled_cell.get('is_error', False)
-    label_icon = '❌' if is_error else '✅'
+    cell_value = labeled_cell.get("val", "Unknown Value")
+    is_error = labeled_cell.get("is_error", False)
+    label_icon = "❌" if is_error else "✅"
     cell_desc = f"{label_icon} Cell: `{cell_value}`"
 
     with st.expander(cell_desc):
         cell_info = ["**Original Cell Details**"]
-        if labeled_cell.get('table'):
+        if labeled_cell.get("table"):
             cell_info.append(f"- **Table**: `{labeled_cell['table']}`")
-        if labeled_cell.get('row') is not None:
+        if labeled_cell.get("row") is not None:
             cell_info.append(f"- **Row**: {labeled_cell['row']}")
-        if labeled_cell.get('col'):
+        if labeled_cell.get("col"):
             cell_info.append(f"- **Column**: `{labeled_cell['col']}`")
-        if labeled_cell.get('domain_fold'):
+        if labeled_cell.get("domain_fold"):
             cell_info.append(f"- **Domain Fold**: {labeled_cell['domain_fold']}")
-        if labeled_cell.get('cell_fold'):
+        if labeled_cell.get("cell_fold"):
             cell_info.append(f"- **Cell Fold**: {labeled_cell['cell_fold']}")
         st.markdown("\n".join(cell_info))
 
-        if labeled_cell.get('propagated_cells'):
+        if labeled_cell.get("propagated_cells"):
             st.markdown("**Propagated to:**")
-            for prop in labeled_cell['propagated_cells']:
-                confidence_pct = int(prop.get('confidence', 0) * 100)
+            for prop in labeled_cell["propagated_cells"]:
+                confidence_pct = int(prop.get("confidence", 0) * 100)
                 prop_info = []
-                prop_info.append(f"- \U0001f539 Table: `{prop.get('table', 'Unknown')}`")
-                if prop.get('row') is not None:
+                prop_info.append(
+                    f"- \U0001f539 Table: `{prop.get('table', 'Unknown')}`"
+                )
+                if prop.get("row") is not None:
                     prop_info.append(f"  - Row: {prop['row']}")
-                if prop.get('col'):
+                if prop.get("col"):
                     prop_info.append(f"  - Column: `{prop['col']}`")
-                if prop.get('val') is not None:
+                if prop.get("val") is not None:
                     prop_info.append(f"  - Value: `{prop['val']}`")
                 prop_info.append(f"  - Confidence: {confidence_pct}%")
-                if prop.get('reason'):
+                if prop.get("reason"):
                     prop_info.append(f"  - Reason: {prop['reason']}")
                 st.markdown("\n".join(prop_info))
         else:
             st.info("No cells were propagated from this label")
 
 # Save propagated errors to pipeline configuration only once
-if "pipeline_path" in st.session_state and not st.session_state.get("propagation_saved"):
+if "pipeline_path" in st.session_state and not st.session_state.get(
+    "propagation_saved"
+):
     cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
     if os.path.exists(cfg_path):
         with open(cfg_path, "r") as f:
@@ -118,7 +125,7 @@ if "pipeline_path" in st.session_state and not st.session_state.get("propagation
                     propagated_errors[table] = []
                 error_info = {
                     "confidence": prop.get("confidence", 0.5),
-                    "source": prop.get("reason", "Unknown")
+                    "source": prop.get("reason", "Unknown"),
                 }
                 if prop.get("row") is not None:
                     error_info["row"] = prop["row"]
@@ -133,17 +140,26 @@ if "pipeline_path" in st.session_state and not st.session_state.get("propagation
             "Precision": round(random.uniform(0.7, 0.9), 2),
             "Recall": round(random.uniform(0.7, 0.9), 2),
         }
-        metrics["F1"] = round(2 * (metrics["Precision"] * metrics["Recall"]) / (metrics["Precision"] + metrics["Recall"]), 2)
+        metrics["F1"] = round(
+            2
+            * (metrics["Precision"] * metrics["Recall"])
+            / (metrics["Precision"] + metrics["Recall"]),
+            2,
+        )
 
         results_entry = {
             "Time": current_time,
             "propagated_errors": propagated_errors,
-            "metrics": metrics
+            "metrics": metrics,
         }
 
         if "results" not in cfg:
             cfg["results"] = []
-        if cfg["results"] and cfg["results"][-1].get("Time", "").split(" ")[0] == current_time.split(" ")[0]:
+        if (
+            cfg["results"]
+            and cfg["results"][-1].get("Time", "").split(" ")[0]
+            == current_time.split(" ")[0]
+        ):
             cfg["results"][-1] = results_entry
         else:
             cfg["results"].append(results_entry)

@@ -17,7 +17,7 @@ __all__ = [
     "render_restart_expander",
     "render_inline_restart_button",
     "get_datasets_path",
-    "load_clean_table",
+    "load_dirty_table",
     "load_pipeline_config",
     "save_pipeline_config",
     "update_domain_folds_in_config",

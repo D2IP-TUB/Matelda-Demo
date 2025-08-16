@@ -7,19 +7,12 @@ import pandas as pd
 import streamlit as st
 from backend import backend_qbf
 from components import (
-    (
-   
     apply_base_styles,
-   
     apply_folding_styles,
-   
     get_datasets_path,
-   
     load_dirty_table,
-    render_sidebar,
-),
-    render_restart_expander,
     render_inline_restart_button,
+    render_sidebar,
 )
 
 # Page setup
@@ -31,7 +24,8 @@ apply_base_styles()
 apply_folding_styles()
 
 # Custom CSS for small show more button
-st.markdown("""
+st.markdown(
+    """
 <style>
 .small-show-more button {
     font-size: 10px !important;
@@ -48,7 +42,9 @@ st.markdown("""
     border-color: #9ca3af !important;
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # Sidebar navigation
 render_sidebar()
@@ -379,7 +375,9 @@ for dom, folds in st.session_state.cell_folds.items():
         if visible_key not in st.session_state:
             st.session_state[visible_key] = 3
         # Clamp in case fold sizes change
-        st.session_state[visible_key] = max(0, min(st.session_state[visible_key], total_cells))
+        st.session_state[visible_key] = max(
+            0, min(st.session_state[visible_key], total_cells)
+        )
         show_upto = st.session_state[visible_key]
 
         for cell_idx, cell in enumerate(cell_list[:show_upto]):
@@ -414,11 +412,15 @@ for dom, folds in st.session_state.cell_folds.items():
             btn_row = st.columns([4, action_col_width])
             with btn_row[0]:
                 st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
-                if st.button("+ show more cells", key=f"show_more_{fname}", use_container_width=False):
+                if st.button(
+                    "+ show more cells",
+                    key=f"show_more_{fname}",
+                    use_container_width=False,
+                ):
                     # Update visible cells and immediately rerun to reflect change
                     st.session_state[visible_key] = min(total_cells, show_upto + 5)
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
@@ -540,7 +542,9 @@ nav_cols = st.columns([1, 1, 1], gap="small")
 
 # Restart: confirmation dialog to go to app.py
 with nav_cols[0]:
-    render_inline_restart_button(page_id="quality_based_folding", use_container_width=True)
+    render_inline_restart_button(
+        page_id="quality_based_folding", use_container_width=True
+    )
 
 # Back: to Domain Based Folding
 if nav_cols[1].button("Back", key="qbf_back", use_container_width=True):

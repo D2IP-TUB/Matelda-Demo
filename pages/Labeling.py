@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 import streamlit as st
 from backend import backend_label_propagation, backend_sample_labeling
 from components import apply_base_styles, get_datasets_path, render_sidebar
+from components.restart import render_inline_restart_button
 from streamlit_swipecards import streamlit_swipecards
 
 # Page setup
