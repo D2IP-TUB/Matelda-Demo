@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 import streamlit as st
-from components import apply_base_styles, render_sidebar
+from components import apply_base_styles, render_inline_restart_button, render_sidebar
 
 # from streamlit_social_share import streamlit_social_share
 
@@ -267,3 +267,15 @@ if dataset_configured:
     st.code(share_text, language=None)
 
 st.balloons()
+
+# Navigation: Restart | Back (no Next since this is the final page)
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="results", use_container_width=True)
+
+# Back: to Error Detection
+if nav_cols[1].button("Back", key="results_back", use_container_width=True):
+    st.switch_page("pages/ErrorDetection.py")

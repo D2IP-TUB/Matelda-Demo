@@ -3,7 +3,7 @@ import os
 import json
 import time
 import random
-from components import render_sidebar, apply_base_styles
+from components import render_sidebar, apply_base_styles, render_restart_expander, render_inline_restart_button
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Propagated Errors", layout="wide")
@@ -152,5 +152,16 @@ if "pipeline_path" in st.session_state and not st.session_state.get("propagation
     st.session_state.propagation_saved = True
 
 st.markdown("---")
-if st.button("Next"):
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="propagated_errors", use_container_width=True)
+
+# Back: to Labeling
+if nav_cols[1].button("Back", key="prop_back", use_container_width=True):
+    st.switch_page("pages/Labeling.py")
+
+# Next: to Error Detection
+if nav_cols[2].button("Next", key="prop_next", use_container_width=True):
     st.switch_page("pages/ErrorDetection.py")

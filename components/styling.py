@@ -9,8 +9,30 @@ def apply_base_styles():
     st.markdown(
         """
         <style>
+          /* Aggressively hide default Streamlit sidebar navigation */
           [data-testid="stSidebarNav"] {
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+          }
+          
+          /* Hide any Streamlit navigation elements */
+          .css-1d391kg, .css-1vencpc, .css-1lcbmhc, .css-17eq0hr {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+          }
+          
+          /* Prevent any sidebar navigation from appearing during page load */
+          .stApp [data-testid="stSidebarNav"] {
+            display: none !important;
+          }
+          
+          /* Ensure fast rendering of custom sidebar content */
+          .sidebar-nav {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
           }
 
           [data-testid="stHorizontalBlock"] {
@@ -61,6 +83,21 @@ def apply_folding_styles():
         div[data-testid="baseButton-primary"] > button {
             background-color: #ff4b4b;
             color: white;
+        }
+
+        /* Distinct style for the per-fold "Show more" control */
+        .show-more-container button {
+            background-color: #0f62fe !important; /* IBM blue for contrast */
+            color: #ffffff !important;
+            border: 1px solid #0b5bd3 !important;
+            box-shadow: none !important;
+        }
+        .show-more-container button:hover {
+            background-color: #0b5bd3 !important;
+            border-color: #0949a6 !important;
+        }
+        .show-more-container [data-testid="stButton"] {
+            width: 100% !important;
         }
         </style>
         """,

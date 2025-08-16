@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import zipfile
 import shutil
-from components import render_sidebar, apply_base_styles, get_datasets_path, load_pipeline_config, save_pipeline_config
+from components import render_sidebar, apply_base_styles, get_datasets_path, load_pipeline_config, save_pipeline_config, render_inline_restart_button
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Configurations", layout="wide")
@@ -310,9 +310,21 @@ def save_config_to_json(config, folder):
     save_pipeline_config(folder, config)
 
 # ----------------------------
-# Save and Continue Button
+# Navigation Buttons
 # ----------------------------
-if st.button("Save and Continue"):
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="configurations", use_container_width=True)
+
+# Back: to main app
+if nav_cols[1].button("Back", key="config_back", use_container_width=True):
+    st.switch_page("app.py")
+
+# Next: Save and Continue
+if nav_cols[2].button("Next", key="config_next", use_container_width=True):
     if pipeline_choice == "Use Existing Pipeline":
         # Check if the placeholder is still selected
         if st.session_state.selected_pipeline == placeholder:

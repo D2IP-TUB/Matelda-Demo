@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import streamlit as st
 from backend import backend_pull_errors
-from components import apply_base_styles, render_sidebar
+from components import apply_base_styles, render_inline_restart_button, render_sidebar
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -191,3 +191,40 @@ if st.session_state.error_detection_completed:
         st.switch_page("pages/Results.py")
 else:
     st.markdown("*Complete error detection to proceed to results.*")
+    st.markdown(
+        "The intensity of the red highlighting indicates the confidence level of the error detection (darker = higher confidence)"
+    )
+
+    for table, errors in propagated_errors.items():
+        with st.expander(f"📊 {table} ({len(errors)} potential errors)"):
+            styled_df = display_table_with_errors(table, errors)
+            if styled_df is not None:
+                st.dataframe(styled_df)
+
+                # Display error details
+                st.markdown("#### Error Details:")
+                for error in errors:
+                    confidence_percentage = int(error["confidence"] * 100)
+                    source = error.get("source", "Unknown")
+                    st.markdown(f"""
+                    - **Cell**: Row {error["row"]}, Column `{error["col"]}`
+                    - **Value**: `{error["val"]}`
+                    - **Confidence**: {confidence_percentage}%
+                    - **Source**: {source}
+                    ---
+                    """)
+
+st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
+
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="error_detection", use_container_width=True)
+
+# Back: to Propagated Errors
+if nav_cols[1].button("Back", key="err_back", use_container_width=True):
+    st.switch_page("pages/PropagatedErrors.py")
+
+# Next: to Results
+if nav_cols[2].button("Next", key="err_next", use_container_width=True):
+    st.switch_page("pages/Results.py")

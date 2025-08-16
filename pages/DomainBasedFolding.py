@@ -5,7 +5,12 @@ import time
 import pandas as pd
 import streamlit as st
 from backend import backend_dbf
-from components import apply_base_styles, apply_folding_styles, render_sidebar
+from components import (
+    apply_base_styles,
+    apply_folding_styles,
+    render_inline_restart_button,
+    render_sidebar,
+)
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -179,8 +184,6 @@ if st.session_state.get("run_folding"):
             else:
                 table_cols[1].empty()
 
-    st.markdown("---")
-
     # Global Confirm Merge: if merge mode is active and more than one fold is selected.
     if st.session_state.merge_mode and len(st.session_state.selected_folds) > 1:
         merge_confirm_cols = st.columns([4, 1])
@@ -194,7 +197,6 @@ if st.session_state.get("run_folding"):
             st.session_state.selected_folds = []
             st.session_state.merge_mode = False
             st.rerun()
-        st.markdown("---")
 
     # Global Confirm Split: if split mode is active and at least one table is selected.
     if st.session_state.global_split_mode:
@@ -237,8 +239,22 @@ if st.session_state.get("run_folding"):
                 st.rerun()
             st.markdown("---")
 
-    # Button to save the current domain fold structure to the pipeline's configurations.json file.
-    if st.button("Save Domain Folds and Continue"):
+    # Navigation row: Restart | Back | Next
+    st.markdown("---")
+    nav_cols = st.columns([1, 1, 1], gap="small")
+
+    # Restart: confirmation dialog to go to app.py
+    with nav_cols[0]:
+        render_inline_restart_button(
+            page_id="domain_based_folding", use_container_width=True
+        )
+
+    # Back: to Configurations
+    if nav_cols[1].button("Back", key="dbf_back", use_container_width=True):
+        st.switch_page("pages/Configurations.py")
+
+    # Next: Save and Continue
+    if nav_cols[2].button("Next", key="dbf_next", use_container_width=True):
         if "pipeline_path" in st.session_state:
             pipeline_config_path = os.path.join(
                 st.session_state.pipeline_path, "configurations.json"

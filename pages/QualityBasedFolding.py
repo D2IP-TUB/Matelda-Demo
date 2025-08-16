@@ -7,11 +7,19 @@ import pandas as pd
 import streamlit as st
 from backend import backend_qbf
 from components import (
+    (
+   
     apply_base_styles,
+   
     apply_folding_styles,
+   
     get_datasets_path,
+   
     load_dirty_table,
     render_sidebar,
+),
+    render_restart_expander,
+    render_inline_restart_button,
 )
 
 # Page setup
@@ -21,6 +29,26 @@ st.title("Quality Based Folding")
 # Apply styles
 apply_base_styles()
 apply_folding_styles()
+
+# Custom CSS for small show more button
+st.markdown("""
+<style>
+.small-show-more button {
+    font-size: 10px !important;
+    padding: 2px 8px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    border-radius: 12px !important;
+    background-color: #f0f2f6 !important;
+    border: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+}
+.small-show-more button:hover {
+    background-color: #e5e7eb !important;
+    border-color: #9ca3af !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Sidebar navigation
 render_sidebar()
@@ -345,7 +373,16 @@ for dom, folds in st.session_state.cell_folds.items():
         else:
             fold_cols[1].empty()
 
-        for cell_idx, cell in enumerate(cell_list):
+        # Limit initial cells shown and add incremental reveal button
+        visible_key = f"visible_cells_{fname}"
+        total_cells = len(cell_list)
+        if visible_key not in st.session_state:
+            st.session_state[visible_key] = 3
+        # Clamp in case fold sizes change
+        st.session_state[visible_key] = max(0, min(st.session_state[visible_key], total_cells))
+        show_upto = st.session_state[visible_key]
+
+        for cell_idx, cell in enumerate(cell_list[:show_upto]):
             r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
             lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
             cell_cols = st.columns([4, action_col_width])
@@ -371,6 +408,17 @@ for dom, folds in st.session_state.cell_folds.items():
                     st.session_state.selected_cells_for_split[fname] = selected_cells
             else:
                 cell_cols[1].empty()
+
+        # Show more button per fold if more cells are available
+        if show_upto < total_cells:
+            btn_row = st.columns([4, action_col_width])
+            with btn_row[0]:
+                st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
+                if st.button("+ show more cells", key=f"show_more_{fname}", use_container_width=False):
+                    # Update visible cells and immediately rerun to reflect change
+                    st.session_state[visible_key] = min(total_cells, show_upto + 5)
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
@@ -448,7 +496,6 @@ if st.session_state.split_mode:
         for fold in st.session_state.selected_cells_for_split
     )
     if any_split:
-        st.markdown("---")
         split_confirm_cols = st.columns([4, 1])
         if split_confirm_cols[1].button(
             "Confirm Split", key="confirm_split", use_container_width=True
@@ -487,10 +534,20 @@ if st.session_state.split_mode:
             st.session_state.selected_cells_for_split = {}
             st.rerun()
 
+# Navigation row: Restart | Back | Next
 st.markdown("---")
+nav_cols = st.columns([1, 1, 1], gap="small")
 
-# Save folds
-if st.button("💾 Save Cell Folds and Continue", key="save_cell_folds"):
+# Restart: confirmation dialog to go to app.py
+with nav_cols[0]:
+    render_inline_restart_button(page_id="quality_based_folding", use_container_width=True)
+
+# Back: to Domain Based Folding
+if nav_cols[1].button("Back", key="qbf_back", use_container_width=True):
+    st.switch_page("pages/DomainBasedFolding.py")
+
+# Next: Save and Continue
+if nav_cols[2].button("Next", key="save_cell_folds", use_container_width=True):
     if "pipeline_path" in st.session_state:
         cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
         with open(cfg_path, "r") as f:

@@ -118,8 +118,18 @@ if st.session_state.run_quality_folding:
                 st.session_state.labeling_results[str(card_id)] = action == "right"
 
     st.markdown("---")
+    nav_cols = st.columns([1, 1, 1], gap="small")
 
-    if st.button("Next"):
+    # Restart: confirmation dialog to go to app.py
+    with nav_cols[0]:
+        render_inline_restart_button(page_id="labeling", use_container_width=True)
+
+    # Back: to Quality Based Folding
+    if nav_cols[1].button("Back", key="labeling_back", use_container_width=True):
+        st.switch_page("pages/QualityBasedFolding.py")
+
+    # Next: run propagation and continue
+    if nav_cols[2].button("Next", key="labeling_next", use_container_width=True):
         labeled_cells = []
         for cell in cards:
             is_error = not st.session_state.labeling_results.get(str(cell["id"]), False)
