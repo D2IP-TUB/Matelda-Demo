@@ -28,8 +28,10 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
         with open(cfg_path) as f:
             cfg = json.load(f)
         selected = cfg.get("selected_dataset")
+        labeling_budget = cfg.get("labeling_budget", 10)
         if selected:
             st.session_state.dataset_select = selected
+            st.session_state["budget_slider"] = labeling_budget
 
 # If dataset remains undefined, warn user and provide a navigation button
 if "dataset_select" not in st.session_state:
@@ -69,7 +71,7 @@ if "run_quality_folding" not in st.session_state:
 if not st.session_state.run_quality_folding:
     if st.button("Run Labeling"):
         with st.spinner("🔄 Processing... Please wait..."):
-            labeling_budget = st.session_state.get("labeling_budget", 10)
+            labeling_budget = st.session_state.get("budget_slider", 10)
             cell_folds = st.session_state.get("cell_folds", {})
             domain_folds = st.session_state.get("domain_folds", {})
             sampled_cells = backend_sample_labeling(
@@ -86,7 +88,7 @@ else:
     # Quality-based folding already completed but sampling might be missing
     if "sampled_cells" not in st.session_state:
         with st.spinner("🔄 Processing... Please wait..."):
-            labeling_budget = st.session_state.get("labeling_budget", 10)
+            labeling_budget = st.session_state.get("budget_slider", 10)
             cell_folds = st.session_state.get("cell_folds", {})
             domain_folds = st.session_state.get("domain_folds", {})
             sampled_cells = backend_sample_labeling(

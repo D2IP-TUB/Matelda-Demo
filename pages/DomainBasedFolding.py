@@ -29,8 +29,10 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
         with open(config_path) as f:
             config = json.load(f)
         selected = config.get("selected_dataset")
+        labeling_budget = config.get("labeling_budget", 10)
         if selected:
             st.session_state["dataset_select"] = selected
+            st.session_state["budget_slider"] = labeling_budget
 
 # If we still don't have a dataset configured, show a warning and redirect option
 if "dataset_select" not in st.session_state:
@@ -85,7 +87,7 @@ if st.button("▶️ Run Domain Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
         # Call the backend function to get domain folds
         labeling_budget = st.session_state.get(
-            "labeling_budget", 10
+            "budget_slider", 10
         )  # Default to 10 if not set
         result = backend_dbf(selected_dataset, labeling_budget)
         domain_folds = result["domain_folds"]

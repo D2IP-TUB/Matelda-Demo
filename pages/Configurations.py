@@ -1,10 +1,16 @@
-import streamlit as st
 import os
-import json
-import pandas as pd
-import zipfile
 import shutil
-from components import render_sidebar, apply_base_styles, get_datasets_path, load_pipeline_config, save_pipeline_config, render_inline_restart_button
+import zipfile
+
+import streamlit as st
+from components import (
+    apply_base_styles,
+    get_datasets_path,
+    load_pipeline_config,
+    render_inline_restart_button,
+    render_sidebar,
+    save_pipeline_config,
+)
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Configurations", layout="wide")
@@ -22,7 +28,11 @@ pipelines_folder = os.path.join(os.path.dirname(__file__), "../pipelines")
 if not os.path.exists(pipelines_folder):
     os.makedirs(pipelines_folder)
 
-existing_pipelines = [f for f in os.listdir(pipelines_folder) if os.path.isdir(os.path.join(pipelines_folder, f))]
+existing_pipelines = [
+    f
+    for f in os.listdir(pipelines_folder)
+    if os.path.isdir(os.path.join(pipelines_folder, f))
+]
 placeholder = "Click here to select existing pipeline"
 
 # Initialize state for new pipeline validation
@@ -41,10 +51,10 @@ def load_pipeline_config_ui():
     # Do nothing if the placeholder is still selected.
     if selected == placeholder:
         return
-    
+
     pipeline_path = os.path.join(pipelines_folder, selected)
     pipeline_config = load_pipeline_config(pipeline_path)
-    
+
     pipeline_dataset = pipeline_config.get("selected_dataset", None)
     # Get the dataset currently selected in the UI (from the selectbox, which writes to st.session_state.dataset_select)
     current_dataset = st.session_state.get("dataset_select")
@@ -65,6 +75,7 @@ def sync_input_to_slider():
     """Keep the slider in sync when the number input changes."""
     st.session_state.budget_slider = st.session_state.budget_input
 
+
 pipeline_choice = st.radio(
     "Do you want to use an existing pipeline or create a new one?",
     options=["Create New Pipeline", "Use Existing Pipeline"],
@@ -75,16 +86,16 @@ if pipeline_choice == "Use Existing Pipeline":
     # Show placeholder first, then existing pipelines.
     pipeline_options = [placeholder] + existing_pipelines
     selected_pipeline = st.selectbox(
-        "Select an existing pipeline:", 
-        options=pipeline_options, 
+        "Select an existing pipeline:",
+        options=pipeline_options,
         key="selected_pipeline",
-        on_change=load_pipeline_config_ui
+        on_change=load_pipeline_config_ui,
     )
-    
+
     # On first load, load configuration if not already set.
     if "budget_slider" not in st.session_state:
         load_pipeline_config_ui()
-    
+
     st.markdown("---")
     st.subheader("Labeling Budget")
     st.session_state.setdefault("budget_slider", 10)
@@ -123,7 +134,9 @@ else:
     st.subheader("Dataset Selection")
 
     # 1) Get datasets folder path using component function
-    datasets_folder = os.path.dirname(get_datasets_path(""))  # Get parent directory of datasets
+    datasets_folder = os.path.dirname(
+        get_datasets_path("")
+    )  # Get parent directory of datasets
 
     # 2) Initialize our session_state buckets (only happens once)
     if "processed_file_ids" not in st.session_state:
@@ -137,8 +150,8 @@ else:
     # 3) File uploader (always visible)
     st.markdown("##### Add Dataset (optional)")
     uploaded_file = st.file_uploader(
-        "Upload a zip file containing the dataset:", 
-        type=["zip"], 
+        "Upload a zip file containing the dataset:",
+        type=["zip"],
         key="dataset_zip_uploader",
     )
 
@@ -157,7 +170,11 @@ else:
                 zip_filename = uploaded_file.name
                 base_name = os.path.splitext(zip_filename)[0]
                 with zipfile.ZipFile(uploaded_file, "r") as zip_ref:
-                    entries = [info.filename for info in zip_ref.infolist() if info.filename and not info.filename.startswith("__MACOSX/")]
+                    entries = [
+                        info.filename
+                        for info in zip_ref.infolist()
+                        if info.filename and not info.filename.startswith("__MACOSX/")
+                    ]
                     top_dirs = {entry.split("/", 1)[0] for entry in entries}
                     if len(top_dirs) == 1:
                         inner_root = next(iter(top_dirs))
@@ -181,7 +198,7 @@ else:
                         for member in zip_ref.infolist():
                             member_name = member.filename
                             if member_name.startswith(inner_root):
-                                member_name = member_name[len(inner_root):].lstrip("/")
+                                member_name = member_name[len(inner_root) :].lstrip("/")
                             if not member_name:
                                 continue
                             target_path = os.path.join(new_dataset_path, member_name)
@@ -189,7 +206,10 @@ else:
                                 os.makedirs(target_path, exist_ok=True)
                             else:
                                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                                with zip_ref.open(member) as src, open(target_path, "wb") as dst:
+                                with (
+                                    zip_ref.open(member) as src,
+                                    open(target_path, "wb") as dst,
+                                ):
                                     shutil.copyfileobj(src, dst)
                     else:
                         zip_ref.extractall(new_dataset_path)
@@ -209,7 +229,7 @@ else:
     # 6) Now list all folders under "../datasets" (including ones you uploaded previously,
     #    plus any that already existed on disk before you ran this app).
     st.markdown("##### Select Dataset")
-    
+
     dataset_options = [
         d
         for d in os.listdir(datasets_folder)
@@ -222,10 +242,11 @@ else:
             "Select the dataset you want to use:",
             options=dataset_options,
             key="dataset_select",
-            label_visibility="visible"
+            label_visibility="visible",
         )
-        st.write(f"Here is some information about the selected dataset: `Insert Information`")
-
+        st.write(
+            "Here is some information about the selected dataset: `Insert Information`"
+        )
 
     st.markdown("---")
     st.subheader("Labeling Budget")
@@ -256,7 +277,7 @@ else:
         )
 
     labeling_budget = st.session_state.get("budget_slider", 10)
-    
+
     # ----------------------------
     # Suggest Unique Pipeline Folder Name at the Bottom
     # ----------------------------
@@ -267,8 +288,10 @@ else:
         """
         candidate_prefix = f"{dataset_name}-pipeline-"
         candidates = [
-            d for d in os.listdir(pipelines_dir)
-            if os.path.isdir(os.path.join(pipelines_dir, d)) and d.startswith(candidate_prefix)
+            d
+            for d in os.listdir(pipelines_dir)
+            if os.path.isdir(os.path.join(pipelines_dir, d))
+            and d.startswith(candidate_prefix)
         ]
         if not candidates:
             return f"{dataset_name}-pipeline-01"
@@ -283,20 +306,24 @@ else:
                     continue
             next_num = max_num + 1
             return f"{dataset_name}-pipeline-{next_num:02d}"
-    
+
     st.markdown("---")
     st.subheader("Pipeline Name")
-    default_pipeline_name = suggest_pipeline_folder_name(st.session_state.get("dataset_select", "dataset"), pipelines_folder)
+    default_pipeline_name = suggest_pipeline_folder_name(
+        st.session_state.get("dataset_select", "dataset"), pipelines_folder
+    )
     new_pipeline_name = st.text_input(
-        "Enter a new pipeline name:", 
+        "Enter a new pipeline name:",
         value=default_pipeline_name,
-        key="new_pipeline_name"
+        key="new_pipeline_name",
     )
     # Real-time validation for existing pipeline name
     if new_pipeline_name:
         new_folder_path = os.path.join(pipelines_folder, new_pipeline_name)
         if os.path.exists(new_folder_path):
-            st.warning("A pipeline with that name already exists. Please choose a different name.")
+            st.warning(
+                "A pipeline with that name already exists. Please choose a different name."
+            )
             st.session_state.valid_pipeline_name = False
         else:
             st.session_state.valid_pipeline_name = True
@@ -305,9 +332,11 @@ else:
 # Helper Functions for Saving Configurations
 # ----------------------------
 
+
 def save_config_to_json(config, folder):
     """Saves the configuration dictionary as configurations.json inside the specified folder."""
     save_pipeline_config(folder, config)
+
 
 # ----------------------------
 # Navigation Buttons
@@ -330,17 +359,25 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
         if st.session_state.selected_pipeline == placeholder:
             st.warning("Please select an existing pipeline before continuing.")
         else:
-            pipeline_folder = os.path.join(pipelines_folder, st.session_state.selected_pipeline)
+            pipeline_folder = os.path.join(
+                pipelines_folder, st.session_state.selected_pipeline
+            )
             st.session_state.pipeline_path = pipeline_folder
-            
+
+            # Ensure budget is saved to session state with a persistent key
+            current_budget = st.session_state.get("budget_slider", labeling_budget)
+            st.session_state.labeling_budget = current_budget
+
             # Load existing config and update it
             config_to_save = load_pipeline_config(pipeline_folder)
-            config_to_save["labeling_budget"] = st.session_state.get("budget_slider", labeling_budget)
+            config_to_save["labeling_budget"] = current_budget
             config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
-            
+
             # Save updated config
             save_pipeline_config(pipeline_folder, config_to_save)
-            st.success(f"Configurations updated in existing pipeline: {pipeline_folder}!")
+            st.success(
+                f"Configurations updated in existing pipeline: {pipeline_folder}!"
+            )
             st.switch_page("pages/DomainBasedFolding.py")
     else:
         # Create New Pipeline: Check for existing folder name
@@ -353,10 +390,17 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
             os.makedirs(new_folder_path)
             pipeline_folder = new_folder_path
             st.session_state.pipeline_path = pipeline_folder
+
+            # Ensure budget is saved to session state with a persistent key
+            current_budget = st.session_state.get("budget_slider", labeling_budget)
+            st.session_state.labeling_budget = current_budget
+
             config_to_save = {
                 "selected_dataset": st.session_state.get("dataset_select"),
-                "labeling_budget": st.session_state.get("budget_slider", labeling_budget),
+                "labeling_budget": current_budget,
             }
             save_config_to_json(config_to_save, pipeline_folder)
-            st.success(f"New pipeline created and configurations saved in {pipeline_folder}!")
+            st.success(
+                f"New pipeline created and configurations saved in {pipeline_folder}!"
+            )
             st.switch_page("pages/DomainBasedFolding.py")
