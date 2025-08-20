@@ -62,6 +62,7 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
         "highlight_columns": [{"column": column}],
         "center_table_row": row,
         "center_table_column": column,
+        "pills": cell.get("strategies", []),
     }
 
 

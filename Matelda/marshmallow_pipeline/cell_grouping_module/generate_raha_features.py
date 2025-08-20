@@ -7,7 +7,7 @@ import os
 import pickle
 import random
 import re
-import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -133,6 +133,24 @@ def _strategy_runner_process(self, args):
                 outputted_cells[(i, l_j)] = "LRVD"
                 outputted_cells[(i, r_j)] = "RRVD"
 
+    elif algorithm == "TypoD":
+        cell_values_dict = {}
+        all_cells = []
+        # get all cells in the table
+        for i, row in d.dataframe.iterrows():
+            all_cells.append(" ".join(row.values.tolist()))
+            for j, col in enumerate(row.index):
+                cell_values_dict[(i, j)] = row[col]
+
+        words_set = set(all_cells)
+        if "nan" in words_set:
+            words_set.remove("nan")
+
+        miss_spelled_words = check_spelling(all_cells, words_set, checker="aspell")
+        for cell in cell_values_dict:
+            if cell_values_dict[cell] in miss_spelled_words:
+                outputted_cells[cell] = "TypoD"
+
     detected_cells_list = list(outputted_cells.keys())
     strategy_profile = {
         "name": strategy_name,
@@ -162,12 +180,35 @@ def _strategy_runner_process(self, args):
     return strategy_profile
 
 
+def check_spelling(words, words_set, checker="aspell"):
+    # Prepare the input for the subprocess
+    input_text = "\n".join(words_set)
+
+    # Determine the command based on the checker
+    if checker == "aspell":
+        spell_check_command = [checker, "list"]
+    elif checker == "hunspell":
+        spell_check_command = [checker, "-l"]
+    else:
+        raise ValueError("Invalid spell checker specified. Use 'aspell' or 'hunspell'.")
+
+    # Run the spell checker as a subprocess
+    result = subprocess.run(
+        spell_check_command, input=input_text, text=True, capture_output=True
+    )
+
+    # The output contains misspelled words, one per line
+    misspelled_words = set(result.stdout.splitlines())
+
+    return misspelled_words
+
+
 def run_strategies(self, d):
     """
     This method runs (all or the promising) strategies.
     """
     sp_folder_path = os.path.join(d.results_folder, "strategy-profiling")
-    pool = multiprocessing.Pool()
+
     if not self.STRATEGY_FILTERING:
         if os.path.exists(sp_folder_path):
             sys.stderr.write(
@@ -179,6 +220,7 @@ def run_strategies(self, d):
                 if not strategy_file.startswith(".")
             ]
         else:
+            pool = multiprocessing.Pool()
             if self.SAVE_RESULTS:
                 os.mkdir(sp_folder_path)
             algorithm_and_configurations = []
@@ -193,7 +235,9 @@ def run_strategies(self, d):
                                 ["0.1", "0.3", "0.5", "0.7", "0.9"],
                             )
                         )
-                        + list(
+                    ] + [
+                        list(a)
+                        for a in list(
                             itertools.product(
                                 ["gaussian"],
                                 [
@@ -217,6 +261,58 @@ def run_strategies(self, d):
                         ]
                     )
                     logging.debug("OD configurations: %s", len(configuration_list))
+
+                elif algorithm_name == "ODH":
+                    configuration_list = [
+                        list(a)
+                        for a in list(
+                            itertools.product(
+                                ["histogram"],
+                                ["0.1", "0.3", "0.5", "0.7", "0.9"],
+                                ["0.1", "0.3", "0.5", "0.7", "0.9"],
+                            )
+                        )
+                    ]
+                    algorithm_and_configurations.extend(
+                        [
+                            [d, "OD", configuration]
+                            for configuration in configuration_list
+                        ]
+                    )
+                    logging.debug(
+                        "OD-Histogram configurations: %s", len(configuration_list)
+                    )
+
+                elif algorithm_name == "ODG":  # 34
+                    configuration_list = [
+                        list(a)
+                        for a in list(
+                            itertools.product(
+                                ["gaussian"],
+                                [
+                                    "1.0",
+                                    "1.3",
+                                    "1.5",
+                                    "1.7",
+                                    "2.0",
+                                    "2.3",
+                                    "2.5",
+                                    "2.7",
+                                    "3.0",
+                                ],
+                            )
+                        )
+                    ]
+
+                    algorithm_and_configurations.extend(
+                        [
+                            [d, "OD", configuration]
+                            for configuration in configuration_list
+                        ]
+                    )
+                    logging.debug(
+                        "OD-Gaussian configurations: %s", len(configuration_list)
+                    )
 
                 elif algorithm_name == "RVD":
                     configuration_list = []
@@ -244,6 +340,16 @@ def run_strategies(self, d):
                     logging.debug(
                         "RVD_orig configurations: %s", len(configuration_list)
                     )
+                elif algorithm_name == "TypoD":
+                    configuration_list = []
+                    configuration_list.append("TypoD")
+                    algorithm_and_configurations.extend(
+                        [
+                            [d, algorithm_name, configuration]
+                            for configuration in configuration_list
+                        ]
+                    )
+                    logging.debug("TypoD configurations: %s", len(configuration_list))
 
             random.shuffle(algorithm_and_configurations)
             _strategy_runner_process_ = partial(_strategy_runner_process, d)
@@ -273,6 +379,7 @@ def generate_features(self, d):
     """
     columns_features_list = []
     column_feature_names = []
+    cells_to_strategies = {}
     for j in range(d.dataframe.shape[1]):
         strategy_profiles = []
         parsed_keys = []
@@ -294,6 +401,7 @@ def generate_features(self, d):
                 strategy_profiles.append(strategy_profile)
                 parsed_keys.append(strategy)
                 strategy_profile_dict_all_without_rvd[str(strategy)] = strategy_profile
+
         sorted_keys = sorted(parsed_keys)
         sorted_strategy_profiles = dict()
         RVD_orig_outputs = {}
@@ -394,6 +502,14 @@ def generate_features(self, d):
     d.column_features = columns_features_list
     d.column_feature_names = column_feature_names
 
+    for strategy_profile in d.strategy_profiles:
+        for cell in strategy_profile["outputted_cells"]:
+            if cell not in cells_to_strategies:
+                cells_to_strategies[cell] = []
+            cells_to_strategies[cell].append(strategy_profile["name"])
+    d.cell_to_strategies = cells_to_strategies
+    logging.info("Cell to strategies mapping is done")
+
 
 def get_bucket(number):
     if number <= 0.20:
@@ -408,12 +524,12 @@ def get_bucket(number):
         return 4
 
 
-def generate_raha_features(parent_path, dataset_name):
+def generate_raha_features(parent_path, dataset_name, raha_config):
     sp_path = (
         parent_path + "/" + dataset_name + "/" + "raha-baran-results-" + dataset_name
     )
-    if os.path.exists(sp_path):
-        shutil.rmtree(sp_path)
+    # if os.path.exists(sp_path):
+    #     shutil.rmtree(sp_path)
 
     detect = raha.detection.Detection()
     dataset_dictionary = {
@@ -422,13 +538,13 @@ def generate_raha_features(parent_path, dataset_name):
         "clean_path": parent_path + "/" + dataset_name + "/{}".format("clean.csv"),
     }
     detect.VERBOSE = False
-    detect.SAVE_RESULTS = 0
+    detect.SAVE_RESULTS = raha_config["save_results"]
     detect.STRATEGY_FILTERING = 0
-    detect.ERROR_DETECTION_ALGORITHMS = ["OD", "RVD", "RVD_orig"]
+    detect.ERROR_DETECTION_ALGORITHMS = raha_config["error_detection_algorithms"]
     d = detect.initialize_dataset(dataset_dictionary)
     d.VERBOSE = False
-    d.SAVE_RESULTS = 0
-    d.ERROR_DETECTION_ALGORITHMS = ["OD", "RVD", "RVD_orig"]
+    d.SAVE_RESULTS = raha_config["save_results"]
+    d.ERROR_DETECTION_ALGORITHMS = raha_config["error_detection_algorithms"]
     d.STRATEGY_FILTERING = 0
     logging.debug("Dataset is initialized.")
     logging.debug("Dataset name: %s", d.name)
@@ -445,4 +561,4 @@ def generate_raha_features(parent_path, dataset_name):
     t2 = time.time()
     logging.debug("Features are generated.")
     logging.debug("Time - generate features: %s", str(t2 - t1))
-    return d.column_features, d.column_feature_names
+    return d.column_features, d.column_feature_names, d.cell_to_strategies

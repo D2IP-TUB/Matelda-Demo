@@ -3,6 +3,9 @@ from typing import Dict, List
 
 import numpy as np
 from backend.fold_system.core.cell import Cell
+from backend.fold_system.core.error_detection_strategy_parser import (
+    ErrorDetectionParser,
+)
 from Matelda.marshmallow_pipeline.cell_grouping_module.generate_raha_features import (
     generate_raha_features,
 )
@@ -25,11 +28,13 @@ class RAHAFeatureExtractor:
             logging.info(f"Extracting RAHA features for table {table_id}")
 
             # Read table from disk again
-            column_features, column_feature_names = generate_raha_features(
-                self.base_path, table_id
+            column_features, column_feature_names, cell_to_strategies = (
+                generate_raha_features(self.base_path, table_id, self.raha_config)
             )
             # Populate cell features
-            self._populate_cell_features(table_cells, column_features)
+            self._populate_cell_features(
+                table_cells, column_features, cell_to_strategies
+            )
 
         return domain_cells
 
@@ -43,10 +48,13 @@ class RAHAFeatureExtractor:
         return tables
 
     def _populate_cell_features(
-        self, table_cells: List[Cell], column_features: List[np.ndarray]
+        self,
+        table_cells: List[Cell],
+        column_features: List[np.ndarray],
+        cell_to_strategies: Dict[tuple, List[str]],
     ):
         """Populate cell.features from RAHA column_features"""
-
+        parser = ErrorDetectionParser()
         for cell in table_cells:
             if cell.col_idx < len(column_features):
                 col_features = column_features[cell.col_idx]
@@ -56,6 +64,11 @@ class RAHAFeatureExtractor:
                     cell.features = []
             else:
                 cell.features = []
+            if (cell.col_idx, cell.row_idx) in cell_to_strategies:
+                strategies = cell_to_strategies[(cell.col_idx, cell.row_idx)]
+                cell.strategies = parser.parse(strategies)
+            else:
+                cell.strategies = []
 
         features_populated = sum(1 for cell in table_cells if cell.features)
         logging.info(

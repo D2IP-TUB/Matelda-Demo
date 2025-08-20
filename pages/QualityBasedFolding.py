@@ -185,6 +185,7 @@ if st.button("▶️ Run Quality Based Folding"):
             selected_dataset=dataset,
             labeling_budget=labeling_budget,
             domain_folds=st.session_state.domain_folds,
+            selected_strategies=cfg["selected_strategies"],
         )
 
         # Store the cell folds in session state
@@ -222,13 +223,13 @@ def show_cell_dialog(cell, fold_name):
         st.markdown(f"### 📄 Table: `{tbl}`")
         st.markdown(f"**🔹 Column:** `{c}`  \n**🔹 Row Index:** `{r}`")
         st.markdown("---")
-        st.markdown("### 🧠 Error Detection Strategies:")
-        if "strategies" in cell:
-            for strategy, is_active in cell["strategies"].items():
-                status = "✅" if is_active else "❌"
+        st.markdown("### 🔍 Error Detection Results:")
+        if "strategies" in cell and len(cell["strategies"]) > 0:
+            for strategy in cell["strategies"]:
+                status = "❌"
                 st.markdown(f"{status} {strategy}")
         else:
-            st.info("🧬 No strategies available for this cell")
+            st.info("✅ This cell passed all error detection checks")
         st.markdown("---")
         st.markdown("### 🔍 Full Table Preview with Highlight")
         df_preview = load_dirty_table(tbl, datasets_dir)

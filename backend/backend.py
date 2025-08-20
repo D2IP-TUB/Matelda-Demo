@@ -27,11 +27,10 @@ def get_available_strategies() -> List[str]:
     mechanism once strategies are implemented.
     """
     return [
-        "Uncertainty Sampling",
-        "Diversity Sampling",
-        "Core-Set Selection",
-        "Margin Confidence",
-        "Entropy Ranking",
+        "Outlier Detector - Histogram",
+        "Outlier Detector - Gaussian",
+        "Typo Detector",
+        "Rule Violation Detector",
     ]
 
 
@@ -100,6 +99,7 @@ def backend_qbf(
     selected_dataset: str,
     labeling_budget: int,
     domain_folds: Dict[str, List[str]],
+    selected_strategies: List[str],
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     """
     Backend function that performs quality-based folding with caching support.
@@ -130,8 +130,18 @@ def backend_qbf(
     raha_config = {
         "save_results": False,
         "strategy_filtering": False,
-        "error_detection_algorithms": ["OD", "RVD", "RVD_orig"],
+        "error_detection_algorithms": [],
     }
+    if selected_strategies:
+        if "Outlier Detector - Histogram" in selected_strategies:
+            raha_config["error_detection_algorithms"].append("ODH")
+        if "Outlier Detector - Gaussian" in selected_strategies:
+            raha_config["error_detection_algorithms"].append("ODG")
+        if "Rule Violation Detector" in selected_strategies:
+            raha_config["error_detection_algorithms"].append("RVD")
+            raha_config["error_detection_algorithms"].append("RVD_orig")
+        if "Typo Detector" in selected_strategies:
+            raha_config["error_detection_algorithms"].append("TypoD")
 
     try:
         logging.info("Cache miss - computing quality folding from scratch...")
@@ -193,7 +203,8 @@ def backend_qbf(
                         "row": cell.row_idx,
                         "col": cell.col_name,
                         "val": cell.dirty_value,
-                        "strategies": _convert_features_to_strategies(cell.features),
+                        "features": _convert_features_to_strategies(cell.features),
+                        "strategies": cell.strategies,
                         "selected_for_labeling": is_selected_for_labeling,
                         "assigned_budget": assigned_budget if i == 0 else None,
                     }

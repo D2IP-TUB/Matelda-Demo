@@ -35,9 +35,9 @@ class CellSampler:
                     # Extract features from strategies
                     cell_features = []
                     for cell_data in cells_data:
-                        strategies = cell_data.get("strategies", {})
+                        features = cell_data.get("features", {})
                         feature_vector = [
-                            float(strategies.get(f"strategy{i:02d}", 0))
+                            float(features.get(f"strategy{i:02d}", 0))
                             for i in range(20)
                         ]
                         cell_features.append(feature_vector)
@@ -66,7 +66,8 @@ class CellSampler:
                                 "domain_fold": domain_name,
                                 "cell_fold": cell_fold_name,
                                 "cell_fold_label": "neutral",
-                                "strategies": cell_data.get("strategies", {}),
+                                "features": cell_data.get("features", {}),
+                                "strategies": cell_data.get("strategies", []),
                             }
                             sampled_cells.append(sampled_cell)
                             sample_id += 1
