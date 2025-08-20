@@ -4,7 +4,12 @@ from components import apply_base_styles, render_sidebar
 
 cache_utils.set_cache_dir("/home/fatemeh/matelda-demo/temp-cache")
 
-st.set_page_config(page_title="Matelda", layout="wide")
+st.set_page_config(
+    page_title="Matelda", 
+    layout="wide",
+    page_icon="🔧",
+    initial_sidebar_state="expanded"
+)
 
 # Apply base styles
 apply_base_styles()

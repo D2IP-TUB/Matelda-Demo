@@ -4,7 +4,8 @@ from .backend import (
     backend_qbf,
     backend_sample_labeling,
     backend_label_propagation,
-    backend_pull_errors
+    backend_pull_errors,
+    get_available_strategies,
 )
 
 __all__ = [
@@ -12,5 +13,6 @@ __all__ = [
     'backend_qbf', 
     'backend_sample_labeling',
     'backend_label_propagation',
-    'backend_pull_errors'
+    'backend_pull_errors',
+    'get_available_strategies',
 ]

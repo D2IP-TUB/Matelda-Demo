@@ -20,6 +20,21 @@ from backend.fold_system.domain.domain_cell_fold import DomainCellFold
 from backend.fold_system.quality.quality_cell_fold import QualityCellFold
 
 
+def get_available_strategies() -> List[str]:
+    """Return a mock list of available error detection strategies.
+
+    This is a placeholder and should be replaced with a real discovery
+    mechanism once strategies are implemented.
+    """
+    return [
+        "Uncertainty Sampling",
+        "Diversity Sampling",
+        "Core-Set Selection",
+        "Margin Confidence",
+        "Entropy Ranking",
+    ]
+
+
 def backend_dbf(dataset: str, labeling_budget: int) -> dict:
     """
     Backend function that performs domain-based folding with caching.

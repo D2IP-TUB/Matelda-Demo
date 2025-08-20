@@ -5,7 +5,7 @@ import time
 import numpy as np
 import pandas as pd
 import streamlit as st
-from backend import backend_qbf
+from backend import backend_qbf, get_available_strategies
 from components import (
     apply_base_styles,
     apply_folding_styles,
@@ -88,6 +88,20 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
         if selected:
             st.session_state.dataset_select = selected
 
+# Ensure strategies selection is in session state (load from config if needed)
+if (
+    "selected_strategies" not in st.session_state
+    and "pipeline_path" in st.session_state
+):
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            st.session_state.selected_strategies = cfg.get("selected_strategies", [])
+        except Exception:
+            st.session_state.selected_strategies = []
+
 # If dataset is still not configured, inform the user and provide navigation
 if "dataset_select" not in st.session_state:
     st.warning("⚠️ Dataset not configured.")
@@ -142,7 +156,20 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
+# Strategies selection (pre-run)
+st.markdown("---")
+st.subheader("Error Detection Strategies")
+strategies = get_available_strategies()
+preselected = set(st.session_state.get("selected_strategies", []))
+selected = []
+for s in strategies:
+    checked = st.checkbox(s, value=(s in preselected), key=f"strategy_{s}")
+    if checked:
+        selected.append(s)
+st.session_state.selected_strategies = selected
+
 # Run quality-based folding
+st.markdown("---")
 if st.button("▶️ Run Quality Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
         # Get labeling budget from configuration
@@ -150,6 +177,8 @@ if st.button("▶️ Run Quality Based Folding"):
         with open(cfg_path) as f:
             cfg = json.load(f)
         labeling_budget = cfg.get("labeling_budget", 10)
+        # Persist current strategies selection
+        cfg["selected_strategies"] = st.session_state.get("selected_strategies", [])
 
         # Call the backend function to get cell folds
         cell_folds = backend_qbf(

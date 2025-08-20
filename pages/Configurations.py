@@ -2,7 +2,7 @@ import os
 import shutil
 import zipfile
 
-import streamlit as st
+from backend import get_available_strategies
 from components import (
     apply_base_styles,
     get_datasets_path,
@@ -61,9 +61,15 @@ def load_pipeline_config_ui():
     if current_dataset is None and pipeline_dataset:
         st.session_state["dataset_select"] = pipeline_dataset
         current_dataset = pipeline_dataset
-    # Update the budget regardless
-    st.session_state.budget_slider = pipeline_config.get("labeling_budget", 10)
+    # Update the budget from config. Clamp slider to 100 but keep input full value.
+    _cfg_budget = pipeline_config.get("labeling_budget", 10)
+    st.session_state.budget_slider = min(int(_cfg_budget), 100)
+    st.session_state.budget_input = int(_cfg_budget)
     st.session_state.preconfigured_dataset = pipeline_dataset
+    # Load previously selected strategies if available
+    st.session_state.selected_strategies = pipeline_config.get(
+        "selected_strategies", []
+    )
 
 
 def sync_slider_to_input():
@@ -72,8 +78,11 @@ def sync_slider_to_input():
 
 
 def sync_input_to_slider():
-    """Keep the slider in sync when the number input changes."""
-    st.session_state.budget_slider = st.session_state.budget_input
+    """Keep the slider in sync when the number input changes (clamped to 100)."""
+    try:
+        st.session_state.budget_slider = min(int(st.session_state.budget_input), 100)
+    except Exception:
+        st.session_state.budget_slider = 100
 
 
 pipeline_choice = st.radio(
@@ -117,14 +126,30 @@ if pipeline_choice == "Use Existing Pipeline":
         st.number_input(
             "Enter Labeling Budget",
             min_value=1,
-            max_value=100,
             step=1,
             key="budget_input",
             label_visibility="hidden",
             on_change=sync_input_to_slider,
         )
 
-    labeling_budget = st.session_state.get("budget_slider", 10)
+    # Use the number input as the source of truth
+    labeling_budget = st.session_state.get(
+        "budget_input", st.session_state.get("budget_slider", 10)
+    )
+
+    # ----------------------------
+    # Strategies Selection (Existing Pipeline)
+    # ----------------------------
+    st.markdown("---")
+    st.subheader("Error Detection Strategies")
+    strategies = get_available_strategies()
+    preselected = set(st.session_state.get("selected_strategies", []))
+    selected = []
+    for s in strategies:
+        checked = st.checkbox(s, value=(s in preselected), key=f"strategy_{s}")
+        if checked:
+            selected.append(s)
+    st.session_state.selected_strategies = selected
 else:
     # ----------------------------
     # Create New Pipeline: Dataset & Budget Selection
@@ -269,14 +294,30 @@ else:
         st.number_input(
             "Enter Labeling Budget",
             min_value=1,
-            max_value=100,
             step=1,
             key="budget_input",
             label_visibility="hidden",
             on_change=sync_input_to_slider,
         )
 
-    labeling_budget = st.session_state.get("budget_slider", 10)
+    # Use the number input as the source of truth
+    labeling_budget = st.session_state.get(
+        "budget_input", st.session_state.get("budget_slider", 10)
+    )
+
+    # ----------------------------
+    # Strategies Selection (New Pipeline)
+    # ----------------------------
+    st.markdown("---")
+    st.subheader("Error Detection Strategies")
+    strategies = get_available_strategies()
+    preselected = set(st.session_state.get("selected_strategies", []))
+    selected = []
+    for s in strategies:
+        checked = st.checkbox(s, value=(s in preselected), key=f"strategy_{s}")
+        if checked:
+            selected.append(s)
+    st.session_state.selected_strategies = selected
 
     # ----------------------------
     # Suggest Unique Pipeline Folder Name at the Bottom
@@ -370,8 +411,13 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
 
             # Load existing config and update it
             config_to_save = load_pipeline_config(pipeline_folder)
-            config_to_save["labeling_budget"] = current_budget
+            config_to_save["labeling_budget"] = st.session_state.get(
+                "budget_input", labeling_budget
+            )
             config_to_save["selected_dataset"] = st.session_state.get("dataset_select")
+            config_to_save["selected_strategies"] = st.session_state.get(
+                "selected_strategies", []
+            )
 
             # Save updated config
             save_pipeline_config(pipeline_folder, config_to_save)
@@ -397,7 +443,10 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
 
             config_to_save = {
                 "selected_dataset": st.session_state.get("dataset_select"),
-                "labeling_budget": current_budget,
+                "labeling_budget": st.session_state.get(
+                    "budget_input", labeling_budget
+                ),
+                "selected_strategies": st.session_state.get("selected_strategies", []),
             }
             save_config_to_json(config_to_save, pipeline_folder)
             st.success(
