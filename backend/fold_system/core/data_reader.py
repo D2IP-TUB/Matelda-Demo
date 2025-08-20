@@ -43,7 +43,7 @@ class DataReader:
             encoding="latin-1",
             dtype=str,
             keep_default_na=False,
-        ).map(lambda x: self.value_normalizer(x) if isinstance(x, str) else x)
+        ).applymap(lambda x: self.value_normalizer(x) if isinstance(x, str) else x)
 
     def read_all_tables(
         self,

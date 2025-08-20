@@ -5,8 +5,7 @@ import os
 import pandas as pd
 import streamlit as st
 from components import apply_base_styles, render_inline_restart_button, render_sidebar
-
-# from streamlit_social_share import streamlit_social_share
+from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Results", layout="wide")
@@ -256,12 +255,12 @@ if dataset_configured:
 
     current_url = "https://www.tu.berlin/d2ip"
 
-    # shared = streamlit_social_share(
-    #     text=share_text,
-    #     url=current_url,
-    #     networks=["linkedin", "reddit", "email", "whatsapp", "telegram"],
-    #     key="shared"
-    # )
+    shared = streamlit_social_share(
+        text=share_text,
+        url=current_url,
+        networks=["linkedin", "reddit", "email", "whatsapp", "telegram"],
+        key="shared",
+    )
 
     st.markdown("**📋 Copy Share Text:**")
     st.code(share_text, language=None)

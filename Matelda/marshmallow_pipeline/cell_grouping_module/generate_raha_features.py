@@ -422,12 +422,12 @@ def generate_raha_features(parent_path, dataset_name):
         "clean_path": parent_path + "/" + dataset_name + "/{}".format("clean.csv"),
     }
     detect.VERBOSE = False
-    detect.SAVE_RESULTS = 1
+    detect.SAVE_RESULTS = 0
     detect.STRATEGY_FILTERING = 0
     detect.ERROR_DETECTION_ALGORITHMS = ["OD", "RVD", "RVD_orig"]
     d = detect.initialize_dataset(dataset_dictionary)
     d.VERBOSE = False
-    d.SAVE_RESULTS = 1
+    d.SAVE_RESULTS = 0
     d.ERROR_DETECTION_ALGORITHMS = ["OD", "RVD", "RVD_orig"]
     d.STRATEGY_FILTERING = 0
     logging.debug("Dataset is initialized.")

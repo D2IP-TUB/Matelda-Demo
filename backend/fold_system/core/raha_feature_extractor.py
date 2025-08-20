@@ -28,7 +28,6 @@ class RAHAFeatureExtractor:
             column_features, column_feature_names = generate_raha_features(
                 self.base_path, table_id
             )
-
             # Populate cell features
             self._populate_cell_features(table_cells, column_features)
 

@@ -134,7 +134,7 @@ def backend_qbf(
 
         # Perform quality folding for all domains
         all_quality_groups = {}
-        quality_fold = QualityCellFold(base_path, raha_config, n_cores=1)
+        quality_fold = QualityCellFold(base_path, raha_config, n_cores=os.cpu_count())
 
         for domain_fold_name, table_names in domain_folds.items():
             # Get cells for this domain
@@ -223,17 +223,6 @@ def _generate_cache_key(
     cache_hash = hashlib.md5(cache_string.encode()).hexdigest()[:12]
 
     return cache_hash
-
-
-def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
-    """Convert RAHA feature vector to strategy dictionary"""
-    strategies = {}
-
-    for i, feature_value in enumerate(features):
-        strategy_name = f"strategy{i:02d}"
-        strategies[strategy_name] = bool(feature_value > 0)
-
-    return strategies
 
 
 def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
