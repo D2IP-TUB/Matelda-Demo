@@ -351,12 +351,15 @@ def backend_sample_labeling(
                 for cell_data in cells_data:
                     if cell_data.get("selected_for_labeling", False):
                         sampled_cell = {
+                            "id": len(sampled_cells) + 1,  # Add this
+                            "name": f"{cell_fold_name} - {cell_data['table']}",  # Add this
                             "table": cell_data["table"],
                             "row": cell_data["row"],
                             "col": cell_data["col"],
                             "val": cell_data["val"],
                             "domain_fold": domain_name,
                             "cell_fold": cell_fold_name,
+                            "cell_fold_label": "neutral",  # Add this
                             "features": cell_data.get("features", {}),
                             "strategies": cell_data.get("strategies", []),
                         }
