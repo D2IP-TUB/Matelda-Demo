@@ -78,3 +78,34 @@ class QualityCellFold(BaseCellFold):
             quality_clusters[quality_name].append(valid_cells[i])
 
         return quality_clusters
+
+    def _cluster_cells_by_features_with_k(
+        self, cells: List[Cell], domain_name: str, k: int
+    ) -> Dict[str, List[Cell]]:
+        """Cluster cells using exactly k clusters"""
+        feature_vectors = []
+        valid_cells = []
+
+        for cell in cells:
+            if cell.features and len(cell.features) > 0:
+                feature_vectors.append(cell.features)
+                valid_cells.append(cell)
+
+        if len(feature_vectors) < 2:
+            return {"quality_0": cells}
+
+        X = np.array(feature_vectors)
+        n_clusters = min(k, len(feature_vectors))
+
+        clustering = MiniBatchKMeans(
+            n_clusters=n_clusters, batch_size=256 * self.n_cores, random_state=42
+        ).fit(X)
+
+        quality_clusters = {}
+        for i, cluster_id in enumerate(clustering.labels_):
+            quality_name = f"quality_{cluster_id}"
+            if quality_name not in quality_clusters:
+                quality_clusters[quality_name] = []
+            quality_clusters[quality_name].append(valid_cells[i])
+
+        return quality_clusters

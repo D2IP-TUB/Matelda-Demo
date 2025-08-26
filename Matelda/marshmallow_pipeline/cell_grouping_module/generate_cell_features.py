@@ -71,17 +71,17 @@ def generate_cell_features(
             low_memory=False,
             data_type="str",
         )
-        clean_df = read_csv(
-            os.path.join(table_dirs_path, "clean.csv"),
-            low_memory=False,
-            data_type="str",
-        )
+        # clean_df = read_csv(
+        #     os.path.join(table_dirs_path, "clean.csv"),
+        #     low_memory=False,
+        #     data_type="str",
+        # )
 
         logging.debug("Generating features for table: %s", table)
         table_tuples_dict[str(hashlib.md5(table.encode()).hexdigest())] = {
             "header": None,
             "tuples": {},
-            "clean": {},
+            # "clean": {},
         }
 
         table_tuples_dict[str(hashlib.md5(table.encode()).hexdigest())]["header"] = (
@@ -114,28 +114,28 @@ def generate_cell_features(
                 row_idx
             ] = dirty_df.iloc[row_idx].tolist()
 
-        dirty_df.columns = clean_df.columns
-        diff = dirty_df.compare(clean_df, keep_shape=True)
-        self_diff = diff.xs("self", axis=1, level=1)
-        other_diff = diff.xs("other", axis=1, level=1)
+        # dirty_df.columns = clean_df.columns
+        # diff = dirty_df.compare(clean_df, keep_shape=True)
+        # self_diff = diff.xs("self", axis=1, level=1)
+        # other_diff = diff.xs("other", axis=1, level=1)
         # Custom comparison. True (or 1) only when values are different and not both NaN.
-        label_df = (
-            (self_diff != other_diff) & ~(self_diff.isna() & other_diff.isna())
-        ).astype(int)
-        for col_idx, col_name in enumerate(label_df.columns):
-            for row_idx in range(len(label_df[col_name])):
-                features_dict[
-                    (
-                        hashlib.md5(table.encode()).hexdigest(),
-                        col_idx,
-                        row_idx,
-                        "gt",
-                    )
-                ] = label_df[col_name][row_idx]
-        for row_idx in range(len(dirty_df)):
-            table_tuples_dict[str(hashlib.md5(table.encode()).hexdigest())]["clean"][
-                row_idx
-            ] = clean_df.iloc[row_idx].tolist()
+        # label_df = (
+        #     (self_diff != other_diff) & ~(self_diff.isna() & other_diff.isna())
+        # ).astype(int)
+        # for col_idx, col_name in enumerate(label_df.columns):
+        #     for row_idx in range(len(label_df[col_name])):
+        #         features_dict[
+        #             (
+        #                 hashlib.md5(table.encode()).hexdigest(),
+        #                 col_idx,
+        #                 row_idx,
+        #                 "gt",
+        #             )
+        #         ] = label_df[col_name][row_idx]
+        # for row_idx in range(len(dirty_df)):
+        #     table_tuples_dict[str(hashlib.md5(table.encode()).hexdigest())]["clean"][
+        #         row_idx
+        #     ] = clean_df.iloc[row_idx].tolist()
         logging.debug("Table: %s", table)
     except Exception as e:
         logging.error(e)

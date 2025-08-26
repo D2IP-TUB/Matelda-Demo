@@ -10,12 +10,8 @@ from backend.cache_utils import (
     save_to_cache,
 )
 from backend.fold_system.core.backend_error_detection import backend_error_detection
-from backend.fold_system.core.cell_sampler import CellSampler
 from backend.fold_system.core.data_reader import DataReader
 from backend.fold_system.core.label_propagation import LabelPropagator
-from backend.fold_system.core.labeling_budget_distribution import (
-    LabelingBudgetDistributor,
-)
 from backend.fold_system.domain.domain_cell_fold import DomainCellFold
 from backend.fold_system.quality.quality_cell_fold import QualityCellFold
 
@@ -95,6 +91,37 @@ def backend_dbf(dataset: str, labeling_budget: int) -> dict:
         return {"domain_folds": {}}
 
 
+def _get_centroid_cell_index(quality_cells):
+    """Find cell closest to cluster centroid"""
+    import numpy as np
+
+    feature_vectors = []
+    valid_indices = []
+
+    for i, cell in enumerate(quality_cells):
+        if hasattr(cell, "features") and cell.features and len(cell.features) > 0:
+            feature_vectors.append(cell.features)
+            valid_indices.append(i)
+
+    if not feature_vectors:
+        return 0  # If no features, return first cell
+
+    # Calculate centroid
+    centroid = np.mean(feature_vectors, axis=0)
+
+    # Find cell closest to centroid
+    min_distance = float("inf")
+    centroid_idx = 0
+
+    for i, feature_vector in enumerate(feature_vectors):
+        distance = np.linalg.norm(np.array(feature_vector) - centroid)
+        if distance < min_distance:
+            min_distance = distance
+            centroid_idx = valid_indices[i]
+
+    return centroid_idx
+
+
 def backend_qbf(
     selected_dataset: str,
     labeling_budget: int,
@@ -157,65 +184,102 @@ def backend_qbf(
                 cells_by_table[cell.table_id] = []
             cells_by_table[cell.table_id].append(cell)
 
-        # Perform quality folding for all domains
-        all_quality_groups = {}
+        # Step 1: Calculate k (clusters) for each domain FIRST
+        total_columns = 0
+        domain_column_counts = {}
+
+        for domain_fold_name, table_names in domain_folds.items():
+            domain_columns = set()
+            for table_name in table_names:
+                if table_name in cells_by_table:
+                    for cell in cells_by_table[table_name]:
+                        domain_columns.add(cell.col_name)
+            domain_column_counts[domain_fold_name] = len(domain_columns)
+            total_columns += len(domain_columns)
+
+        # Calculate k for each domain: k ← max(2, Λ · |columns(df)| / |columns(S)|)
+        domain_k_values = {}
+        for domain_fold_name, domain_col_count in domain_column_counts.items():
+            k = (
+                max(2, int(labeling_budget * domain_col_count / total_columns))
+                if total_columns > 0
+                else 2
+            )
+            domain_k_values[domain_fold_name] = k
+
+        # Step 2: Create exactly k clusters for each domain
         quality_fold = QualityCellFold(base_path, raha_config, n_cores=os.cpu_count())
 
         for domain_fold_name, table_names in domain_folds.items():
-            # Get cells for this domain
+            k = domain_k_values[domain_fold_name]
             domain_cells = []
             for table_name in table_names:
                 if table_name in cells_by_table:
                     domain_cells.extend(cells_by_table[table_name])
 
             if domain_cells:
-                # Perform quality folding
-                domain_groups = {domain_fold_name: domain_cells}
-                quality_groups = quality_fold.fold_cells(domain_groups)
-                all_quality_groups.update(quality_groups)
+                # Extract features first
+                cells_with_features = (
+                    quality_fold.feature_extractor.extract_features_for_domain(
+                        domain_cells
+                    )
+                )
 
-        # Distribute labeling budget across quality clusters
-        budget_distributor = LabelingBudgetDistributor(
-            labeling_budget, min_labels_per_cluster=2
-        )
-        budget_distribution = budget_distributor.distribute_budget(all_quality_groups)
+                # Use the new method with k clusters
+                quality_clusters = quality_fold._cluster_cells_by_features_with_k(
+                    cells_with_features, domain_fold_name, k
+                )
 
-        # Convert to output format with budget information
+        # Convert to output format
         result = {}
-        for domain_name, quality_clusters in all_quality_groups.items():
-            domain_result = {}
 
-            for quality_group_name, quality_cells in quality_clusters.items():
-                # Get assigned budget for this cluster
-                assigned_budget = budget_distribution.get(domain_name, {}).get(
-                    quality_group_name, 0
+        for domain_fold_name, table_names in domain_folds.items():
+            k = domain_k_values[domain_fold_name]
+            domain_cells = []
+            for table_name in table_names:
+                if table_name in cells_by_table:
+                    domain_cells.extend(cells_by_table[table_name])
+
+            if domain_cells:
+                # Extract features and create clusters
+                cells_with_features = (
+                    quality_fold.feature_extractor.extract_features_for_domain(
+                        domain_cells
+                    )
+                )
+                quality_clusters = quality_fold._cluster_cells_by_features_with_k(
+                    cells_with_features, domain_fold_name, k
                 )
 
-                cell_fold_name = f"{domain_name} / Cell Fold {quality_group_name.replace('quality_', '')}"
+                # Build result for this domain
+                domain_result = {}
+                for quality_group_name, quality_cells in quality_clusters.items():
+                    # Find centroid cell for labeling
+                    centroid_idx = _get_centroid_cell_index(quality_cells)
 
-                cell_fold_data = []
-                for i, cell in enumerate(quality_cells):
-                    # Mark cells as selected for labeling based on budget
-                    is_selected_for_labeling = i < assigned_budget
+                    cell_fold_name = f"{domain_fold_name} / Cell Fold {quality_group_name.replace('quality_', '')}"
 
-                    cell_dict = {
-                        "table": cell.table_id,
-                        "row": cell.row_idx,
-                        "col": cell.col_name,
-                        "val": cell.dirty_value,
-                        "features": _convert_features_to_strategies(cell.features),
-                        "strategies": cell.strategies,
-                        "selected_for_labeling": is_selected_for_labeling,
-                        "assigned_budget": assigned_budget if i == 0 else None,
-                    }
-                    cell_fold_data.append(cell_dict)
+                    cell_fold_data = []
+                    for i, cell in enumerate(quality_cells):
+                        is_selected_for_labeling = i == centroid_idx
 
-                domain_result[cell_fold_name] = cell_fold_data
-                logging.info(
-                    f"Created {cell_fold_name} with {len(cell_fold_data)} cells, budget: {assigned_budget}"
-                )
+                        cell_dict = {
+                            "table": cell.table_id,
+                            "row": cell.row_idx,
+                            "col": cell.col_name,
+                            "val": cell.dirty_value,
+                            "features": _convert_features_to_strategies(cell.features),
+                            "strategies": cell.strategies,
+                            "selected_for_labeling": is_selected_for_labeling,
+                            "assigned_budget": 1
+                            if i == 0
+                            else None,  # Each cluster gets 1 label
+                        }
+                        cell_fold_data.append(cell_dict)
 
-            result[domain_name] = domain_result
+                    domain_result[cell_fold_name] = cell_fold_data
+
+                result[domain_fold_name] = domain_result
 
         # Save result to cache
         logging.info("Saving quality folding results to cache...")
@@ -274,46 +338,47 @@ def backend_sample_labeling(
     logging.info(f"Labeling budget: {labeling_budget}")
 
     try:
-        # Step 1: Calculate budget distribution across cell folds (simplified)
-        cluster_info = []
+        # Just collect pre-selected cells (centroids already chosen in quality folding)
+        sampled_cells = []
+        total_selected = 0
+
         for domain_name, domain_cell_folds in cell_folds.items():
+            domain_selected = 0
+
             for cell_fold_name, cells_data in domain_cell_folds.items():
-                cluster_info.append(
-                    {
-                        "domain": domain_name,
-                        "cell_fold": cell_fold_name,
-                        "n_cells": len(cells_data),
-                        "error_rate": 0.1,  # Default error rate for budget calculation
-                    }
-                )
+                cell_fold_selected = 0
 
-        # Simple proportional budget distribution
-        total_cells = sum(info["n_cells"] for info in cluster_info)
-        budget_distribution = {}
+                for cell_data in cells_data:
+                    if cell_data.get("selected_for_labeling", False):
+                        sampled_cell = {
+                            "table": cell_data["table"],
+                            "row": cell_data["row"],
+                            "col": cell_data["col"],
+                            "val": cell_data["val"],
+                            "domain_fold": domain_name,
+                            "cell_fold": cell_fold_name,
+                            "features": cell_data.get("features", {}),
+                            "strategies": cell_data.get("strategies", []),
+                        }
+                        sampled_cells.append(sampled_cell)
+                        cell_fold_selected += 1
 
-        for info in cluster_info:
-            domain = info["domain"]
-            cell_fold = info["cell_fold"]
-            proportion = info["n_cells"] / total_cells if total_cells > 0 else 0
-            allocated_budget = max(
-                1, int(labeling_budget * proportion)
-            )  # At least 1 sample
+                logging.info(f"{cell_fold_name}: {cell_fold_selected} selected cells")
+                domain_selected += cell_fold_selected
 
-            if domain not in budget_distribution:
-                budget_distribution[domain] = {}
-            budget_distribution[domain][cell_fold] = allocated_budget
+            logging.info(f"Domain {domain_name}: {domain_selected} selected cells")
+            total_selected += domain_selected
 
-        # Step 2: Sample cells
-        sampler = CellSampler(sampling_strategy="mixed")
-        sampled_cells = sampler.sample_cells_from_cell_folds_direct(
-            cell_folds, budget_distribution
-        )
-
-        # Step 3: Validate budget usage
+        # Validate against labeling budget
         if len(sampled_cells) > labeling_budget:
+            logging.warning(
+                f"Selected {len(sampled_cells)} cells exceeds budget {labeling_budget}, truncating"
+            )
             sampled_cells = sampled_cells[:labeling_budget]
 
-        logging.info(f"Successfully sampled {len(sampled_cells)} cells for labeling")
+        logging.info(
+            f"Successfully sampled {len(sampled_cells)} cells for labeling (budget: {labeling_budget})"
+        )
         return sampled_cells
 
     except Exception as e:

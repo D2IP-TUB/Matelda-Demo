@@ -535,7 +535,7 @@ def generate_raha_features(parent_path, dataset_name, raha_config):
     dataset_dictionary = {
         "name": dataset_name,
         "path": parent_path + "/" + dataset_name + "/{}".format("dirty.csv"),
-        "clean_path": parent_path + "/" + dataset_name + "/{}".format("clean.csv"),
+        # "clean_path": parent_path + "/" + dataset_name + "/{}".format("clean.csv"),
     }
     detect.VERBOSE = False
     detect.SAVE_RESULTS = raha_config["save_results"]
