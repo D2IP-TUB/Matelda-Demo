@@ -6,6 +6,7 @@ import streamlit as st
 from backend import get_available_strategies
 from components import (
     apply_base_styles,
+    get_current_theme,
     get_datasets_path,
     load_pipeline_config,
     render_inline_restart_button,
@@ -15,7 +16,8 @@ from components import (
 
 # Set page config and apply base styles
 st.set_page_config(page_title="Configurations", layout="wide")
-apply_base_styles()
+current_theme = get_current_theme()
+apply_base_styles(current_theme)
 
 # Sidebar navigation
 render_sidebar()

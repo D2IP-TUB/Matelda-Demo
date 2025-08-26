@@ -29,9 +29,13 @@ def render_restart_expander(page_id: Optional[str] = None) -> None:
             col_a, col_b = st.columns(2)
             with col_a:
                 if st.button("Restart", key=f"confirm_restart_{suffix}"):
+                    # Preserve a one-time flag to suppress balloons after restarting from Results
+                    suppress_balloons = suffix == "results"
                     # Clear all session state to start from scratch
                     for key in list(st.session_state.keys()):
                         del st.session_state[key]
+                    if suppress_balloons:
+                        st.session_state["suppress_balloons_after_restart"] = True
                     st.switch_page("app.py")
             with col_b:
                 if st.button("Cancel", key=f"cancel_restart_{suffix}"):
@@ -63,9 +67,13 @@ def render_inline_restart_button(page_id: Optional[str] = None, use_container_wi
             col_a, col_b = st.columns(2)
             with col_a:
                 if st.button("Restart", key=f"confirm_restart_inline_{suffix}"):
+                    # Preserve a one-time flag to suppress balloons after restarting from Results
+                    suppress_balloons = suffix == "results"
                     # Clear all session state to start from scratch
                     for key in list(st.session_state.keys()):
                         del st.session_state[key]
+                    if suppress_balloons:
+                        st.session_state["suppress_balloons_after_restart"] = True
                     st.switch_page("app.py")
             with col_b:
                 if st.button("Cancel", key=f"cancel_restart_inline_{suffix}"):

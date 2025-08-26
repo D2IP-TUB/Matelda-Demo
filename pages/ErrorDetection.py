@@ -4,7 +4,12 @@ import os
 import pandas as pd
 import streamlit as st
 from backend import backend_pull_errors
-from components import apply_base_styles, render_inline_restart_button, render_sidebar
+from components import (
+    apply_base_styles,
+    get_current_theme,
+    render_inline_restart_button,
+    render_sidebar,
+)
 
 # Set the page title and layout
 st.set_page_config(page_title="Error Detection", layout="wide")
@@ -52,6 +57,21 @@ if "error_detection_completed" not in st.session_state:
     st.session_state.error_detection_completed = False
 
 
+# Get the current theme to extract primary color
+current_theme = get_current_theme()
+primary_color = current_theme.get("primaryColor", "#f4b11c").strip()
+
+
+# Convert hex color to RGB values for rgba usage
+def hex_to_rgb(hex_color):
+    """Convert hex color to RGB tuple"""
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
+
+primary_rgb = hex_to_rgb(primary_color)
+
+
 # Function to load and display table with propagated errors
 def display_table_with_errors(table_name, error_cells):
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
@@ -67,11 +87,11 @@ def display_table_with_errors(table_name, error_cells):
         for error in error_cells:
             try:
                 confidence = error["confidence"]
-                # Convert confidence to color intensity (higher confidence = more intense red)
-                color_intensity = int(255 * (1 - confidence))
-                color = f"rgb(255, {color_intensity}, {color_intensity})"
+                # Convert confidence to opacity (higher confidence = more opaque)
+                opacity = confidence
+                r, g, b = primary_rgb
                 df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = (
-                    f"background-color: {color}; color: white"
+                    f"background-color: rgba({r}, {g}, {b}, {opacity}); color: white"
                 )
             except Exception:
                 continue

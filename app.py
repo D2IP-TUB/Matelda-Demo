@@ -1,18 +1,16 @@
-import backend.cache_utils as cache_utils
 import streamlit as st
-from components import apply_base_styles, render_sidebar
-
-cache_utils.set_cache_dir("/home/fatemeh/matelda-demo/temp-cache")
+from components import apply_base_styles, get_current_theme, render_sidebar
 
 st.set_page_config(
-    page_title="Matelda", 
+    page_title="Matelda",
     layout="wide",
     page_icon="🔧",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Apply base styles
-apply_base_styles()
+# Apply base styles with current theme
+current_theme = get_current_theme()
+apply_base_styles(current_theme)
 
 st.title("Matelda")
 st.write("Welcome to Matelda!")

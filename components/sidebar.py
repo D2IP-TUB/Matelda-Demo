@@ -3,6 +3,7 @@ Common sidebar navigation component for all pages
 """
 import streamlit as st
 import os
+from .theme_switcher import render_theme_switcher
 
 def render_sidebar():
     """Render the common sidebar navigation with minimal flicker"""
@@ -84,3 +85,6 @@ def render_sidebar():
             st.page_link(path, label=label)
             
         st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Add theme switcher
+        render_theme_switcher()

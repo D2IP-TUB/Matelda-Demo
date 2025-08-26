@@ -48,7 +48,7 @@ if "propagation_results" not in st.session_state:
 
 propagation_results = st.session_state.propagation_results
 
-st.markdown("### \U0001f501 Label Propagation Results")
+st.markdown("### Label Propagation Results")
 st.markdown(
     "Below are the cells you labeled and how their labels were propagated to other cells:"
 )

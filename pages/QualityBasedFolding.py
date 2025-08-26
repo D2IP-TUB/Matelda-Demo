@@ -9,6 +9,7 @@ from backend import backend_qbf, get_available_strategies
 from components import (
     apply_base_styles,
     apply_folding_styles,
+    get_current_theme,
     get_datasets_path,
     load_dirty_table,
     render_inline_restart_button,
@@ -17,34 +18,56 @@ from components import (
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
-st.title("Quality Based Folding")
 
-# Apply styles
-apply_base_styles()
-apply_folding_styles()
+# Apply styles with current theme
+current_theme = get_current_theme()
+apply_base_styles(current_theme)
+apply_folding_styles(current_theme)
 
-# Custom CSS for small show more button
+# Get theme colors for dynamic styling
+primary_color = current_theme.get("primaryColor", "#f4b11c").strip()
+text_color = current_theme.get("textColor", "#002f67").strip()
+
+
+# Convert hex color to RGB for rgba usage
+def hex_to_rgb(hex_color):
+    """Convert hex color to RGB tuple"""
+    hex_color = hex_color.lstrip("#")
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
+
+primary_rgb = hex_to_rgb(primary_color)
+
+# Custom CSS for small show more button and reduced header spacing
 st.markdown(
-    """
+    f"""
 <style>
-.small-show-more button {
+.main .block-container {{
+    padding-top: 1rem !important;
+}}
+h1 {{
+    margin-bottom: 0.5rem !important;
+}}
+.small-show-more button {{
     font-size: 10px !important;
     padding: 2px 8px !important;
     height: 24px !important;
     min-height: 24px !important;
     border-radius: 12px !important;
-    background-color: #f0f2f6 !important;
-    border: 1px solid #d1d5db !important;
-    color: #6b7280 !important;
-}
-.small-show-more button:hover {
-    background-color: #e5e7eb !important;
-    border-color: #9ca3af !important;
-}
+    background-color: {primary_color} !important;
+    border: 1px solid {primary_color} !important;
+    color: {text_color} !important;
+}}
+.small-show-more button:hover {{
+    background-color: rgba({primary_rgb[0]}, {primary_rgb[1]}, {primary_rgb[2]}, 0.8) !important;
+    border-color: rgba({primary_rgb[0]}, {primary_rgb[1]}, {primary_rgb[2]}, 0.8) !important;
+}}
 </style>
 """,
     unsafe_allow_html=True,
 )
+
+st.title("Quality Based Folding")
 
 # Sidebar navigation
 render_sidebar()
@@ -113,12 +136,16 @@ if "dataset_select" not in st.session_state:
 dataset = st.session_state.dataset_select
 datasets_dir = get_datasets_path(dataset)
 
+# Get the current theme to extract primary color
+current_theme = get_current_theme()
+primary_color = current_theme.get("primaryColor", "#f4b11c").strip()
+
 
 def highlight_cell(row_idx, col_name):
     def apply(df):
         return df.style.apply(
             lambda _: [
-                "background-color: yellow" if i == row_idx else ""
+                f"background-color: {primary_color}" if i == row_idx else ""
                 for i in range(len(df))
             ],
             axis=0,
@@ -157,7 +184,6 @@ for key, val in defaults.items():
         st.session_state[key] = val
 
 # Strategies selection (pre-run)
-st.markdown("---")
 st.subheader("Error Detection Strategies")
 strategies = get_available_strategies()
 preselected = set(st.session_state.get("selected_strategies", []))
