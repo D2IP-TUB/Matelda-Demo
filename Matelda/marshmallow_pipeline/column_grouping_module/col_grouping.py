@@ -81,6 +81,7 @@ def col_grouping(
                 clusters = MiniBatchKMeans(
                     n_clusters=min(max_n_col_groups, len(X)),
                     batch_size=256 * n_cores,
+                    n_init="auto",
                 ).fit_predict(X)
 
             else:

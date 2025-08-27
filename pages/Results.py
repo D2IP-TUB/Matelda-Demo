@@ -3,13 +3,13 @@ import json
 import os
 
 import pandas as pd
+import streamlit as st
 from components import (
     apply_base_styles,
     get_current_theme,
     render_inline_restart_button,
     render_sidebar,
 )
-from streamlit import st
 from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles

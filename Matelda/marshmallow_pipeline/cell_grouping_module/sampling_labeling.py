@@ -31,10 +31,13 @@ def get_n_labels(cluster_sizes_df, labeling_budget, min_num_labes_per_col_cluste
     i = 0
     j = 0
     cluster_sizes_df.sort_values(by=["n_cells"], ascending=False, inplace=True)
-    while labeling_budget > cluster_sizes_df["n_labels"].sum() and j < len(cluster_sizes_df["n_cells"]):
+    while labeling_budget > cluster_sizes_df["n_labels"].sum() and j < len(
+        cluster_sizes_df["n_cells"]
+    ):
         if cluster_sizes_df["n_labels"].iloc[i] < cluster_sizes_df["n_cells"].iloc[i]:
-            cluster_sizes_df["n_labels"].iloc[i] = \
+            cluster_sizes_df["n_labels"].iloc[i] = (
                 cluster_sizes_df["n_labels"].iloc[i] + 1
+            )
             j = 0
         else:
             j += 1
@@ -45,7 +48,15 @@ def get_n_labels(cluster_sizes_df, labeling_budget, min_num_labes_per_col_cluste
     return cluster_sizes_df
 
 
-def cell_clustering(table_cluster, col_cluster, x, y, n_cell_clusters_per_col_cluster, n_cores, labels_per_cell_group):
+def cell_clustering(
+    table_cluster,
+    col_cluster,
+    x,
+    y,
+    n_cell_clusters_per_col_cluster,
+    n_cores,
+    labels_per_cell_group,
+):
     # logging.info(
     #     "Cell Clustering - table_cluster: %s, col_cluster: %s",
     #     table_cluster,
@@ -72,6 +83,7 @@ def cell_clustering(table_cluster, col_cluster, x, y, n_cell_clusters_per_col_cl
     clustering = MiniBatchKMeans(
         n_clusters=int(n_cell_clusters_per_col_cluster),
         batch_size=256 * n_cores,
+        n_init="auto",
     ).fit(x)
     set_clustering_labels = set(clustering.labels_)
     logging.debug("KMeans - n_cell_clusters_generated: %s", len(set_clustering_labels))
@@ -88,10 +100,14 @@ def cell_clustering(table_cluster, col_cluster, x, y, n_cell_clusters_per_col_cl
     cell_clustering_dict["table_cluster"] = table_cluster
     cell_clustering_dict["col_cluster"] = col_cluster
     cell_clustering_dict["n_cells"] = len(x)
-    cell_clustering_dict["n_init_labels"] = n_cell_clusters_per_col_cluster * labels_per_cell_group
+    cell_clustering_dict["n_init_labels"] = (
+        n_cell_clusters_per_col_cluster * labels_per_cell_group
+    )
     cell_clustering_dict["n_produced_cell_clusters"] = len(set_clustering_labels)
-    cell_clustering_dict["n_current_requiered_labels"] = len(set_clustering_labels) * labels_per_cell_group
-    
+    cell_clustering_dict["n_current_requiered_labels"] = (
+        len(set_clustering_labels) * labels_per_cell_group
+    )
+
     cell_clustering_dict["remaining_labels"] = (
         cell_clustering_dict["n_init_labels"]
         - cell_clustering_dict["n_current_requiered_labels"]
@@ -127,13 +143,15 @@ def update_n_labels(cell_clustering_recs):
                 remaining_labels -= 1
                 j = 0
             else:
-                j += 1     
+                j += 1
             if i < len(cell_clustering_df) - 1:
                 i += 1
             else:
                 i = 0
     elif remaining_labels < 0:
-        logging.info("remaining_labels < 0 - remaining_labels: {}".format(remaining_labels))
+        logging.info(
+            "remaining_labels < 0 - remaining_labels: {}".format(remaining_labels)
+        )
         logging.info("I need more labels :)")
     logging.info("Update n_labels - remaining_labels: {}".format(remaining_labels))
     return cell_clustering_df
@@ -141,18 +159,47 @@ def update_n_labels(cell_clustering_recs):
 
 def get_the_nearest_point_to_centroid(feature_vectors):
     centroid = np.mean(feature_vectors, axis=0)
-    closest_index = min(range(len(feature_vectors)), key=lambda i: euclidean(feature_vectors[i], centroid))
+    closest_index = min(
+        range(len(feature_vectors)),
+        key=lambda i: euclidean(feature_vectors[i], centroid),
+    )
     return closest_index
 
 
-def split_cell_cluster(cell_cluster_n_labels, n_cores, x_cluster, y_cluster, col_group_cell_idx, updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels, cluster, min_n_labels_per_cell_group):
+def split_cell_cluster(
+    cell_cluster_n_labels,
+    n_cores,
+    x_cluster,
+    y_cluster,
+    col_group_cell_idx,
+    updated_cells_per_cluster,
+    updated_errors_per_cluster,
+    updated_cell_cluster_n_labels,
+    cluster,
+    min_n_labels_per_cell_group,
+):
     try:
-        clustering = MiniBatchKMeans(n_clusters=min(len(x_cluster), math.floor(cell_cluster_n_labels[cluster]/min_n_labels_per_cell_group)), batch_size=256 * n_cores).fit(x_cluster)
+        clustering = MiniBatchKMeans(
+            n_clusters=min(
+                len(x_cluster),
+                math.floor(
+                    cell_cluster_n_labels[cluster] / min_n_labels_per_cell_group
+                ),
+            ),
+            batch_size=256 * n_cores,
+            n_init="auto",
+        ).fit(x_cluster)
         set_clustering_labels = set(clustering.labels_)
-        logging.info("inner cluster splitting - n_clusters: %s", len(set_clustering_labels))
+        logging.info(
+            "inner cluster splitting - n_clusters: %s", len(set_clustering_labels)
+        )
         clustering_labels = clustering.labels_
         if len(set_clustering_labels) < cell_cluster_n_labels[cluster]:
-            return updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels
+            return (
+                updated_cells_per_cluster,
+                updated_errors_per_cluster,
+                updated_cell_cluster_n_labels,
+            )
         else:
             x_cluster_splited = []
             y_cluster_splited = []
@@ -167,17 +214,35 @@ def split_cell_cluster(cell_cluster_n_labels, n_cores, x_cluster, y_cluster, col
                 y_cluster_splited[clustering_labels[x_idx]].append(y_cluster[x_idx])
 
             for mini_cluster in range(len(x_cluster_splited)):
-                updated_cells_per_cluster[max(updated_cells_per_cluster.keys())+1] = [col_group_cell_idx[x_idx] for x_idx in x_idx_cluster_splited[mini_cluster]]
-                updated_errors_per_cluster[max(updated_errors_per_cluster.keys())+1] = sum(y_cluster_splited[mini_cluster])
-                updated_cell_cluster_n_labels[max(updated_cell_cluster_n_labels.keys())+1] = 1
+                updated_cells_per_cluster[max(updated_cells_per_cluster.keys()) + 1] = [
+                    col_group_cell_idx[x_idx]
+                    for x_idx in x_idx_cluster_splited[mini_cluster]
+                ]
+                updated_errors_per_cluster[
+                    max(updated_errors_per_cluster.keys()) + 1
+                ] = sum(y_cluster_splited[mini_cluster])
+                updated_cell_cluster_n_labels[
+                    max(updated_cell_cluster_n_labels.keys()) + 1
+                ] = 1
             updated_cells_per_cluster.pop(cluster)
             updated_errors_per_cluster.pop(cluster)
             updated_cell_cluster_n_labels.pop(cluster)
     except Exception as e:
         logging.error("inner cluster splitting - error: %s", e)
-    return updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels
+    return (
+        updated_cells_per_cluster,
+        updated_errors_per_cluster,
+        updated_cell_cluster_n_labels,
+    )
 
-def distribute_labels_in_cell_clusters(cell_cluster_n_labels, sorted_clusters, values_per_cluster, n_labels, min_n_labels_per_cell_group=1):
+
+def distribute_labels_in_cell_clusters(
+    cell_cluster_n_labels,
+    sorted_clusters,
+    values_per_cluster,
+    n_labels,
+    min_n_labels_per_cell_group=1,
+):
     i = 0
     sorted_cluster_idx = 0
     if min_n_labels_per_cell_group == 2:
@@ -207,9 +272,19 @@ def distribute_labels_in_cell_clusters(cell_cluster_n_labels, sorted_clusters, v
         else:
             sorted_cluster_idx = 0
     return cell_cluster_n_labels
-    
-def pick_samples_in_cell_cluster(cluster, updated_cells_per_cluster, updated_cell_cluster_n_labels, 
-                                 x, y, dirty_cell_values, tables_tuples_dict, original_data_keys_temp, min_n_labels_per_cell_group):
+
+
+def pick_samples_in_cell_cluster(
+    cluster,
+    updated_cells_per_cluster,
+    updated_cell_cluster_n_labels,
+    x,
+    y,
+    dirty_cell_values,
+    tables_tuples_dict,
+    original_data_keys_temp,
+    min_n_labels_per_cell_group,
+):
     try:
         x_cluster = []
         y_cluster = []
@@ -250,7 +325,7 @@ def pick_samples_in_cell_cluster(cluster, updated_cells_per_cluster, updated_cel
                 )
                 samples_indices_global.append(col_group_cell_idx[sample])
                 samples_indices_cell_group.append(sample)
-            
+
         else:
             sample = get_the_nearest_point_to_centroid(x_cluster)
             samples_feature_vectors.append(x_cluster[sample])
@@ -259,16 +334,34 @@ def pick_samples_in_cell_cluster(cluster, updated_cells_per_cluster, updated_cel
             dirty_cell_values_cluster.append(
                 dirty_cell_values[col_group_cell_idx[sample]]
             )
-            
+
             samples_indices_global.append(col_group_cell_idx[sample])
             samples_indices_cell_group.append(sample)
 
     except Exception as e:
         logging.error("pick_samples_in_cell_cluster - error: %s", e)
-    return samples_feature_vectors, samples_labels, samples_indices_global, samples_indices_cell_group,\
-          dirty_cell_values_cluster, n_user_labeled_cells
+    return (
+        samples_feature_vectors,
+        samples_labels,
+        samples_indices_global,
+        samples_indices_cell_group,
+        dirty_cell_values_cluster,
+        n_user_labeled_cells,
+    )
 
-def check_and_split_cell_clusters(x, y, labeled_clusters, cell_cluster_n_labels, cells_per_cluster, n_cores, updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels, min_n_labels_per_cell_group):
+
+def check_and_split_cell_clusters(
+    x,
+    y,
+    labeled_clusters,
+    cell_cluster_n_labels,
+    cells_per_cluster,
+    n_cores,
+    updated_cells_per_cluster,
+    updated_errors_per_cluster,
+    updated_cell_cluster_n_labels,
+    min_n_labels_per_cell_group,
+):
     for cluster in labeled_clusters:
         if cell_cluster_n_labels[cluster] > min_n_labels_per_cell_group:
             x_cluster = []
@@ -277,26 +370,48 @@ def check_and_split_cell_clusters(x, y, labeled_clusters, cell_cluster_n_labels,
             for cell_idx in col_group_cell_idx:
                 x_cluster.append(x[cell_idx])
                 y_cluster.append(y[cell_idx])
-            updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels = \
-                split_cell_cluster(cell_cluster_n_labels, 
-                                   n_cores, 
-                                   x_cluster, 
-                                   y_cluster, 
-                                   col_group_cell_idx, 
-                                   updated_cells_per_cluster, 
-                                   updated_errors_per_cluster,
-                                   updated_cell_cluster_n_labels, 
-                                   cluster, min_n_labels_per_cell_group)
-    return updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels
+            (
+                updated_cells_per_cluster,
+                updated_errors_per_cluster,
+                updated_cell_cluster_n_labels,
+            ) = split_cell_cluster(
+                cell_cluster_n_labels,
+                n_cores,
+                x_cluster,
+                y_cluster,
+                col_group_cell_idx,
+                updated_cells_per_cluster,
+                updated_errors_per_cluster,
+                updated_cell_cluster_n_labels,
+                cluster,
+                min_n_labels_per_cell_group,
+            )
+    return (
+        updated_cells_per_cluster,
+        updated_errors_per_cluster,
+        updated_cell_cluster_n_labels,
+    )
 
-def update_samples_dict(cell_clustering_dict, samples_dict, cluster, \
-                        samples_feature_vectors, samples_labels, samples_indices_global, \
-                            samples_indices_cell_group, dirty_cell_values_cluster, \
-                                updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels):
+
+def update_samples_dict(
+    cell_clustering_dict,
+    samples_dict,
+    cluster,
+    samples_feature_vectors,
+    samples_labels,
+    samples_indices_global,
+    samples_indices_cell_group,
+    dirty_cell_values_cluster,
+    updated_cells_per_cluster,
+    updated_errors_per_cluster,
+    updated_cell_cluster_n_labels,
+):
     logging.debug("Update samples dict")
     cell_clustering_dict["cells_per_cluster"].values[0] = updated_cells_per_cluster
     cell_clustering_dict["errors_per_cluster"].values[0] = updated_errors_per_cluster
-    cell_clustering_dict["n_labels_updated"].values[0] = sum(updated_cell_cluster_n_labels.values())
+    cell_clustering_dict["n_labels_updated"].values[0] = sum(
+        updated_cell_cluster_n_labels.values()
+    )
     samples_dict["cell_cluster"].append(cluster)
     samples_dict["samples"].append(samples_feature_vectors)
     samples_dict["n_samples"].append(len(samples_feature_vectors))
@@ -306,7 +421,17 @@ def update_samples_dict(cell_clustering_dict, samples_dict, cluster, \
     samples_dict["samples_indices_global"].append(samples_indices_global)
     return cell_clustering_dict, samples_dict
 
-def sampling(cell_clustering_dict, x, y, dirty_cell_values, original_data_keys_temp, n_cores, tables_tuples_dict, min_n_labels_per_cell_group):
+
+def sampling(
+    cell_clustering_dict,
+    x,
+    y,
+    dirty_cell_values,
+    original_data_keys_temp,
+    n_cores,
+    tables_tuples_dict,
+    min_n_labels_per_cell_group,
+):
     logging.debug("Sampling")
     samples_dict = {
         "cell_cluster": [],
@@ -315,61 +440,100 @@ def sampling(cell_clustering_dict, x, y, dirty_cell_values, original_data_keys_t
         "samples_indices_cell_group": [],
         "samples_indices_global": [],
         "labels": [],
-        "dirty_cell_values": []
+        "dirty_cell_values": [],
     }
 
     cells_per_cluster = cell_clustering_dict["cells_per_cluster"].values[0]
-    updated_cells_per_cluster = copy.deepcopy(cell_clustering_dict["cells_per_cluster"].values[0])
-    updated_errors_per_cluster = copy.deepcopy(cell_clustering_dict["errors_per_cluster"].values[0])
-    labeled_clusters = {
-        key: value
-        for key, value in cells_per_cluster.items()
-    }
-    sorted_clusters = sorted(labeled_clusters, key=lambda k: len(labeled_clusters[k]), reverse=True)
+    updated_cells_per_cluster = copy.deepcopy(
+        cell_clustering_dict["cells_per_cluster"].values[0]
+    )
+    updated_errors_per_cluster = copy.deepcopy(
+        cell_clustering_dict["errors_per_cluster"].values[0]
+    )
+    labeled_clusters = {key: value for key, value in cells_per_cluster.items()}
+    sorted_clusters = sorted(
+        labeled_clusters, key=lambda k: len(labeled_clusters[k]), reverse=True
+    )
     logging.debug("Sampling - sorted_clusters: {}".format(sorted_clusters))
     cell_cluster_n_labels = {k: 0 for k in cells_per_cluster.keys()}
     updated_cell_cluster_n_labels = {k: 0 for k in cells_per_cluster.keys()}
     values_per_cluster = {k: [] for k in cells_per_cluster.keys()}
     for k in values_per_cluster.keys():
         values_per_cluster[k] = [tuple(x[i]) for i in cells_per_cluster[k]]
-    n_labels = cell_clustering_dict["n_labels_updated"].values[0]        
-    cell_cluster_n_labels = distribute_labels_in_cell_clusters(cell_cluster_n_labels, sorted_clusters, values_per_cluster, n_labels, min_n_labels_per_cell_group)
+    n_labels = cell_clustering_dict["n_labels_updated"].values[0]
+    cell_cluster_n_labels = distribute_labels_in_cell_clusters(
+        cell_cluster_n_labels,
+        sorted_clusters,
+        values_per_cluster,
+        n_labels,
+        min_n_labels_per_cell_group,
+    )
     updated_cell_cluster_n_labels = copy.deepcopy(cell_cluster_n_labels)
 
-    updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels = \
-    check_and_split_cell_clusters(x, y, labeled_clusters, cell_cluster_n_labels, cells_per_cluster, n_cores, updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels, min_n_labels_per_cell_group)
-            
+    (
+        updated_cells_per_cluster,
+        updated_errors_per_cluster,
+        updated_cell_cluster_n_labels,
+    ) = check_and_split_cell_clusters(
+        x,
+        y,
+        labeled_clusters,
+        cell_cluster_n_labels,
+        cells_per_cluster,
+        n_cores,
+        updated_cells_per_cluster,
+        updated_errors_per_cluster,
+        updated_cell_cluster_n_labels,
+        min_n_labels_per_cell_group,
+    )
+
     updated_labeled_clusters = {
-        key: value
-        for key, value in updated_cells_per_cluster.items()
+        key: value for key, value in updated_cells_per_cluster.items()
     }
 
-    logging.debug("Number of updated_labeled_clusters: %s", len(updated_labeled_clusters))
+    logging.debug(
+        "Number of updated_labeled_clusters: %s", len(updated_labeled_clusters)
+    )
     global_n_user_labeled_cells = 0
     for cluster in updated_labeled_clusters:
         logging.debug("Sampling - cluster: %s", cluster)
-        samples_feature_vectors, samples_labels, \
-        samples_indices_global, samples_indices_cell_group, dirty_cell_values_cluster, n_user_labeled_cells, = \
-            pick_samples_in_cell_cluster(cluster, 
-                                         updated_cells_per_cluster, 
-                                         updated_cell_cluster_n_labels, 
-                                         x, 
-                                         y, 
-                                         dirty_cell_values, 
-                                         tables_tuples_dict,
-                                         original_data_keys_temp, 
-                                         min_n_labels_per_cell_group)
+        (
+            samples_feature_vectors,
+            samples_labels,
+            samples_indices_global,
+            samples_indices_cell_group,
+            dirty_cell_values_cluster,
+            n_user_labeled_cells,
+        ) = pick_samples_in_cell_cluster(
+            cluster,
+            updated_cells_per_cluster,
+            updated_cell_cluster_n_labels,
+            x,
+            y,
+            dirty_cell_values,
+            tables_tuples_dict,
+            original_data_keys_temp,
+            min_n_labels_per_cell_group,
+        )
         global_n_user_labeled_cells += n_user_labeled_cells
 
-        cell_clustering_dict, samples_dict = update_samples_dict(cell_clustering_dict, samples_dict, cluster, \
-                        samples_feature_vectors, samples_labels, samples_indices_global, \
-                            samples_indices_cell_group, dirty_cell_values_cluster, \
-                                updated_cells_per_cluster, updated_errors_per_cluster, updated_cell_cluster_n_labels)
-        
-    logging.debug("Sampling done")
-    
-    return samples_dict, cell_clustering_dict, global_n_user_labeled_cells
+        cell_clustering_dict, samples_dict = update_samples_dict(
+            cell_clustering_dict,
+            samples_dict,
+            cluster,
+            samples_feature_vectors,
+            samples_labels,
+            samples_indices_global,
+            samples_indices_cell_group,
+            dirty_cell_values_cluster,
+            updated_cells_per_cluster,
+            updated_errors_per_cluster,
+            updated_cell_cluster_n_labels,
+        )
 
+    logging.debug("Sampling done")
+
+    return samples_dict, cell_clustering_dict, global_n_user_labeled_cells
 
 
 def labeling(samples_dict):
@@ -383,7 +547,10 @@ def labeling(samples_dict):
                         samples_dict["labels"][cell_cluster_idx][0]
                     )
                 else:
-                    logging.debug("*******Labeling - mode: %s", mode(samples_dict["labels"][cell_cluster_idx]))
+                    logging.debug(
+                        "*******Labeling - mode: %s",
+                        mode(samples_dict["labels"][cell_cluster_idx]),
+                    )
                     samples_dict["final_label_to_be_propagated"].append(
                         mode(samples_dict["labels"][cell_cluster_idx])
                     )
