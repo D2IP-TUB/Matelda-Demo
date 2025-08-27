@@ -170,6 +170,16 @@ def backend_qbf(
         if "Typo Detector" in selected_strategies:
             raha_config["error_detection_algorithms"].append("TypoD")
 
+    all_table_names = set()
+    for table_names in domain_folds.values():
+        all_table_names.update(table_names)
+
+    logging.info(
+        f"Pre-generating RAHA features for {len(all_table_names)} unique tables"
+    )
+    quality_fold = QualityCellFold(base_path, raha_config, n_cores=os.cpu_count())
+    all_table_features = quality_fold._generate_features_for_all_tables(all_table_names)
+
     try:
         logging.info("Cache miss - computing quality folding from scratch...")
 
@@ -207,9 +217,6 @@ def backend_qbf(
             )
             domain_k_values[domain_fold_name] = k
 
-        # Step 2: Create exactly k clusters for each domain
-        quality_fold = QualityCellFold(base_path, raha_config, n_cores=os.cpu_count())
-
         for domain_fold_name, table_names in domain_folds.items():
             k = domain_k_values[domain_fold_name]
             domain_cells = []
@@ -219,10 +226,8 @@ def backend_qbf(
 
             if domain_cells:
                 # Extract features first
-                cells_with_features = (
-                    quality_fold.feature_extractor.extract_features_for_domain(
-                        domain_cells
-                    )
+                cells_with_features = quality_fold._populate_precomputed_features(
+                    domain_cells, all_table_features
                 )
 
                 # Use the new method with k clusters
@@ -242,11 +247,10 @@ def backend_qbf(
 
             if domain_cells:
                 # Extract features and create clusters
-                cells_with_features = (
-                    quality_fold.feature_extractor.extract_features_for_domain(
-                        domain_cells
-                    )
+                cells_with_features = quality_fold._populate_precomputed_features(
+                    domain_cells, all_table_features
                 )
+
                 quality_clusters = quality_fold._cluster_cells_by_features_with_k(
                     cells_with_features, domain_fold_name, k
                 )

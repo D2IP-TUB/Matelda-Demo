@@ -16,47 +16,13 @@ class QualityCellFold(BaseCellFold):
 
     def __init__(self, base_path: str, raha_config: Dict, n_cores: int = 1):
         super().__init__("quality")
+        self.base_path = base_path
         self.feature_extractor = RAHAFeatureExtractor(base_path, raha_config)
         self.n_cores = n_cores
+        self.raha_config = raha_config
 
-    def fold_cells(
-        self, domain_groups: Dict[str, List[Cell]]
-    ) -> Dict[str, Dict[str, List[Cell]]]:
-        """Fold cells by quality within each domain"""
-
-        # COLLECT ALL UNIQUE TABLES ACROSS ALL DOMAINS
-        all_cells = []
-        for cells in domain_groups.values():
-            all_cells.extend(cells)
-
-        unique_table_ids = set(cell.table_id for cell in all_cells)
-        logging.info(
-            f"Pre-generating RAHA features for {len(unique_table_ids)} unique tables"
-        )
-
-        # GENERATE FEATURES FOR ALL TABLES ONCE
-        all_table_features = self._generate_features_for_all_tables(unique_table_ids)
-
-        quality_groups = {}
-
-        for domain_name, cells in domain_groups.items():
-            logging.info(
-                f"Quality folding domain {domain_name} with {len(cells)} cells"
-            )
-
-            # Extract RAHA features by reading tables from disk
-            cells_with_features = self.self._populate_precomputed_features(
-                cells, all_table_features
-            )
-
-            # Cluster cells by their features
-            quality_clusters = self._cluster_cells_by_features(
-                cells_with_features, domain_name
-            )
-
-            quality_groups[domain_name] = quality_clusters
-
-        return quality_groups
+    def fold_cells(self, cells):
+        return super().fold_cells(cells)
 
     def _generate_features_for_all_tables(self, table_ids: set):
         """Generate RAHA features for all unique tables once"""
@@ -159,3 +125,30 @@ class QualityCellFold(BaseCellFold):
             quality_clusters[quality_name].append(valid_cells[i])
 
         return quality_clusters
+
+    def _set_cell_features(self, cell: Cell, table_features: Dict):
+        """Set cell features from precomputed table features"""
+        from backend.fold_system.core.error_detection_strategy_parser import (
+            ErrorDetectionParser,
+        )
+
+        col_features = table_features["col_features"]
+        cell_to_strategies = table_features["cell_to_strategies"]
+
+        # Set features
+        if cell.col_idx < len(col_features):
+            col_feature_array = col_features[cell.col_idx]
+            if cell.row_idx < len(col_feature_array):
+                cell.features = col_feature_array[cell.row_idx].tolist()
+            else:
+                cell.features = []
+        else:
+            cell.features = []
+
+        # Set strategies
+        parser = ErrorDetectionParser()
+        if (cell.col_idx, cell.row_idx) in cell_to_strategies:
+            strategies = cell_to_strategies[(cell.col_idx, cell.row_idx)]
+            cell.strategies = parser.parse(strategies)
+        else:
+            cell.strategies = []
