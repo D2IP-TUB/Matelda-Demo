@@ -111,7 +111,7 @@ def matelda_domain_folding(datasets_path, tables):
         try:
             # Read CSV file
             csv_path = os.path.join(table_path, csv_files[0])
-            df = pd.read_csv(csv_path)
+            df = pd.read_csv(csv_path, dtype=str)
 
             st = serialize_table(df)
 

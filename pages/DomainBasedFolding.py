@@ -76,7 +76,7 @@ if "selected_split_tables" not in st.session_state:
 def load_table(table_name):
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, dtype=str)
     except Exception as e:
         df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
     return df

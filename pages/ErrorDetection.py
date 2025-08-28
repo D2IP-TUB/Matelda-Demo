@@ -76,7 +76,7 @@ primary_rgb = hex_to_rgb(primary_color)
 def display_table_with_errors(table_name, error_cells):
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, dtype=str)
     except Exception as e:
         st.error(f"Could not load {file_path}: {e}")
         return
@@ -103,9 +103,9 @@ def display_table_with_errors(table_name, error_cells):
 
 
 # Main interface
-st.markdown("### 🤖 Machine Learning Error Detection")
+st.markdown("### Error Detection")
 st.markdown(
-    "Run the error detection classifier to automatically detect errors in your dataset based on the propagated labels."
+    "Run the error detection classifier to automatically detect errors in your dataset based on the user & propagated labels."
 )
 
 # Show propagation summary

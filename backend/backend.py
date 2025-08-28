@@ -91,37 +91,6 @@ def backend_dbf(dataset: str, labeling_budget: int) -> dict:
         return {"domain_folds": {}}
 
 
-def _get_centroid_cell_index(quality_cells):
-    """Find cell closest to cluster centroid"""
-    import numpy as np
-
-    feature_vectors = []
-    valid_indices = []
-
-    for i, cell in enumerate(quality_cells):
-        if hasattr(cell, "features") and cell.features and len(cell.features) > 0:
-            feature_vectors.append(cell.features)
-            valid_indices.append(i)
-
-    if not feature_vectors:
-        return 0  # If no features, return first cell
-
-    # Calculate centroid
-    centroid = np.mean(feature_vectors, axis=0)
-
-    # Find cell closest to centroid
-    min_distance = float("inf")
-    centroid_idx = 0
-
-    for i, feature_vector in enumerate(feature_vectors):
-        distance = np.linalg.norm(np.array(feature_vector) - centroid)
-        if distance < min_distance:
-            min_distance = distance
-            centroid_idx = valid_indices[i]
-
-    return centroid_idx
-
-
 def backend_qbf(
     selected_dataset: str,
     labeling_budget: int,
@@ -155,7 +124,7 @@ def backend_qbf(
     # Setup
     base_path = os.path.join("datasets", selected_dataset)
     raha_config = {
-        "save_results": False,
+        "save_results": True,
         "strategy_filtering": False,
         "error_detection_algorithms": [],
     }
@@ -259,7 +228,16 @@ def backend_qbf(
                 domain_result = {}
                 for quality_group_name, quality_cells in quality_clusters.items():
                     # Find centroid cell for labeling
-                    centroid_idx = _get_centroid_cell_index(quality_cells)
+                    from backend.fold_system.core.cell_sampler import CellSampler
+
+                    sampler = CellSampler(sampling_strategy="centroid")
+                    cell_features = [
+                        cell.features for cell in quality_cells if cell.features
+                    ]
+                    selected_indices = sampler._sample_nearest_to_centroid(
+                        cell_features
+                    )
+                    centroid_idx = selected_indices[0] if selected_indices else 0
 
                     cell_fold_name = f"{domain_fold_name} / Cell Fold {quality_group_name.replace('quality_', '')}"
 
@@ -355,15 +333,15 @@ def backend_sample_labeling(
                 for cell_data in cells_data:
                     if cell_data.get("selected_for_labeling", False):
                         sampled_cell = {
-                            "id": len(sampled_cells) + 1,  # Add this
-                            "name": f"{cell_fold_name} - {cell_data['table']}",  # Add this
+                            "id": len(sampled_cells) + 1,
+                            "name": f"{cell_fold_name} - {cell_data['table']}",
                             "table": cell_data["table"],
                             "row": cell_data["row"],
                             "col": cell_data["col"],
                             "val": cell_data["val"],
                             "domain_fold": domain_name,
                             "cell_fold": cell_fold_name,
-                            "cell_fold_label": "neutral",  # Add this
+                            "cell_fold_label": "neutral",
                             "features": cell_data.get("features", {}),
                             "strategies": cell_data.get("strategies", []),
                         }

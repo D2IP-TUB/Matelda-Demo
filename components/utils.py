@@ -20,7 +20,7 @@ def load_clean_table(table_name: str, datasets_path: str) -> pd.DataFrame:
     """Load clean.csv file for a given table"""
     file_path = os.path.join(datasets_path, table_name, "clean.csv")
     try:
-        return pd.read_csv(file_path)
+        return pd.read_csv(file_path, dtype=str)
     except Exception as e:
         return pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
 
@@ -29,7 +29,7 @@ def load_dirty_table(table_name: str, datasets_path: str) -> pd.DataFrame:
     """Load dirty.csv file for a given table"""
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
     try:
-        return pd.read_csv(file_path)
+        return pd.read_csv(file_path, dtype=str)
     except Exception as e:
         return pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
 

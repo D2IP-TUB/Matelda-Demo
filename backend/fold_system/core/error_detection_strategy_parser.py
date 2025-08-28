@@ -43,6 +43,10 @@ class ErrorDetectionParser:
                 return f"{self.detector_types[detector_type]}, Violated Rule: {rule_type} -> {rule_target}"
             else:
                 return f"{self.detector_types[detector_type]}, Rule: {strategy_params[0] if strategy_params else 'unknown'}"
+        elif detector_type == "RVD":
+            return "RVD"
+        elif detector_type == "TypoD":
+            return "TypoD"
 
         # else:
         # Unknown detector type
@@ -58,7 +62,7 @@ class ErrorDetectionParser:
                 detector_type, strategy_params = self.parse_line(line)
                 if detector_type and strategy_params:
                     formatted = self.format_strategy(detector_type, strategy_params)
-                    if formatted not in seen_strategies:
+                    if formatted != "RVD" and formatted not in seen_strategies:
                         strategies.append(formatted)
                         seen_strategies.add(formatted)
 

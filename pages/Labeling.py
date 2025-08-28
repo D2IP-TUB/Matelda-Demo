@@ -1,9 +1,12 @@
 import json
 import logging
+import math
 import os
 import time
 from typing import Any, Dict, List
 
+import numpy as np
+import pandas as pd
 import streamlit as st
 from backend import backend_label_propagation, backend_sample_labeling
 from components import (
@@ -49,6 +52,18 @@ if "dataset_select" not in st.session_state:
 dataset = st.session_state.dataset_select
 
 
+def sanitize(obj):
+    if isinstance(obj, float) and math.isnan(obj):
+        return None
+    if isinstance(obj, dict):
+        return {k: sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return sanitize(obj.tolist())
+    return obj
+
+
 def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     """Return a table-mode card configuration for streamlit-swipecards."""
 
@@ -57,12 +72,15 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
 
     row = int(cell.get("row", 0))
     column = cell.get("col", "")
+    val = cell.get("val", "")
+    if pd.isna(val) or str(val).lower() == "nan":
+        val = ""
 
     return {
         "dataset_path": dataset_path,
         "row_index": row,
         "name": cell.get("name", ""),
-        "description": f"Value: {cell.get('val', '')}",
+        "description": f"Value: {val}",
         "highlight_cells": [{"row": row, "column": column}],
         "highlight_rows": [{"row": row}],
         "highlight_columns": [{"column": column}],
