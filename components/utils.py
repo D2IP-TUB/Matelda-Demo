@@ -7,6 +7,7 @@ import os
 from typing import Any, Dict
 
 import pandas as pd
+import streamlit as st
 
 
 def get_datasets_path(selected_dataset: str) -> str:
@@ -68,3 +69,21 @@ def update_domain_folds_in_config(
     except Exception as e:
         print(f"Error saving domain folds: {e}")
         return False
+
+
+# ----------------------------
+# Pipeline change tracking
+# ----------------------------
+def mark_pipeline_dirty() -> None:
+    """Mark current session's pipeline state as dirty (changes made)."""
+    st.session_state["pipeline_dirty"] = True
+
+
+def mark_pipeline_clean() -> None:
+    """Mark current session's pipeline state as clean (results saved)."""
+    st.session_state["pipeline_dirty"] = False
+
+
+def is_pipeline_dirty() -> bool:
+    """Check if current session's pipeline state is dirty."""
+    return bool(st.session_state.get("pipeline_dirty", False))

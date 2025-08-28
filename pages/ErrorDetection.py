@@ -15,6 +15,10 @@ from components import (
 st.set_page_config(page_title="Error Detection", layout="wide")
 st.title("Error Detection")
 
+# If pipeline has been modified, inform that shown errors may be from a previous run
+# if is_pipeline_dirty():
+#     st.info("Pipeline changed earlier in this session. Showing the last saved detected errors until you re-run labeling/propagation.")
+
 # Apply base styles
 apply_base_styles()
 
@@ -35,7 +39,7 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
             st.session_state.dataset_select = selected
 
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Dataset not configured.")
+    st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()

@@ -10,7 +10,9 @@ from components import (
     apply_folding_styles,
     render_inline_restart_button,
     render_sidebar,
+    update_domain_folds_in_config,
 )
+from components.utils import mark_pipeline_dirty
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -36,7 +38,7 @@ if "dataset_select" not in st.session_state and "pipeline_path" in st.session_st
 
 # If we still don't have a dataset configured, show a warning and redirect option
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Dataset not configured.")
+    st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()
@@ -46,7 +48,7 @@ selected_dataset = st.session_state.dataset_select
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 datasets_path = os.path.join(root_dir, "datasets", selected_dataset)
 
-# Load saved domain folds only if a pipeline is selected and table_locations is not already set.
+# Load saved domain folds only if a pipeline is selected. If found, also mark run_folding True
 if "pipeline_path" in st.session_state and "table_locations" not in st.session_state:
     pipeline_config_path = os.path.join(
         st.session_state.pipeline_path, "configurations.json"
@@ -60,6 +62,7 @@ if "pipeline_path" in st.session_state and "table_locations" not in st.session_s
             st.session_state.table_locations = {
                 table: fold for fold, tables in saved_folds.items() for table in tables
             }
+            st.session_state.run_folding = True
 
 # Initialize session state variables
 if "merge_mode" not in st.session_state:
@@ -96,6 +99,16 @@ if st.button("▶️ Run Domain Based Folding"):
         st.session_state.table_locations = {
             table: fold for fold, tables in domain_folds.items() for table in tables
         }
+        # Persist domain folds into the pipeline configuration for reloading later
+        if "pipeline_path" in st.session_state:
+            try:
+                update_domain_folds_in_config(
+                    st.session_state.pipeline_path, st.session_state.table_locations
+                )
+            except Exception:
+                pass
+        # Domain folds changed – mark pipeline as dirty (results/metrics outdated)
+        mark_pipeline_dirty()
         time.sleep(2)  # Keep a small delay for UX
     st.session_state.run_folding = True
 
@@ -167,6 +180,7 @@ if st.session_state.get("run_folding"):
                 )
                 if new_location != st.session_state.table_locations[table]:
                     st.session_state.table_locations[table] = new_location
+                    mark_pipeline_dirty()
                     st.rerun()
             if st.session_state.global_split_mode:
                 split_selected = table_cols[1].checkbox(
@@ -198,6 +212,7 @@ if st.session_state.get("run_folding"):
                     st.session_state.table_locations[table] = target_fold
             st.session_state.selected_folds = []
             st.session_state.merge_mode = False
+            mark_pipeline_dirty()
             st.rerun()
 
     # Global Confirm Split: if split mode is active and at least one table is selected.
@@ -238,8 +253,8 @@ if st.session_state.get("run_folding"):
                                 st.session_state.table_locations[t] = new_fold_name
                 st.session_state.global_split_mode = False
                 st.session_state.selected_split_tables = {}
+                mark_pipeline_dirty()
                 st.rerun()
-            st.markdown("---")
 
     # Navigation row: Restart | Back | Next
     st.markdown("---")

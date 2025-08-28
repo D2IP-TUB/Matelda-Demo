@@ -15,6 +15,7 @@ from components import (
     render_inline_restart_button,
     render_sidebar,
 )
+from components.utils import mark_pipeline_dirty
 
 # Page setup
 st.set_page_config(page_title="Quality Based Folding", layout="wide")
@@ -127,7 +128,7 @@ if (
 
 # If dataset is still not configured, inform the user and provide navigation
 if "dataset_select" not in st.session_state:
-    st.warning("⚠️ Dataset not configured.")
+    st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()
@@ -170,6 +171,20 @@ if "domain_folds" not in st.session_state:
         st.warning("⚠️ No pipeline selected.")
         st.stop()
 
+# If saved cell folds exist in the pipeline config, preload them and mark as already run
+if "pipeline_path" in st.session_state and "cell_folds" not in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            saved_cell_folds = cfg.get("cell_folds")
+            if saved_cell_folds:
+                st.session_state.cell_folds = saved_cell_folds
+                st.session_state.run_quality_folding = True
+        except Exception:
+            pass
+
 # Initialize controls
 defaults = {
     "run_quality_folding": False,
@@ -182,6 +197,60 @@ defaults = {
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
+
+##############################
+# Labeling Budget (editable) #
+##############################
+
+# Initialize labeling budget from pipeline config if missing in session
+if ("budget_slider" not in st.session_state) or ("budget_input" not in st.session_state):
+    cfg_budget = 10
+    if "pipeline_path" in st.session_state:
+        _cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+        if os.path.exists(_cfg_path):
+            try:
+                with open(_cfg_path) as _f:
+                    _cfg_tmp = json.load(_f)
+                cfg_budget = int(_cfg_tmp.get("labeling_budget", 10))
+            except Exception:
+                cfg_budget = 10
+    st.session_state.setdefault("budget_slider", min(int(cfg_budget), 100))
+    st.session_state.setdefault("budget_input", int(cfg_budget))
+
+def _sync_slider_to_input() -> None:
+    st.session_state.budget_input = st.session_state.budget_slider
+
+def _sync_input_to_slider() -> None:
+    try:
+        st.session_state.budget_slider = min(int(st.session_state.budget_input), 100)
+    except Exception:
+        st.session_state.budget_slider = 100
+
+st.subheader("Labeling Budget")
+col_slider, col_input = st.columns([3, 1])
+with col_slider:
+    st.slider(
+        "Select Labeling Budget:",
+        min_value=1,
+        max_value=100,
+        key="budget_slider",
+        label_visibility="visible",
+        on_change=_sync_slider_to_input,
+    )
+with col_input:
+    st.number_input(
+        "Enter Labeling Budget",
+        min_value=1,
+        step=1,
+        key="budget_input",
+        label_visibility="hidden",
+        on_change=_sync_input_to_slider,
+    )
+
+# Use number input as source of truth
+_current_labeling_budget = int(st.session_state.get("budget_input", st.session_state.get("budget_slider", 10)))
+
+st.markdown("---")
 
 # Strategies selection (pre-run)
 st.subheader("Error Detection Strategies")
@@ -198,11 +267,12 @@ st.session_state.selected_strategies = selected
 st.markdown("---")
 if st.button("▶️ Run Quality Based Folding"):
     with st.spinner("🔄 Processing... Please wait..."):
-        # Get labeling budget from configuration
+        # Load current configuration and persist the latest labeling budget from UI
         cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
         with open(cfg_path) as f:
             cfg = json.load(f)
-        labeling_budget = cfg.get("labeling_budget", 10)
+        labeling_budget = int(st.session_state.get("budget_input", st.session_state.get("budget_slider", cfg.get("labeling_budget", 10))))
+        cfg["labeling_budget"] = labeling_budget
         # Persist current strategies selection
         cfg["selected_strategies"] = st.session_state.get("selected_strategies", [])
 
@@ -223,6 +293,8 @@ if st.button("▶️ Run Quality Based Folding"):
             json.dump(cfg, f, indent=2, default=_json_default)
 
         time.sleep(2)  # Keep a small delay for UX
+    # Cell folds changed, downstream results are outdated
+    mark_pipeline_dirty()
     st.session_state.run_quality_folding = True
     st.rerun()
 
@@ -290,7 +362,8 @@ def show_cell_dialog(cell, fold_name):
                 cfg["cell_folds"] = st.session_state.cell_folds
                 with open(cfg_path, "w") as f:
                     json.dump(cfg, f, indent=2, default=_json_default)
-
+            # Moving a cell changes folds
+            mark_pipeline_dirty()
             st.rerun()
         if st.button("Close", key=f"close_{fold_name}_{tbl}_{r}_{c}_{id(cell)}"):
             st.rerun()
@@ -350,7 +423,18 @@ header_cols[0].markdown("**Fold / Cell**")
 header_cols[1].markdown("**Select**")
 
 for dom, folds in st.session_state.cell_folds.items():
-    for fname, cell_list in folds.items():
+    # Limit initially visible folds per domain to 1, with a 'show more' button
+    fold_names = list(folds.keys())
+    total_folds_in_domain = len(fold_names)
+    visible_folds_key = f"visible_folds_{dom}"
+    if visible_folds_key not in st.session_state:
+        st.session_state[visible_folds_key] = 1
+    # Clamp
+    st.session_state[visible_folds_key] = max(1, min(st.session_state[visible_folds_key], total_folds_in_domain))
+    show_fold_names = fold_names[: st.session_state[visible_folds_key]]
+
+    for fname in show_fold_names:
+        cell_list = folds[fname]
         fold_label = None
         if "pipeline_path" in st.session_state:
             cfg_path = os.path.join(
@@ -405,6 +489,7 @@ for dom, folds in st.session_state.cell_folds.items():
                         cfg["cell_fold_labels"][fname] = "correct"
                         with open(cfg_path, "w") as f:
                             json.dump(cfg, f, indent=2, default=_json_default)
+                        mark_pipeline_dirty()
                         st.rerun()
             if button_cols[1].button(
                 "✗", key=f"false_{fname}", use_container_width=True
@@ -421,6 +506,7 @@ for dom, folds in st.session_state.cell_folds.items():
                         cfg["cell_fold_labels"][fname] = "false"
                         with open(cfg_path, "w") as f:
                             json.dump(cfg, f, indent=2, default=_json_default)
+                        mark_pipeline_dirty()
                         st.rerun()
         else:
             fold_cols[1].empty()
@@ -478,10 +564,19 @@ for dom, folds in st.session_state.cell_folds.items():
                     st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
+    # Domain-level 'show more cell folds' button if more folds are available
+    if st.session_state[visible_folds_key] < total_folds_in_domain:
+        domain_btn_row = st.columns([4, action_col_width])
+        with domain_btn_row[0]:
+            st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
+            if st.button("+ show more cell folds", key=f"show_more_folds_{dom}", use_container_width=False):
+                st.session_state[visible_folds_key] = min(total_folds_in_domain, st.session_state[visible_folds_key] + 3)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
 if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge) > 1:
-    st.markdown("---")
     merge_confirm_cols = st.columns([4, 1])
     if merge_confirm_cols[1].button(
         "Confirm Merge", key="confirm_merge", use_container_width=True
@@ -545,6 +640,7 @@ if st.session_state.merge_mode and len(st.session_state.selected_folds_for_merge
 
         st.session_state.selected_folds_for_merge = []
         st.session_state.merge_mode = False
+        mark_pipeline_dirty()
         st.rerun()
 
 # Global Confirm Split: if split mode is active and at least one cell is selected
@@ -590,6 +686,7 @@ if st.session_state.split_mode:
 
             st.session_state.split_mode = False
             st.session_state.selected_cells_for_split = {}
+            mark_pipeline_dirty()
             st.rerun()
 
 # Navigation row: Restart | Back | Next

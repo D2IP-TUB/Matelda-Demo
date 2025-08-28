@@ -3,10 +3,13 @@ Common sidebar navigation component for all pages
 """
 import streamlit as st
 import os
+from .session_persistence import init_session_persistence, persist_session
 from .theme_switcher import render_theme_switcher
 
 def render_sidebar():
     """Render the common sidebar navigation with minimal flicker"""
+    # Restore any previous session snapshot for this browser tab
+    init_session_persistence()
     # Get current page path
     try:
         current_script = os.path.basename(st._get_script_run_ctx().info.script_path)
@@ -88,3 +91,6 @@ def render_sidebar():
         
         # Add theme switcher
         render_theme_switcher()
+
+    # Persist a snapshot of important session keys for reload survival
+    persist_session()
