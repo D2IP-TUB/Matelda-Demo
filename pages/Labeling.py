@@ -17,6 +17,15 @@ from components import (
 from components.utils import mark_pipeline_dirty
 from streamlit_swipecards import streamlit_swipecards
 
+# Logger setup (console only)
+logger = logging.getLogger("labeling")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    _handler.setFormatter(_formatter)
+    logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
+
 # Page setup
 st.set_page_config(page_title="Labeling", layout="wide")
 st.title("Labeling")
@@ -48,6 +57,11 @@ if "dataset_select" not in st.session_state:
     st.stop()
 
 dataset = st.session_state.dataset_select
+
+# Session-state keys
+SAMPLE_KEY = "labeling.sampled_cells"
+SAMPLE_DATASET_KEY = "labeling.sampled_cells.dataset"
+SAMPLE_BUDGET_KEY = "labeling.sampled_cells.budget"
 
 # Hydrate domain_folds and cell_folds from pipeline config on reload
 if (
@@ -157,42 +171,79 @@ def show_all_strategies_dialog(cell_data: Dict[str, Any]):
     _dialog()
 
 
-if "run_quality_folding" not in st.session_state:
-    st.session_state.run_quality_folding = False
+def _compute_sampled_cells(
+    dataset: str,
+    labeling_budget: int,
+    cell_folds: Dict[str, Any],
+    domain_folds: Dict[str, Any],
+):
+    # Log only when actually computing (i.e., cache miss)
+    logger.info(
+        "Sampling cells via backend_sample_labeling (dataset=%s, budget=%s)",
+        dataset,
+        labeling_budget,
+    )
+    return backend_sample_labeling(
+        selected_dataset=dataset,
+        labeling_budget=labeling_budget,
+        cell_folds=cell_folds,
+        domain_folds=domain_folds,
+    )
 
-if not st.session_state.run_quality_folding:
-    if st.button("Run Labeling"):
-        with st.spinner("🔄 Processing... Please wait..."):
-            labeling_budget = st.session_state.get("budget_slider", 10)
-            cell_folds = st.session_state.get("cell_folds", {})
-            domain_folds = st.session_state.get("domain_folds", {})
-            sampled_cells = backend_sample_labeling(
-                selected_dataset=dataset,
-                labeling_budget=labeling_budget,
-                cell_folds=cell_folds,
-                domain_folds=domain_folds,
-            )
-            st.session_state.sampled_cells = sampled_cells
-            time.sleep(2)
-        st.session_state.run_quality_folding = True
-        st.rerun()
-else:
-    # Quality-based folding already completed but sampling might be missing
-    if "sampled_cells" not in st.session_state:
-        with st.spinner("🔄 Processing... Please wait..."):
-            labeling_budget = st.session_state.get("budget_slider", 10)
-            cell_folds = st.session_state.get("cell_folds", {})
-            domain_folds = st.session_state.get("domain_folds", {})
-            sampled_cells = backend_sample_labeling(
-                selected_dataset=dataset,
-                labeling_budget=labeling_budget,
-                cell_folds=cell_folds,
-                domain_folds=domain_folds,
-            )
-            st.session_state.sampled_cells = sampled_cells
 
-if st.session_state.run_quality_folding:
-    cards: List[Dict[str, Any]] = st.session_state.get("sampled_cells", [])
+@st.cache_data(show_spinner=False)
+def get_cached_sampled_cells(
+    dataset: str,
+    labeling_budget: int,
+    cell_folds: Dict[str, Any],
+    domain_folds: Dict[str, Any],
+):
+    return _compute_sampled_cells(dataset, labeling_budget, cell_folds, domain_folds)
+
+
+def run_sampling():
+    with st.spinner("🔄 Processing... Please wait..."):
+        labeling_budget = st.session_state.get("labeling_budget", 10)
+        cell_folds = st.session_state.get("cell_folds", {})
+        domain_folds = st.session_state.get("domain_folds", {})
+        sampled_cells = get_cached_sampled_cells(
+            dataset=dataset,
+            labeling_budget=labeling_budget,
+            cell_folds=cell_folds,
+            domain_folds=domain_folds,
+        )
+        # Persist in session state to avoid re-sampling on reload
+        st.session_state[SAMPLE_KEY] = sampled_cells
+        st.session_state[SAMPLE_DATASET_KEY] = dataset
+        st.session_state[SAMPLE_BUDGET_KEY] = labeling_budget
+        # Small delay to make spinner visible and UX smooth
+        time.sleep(0.3)
+
+
+# Migration: support prior non-namespaced key
+if "sampled_cells" in st.session_state and SAMPLE_KEY not in st.session_state:
+    st.session_state[SAMPLE_KEY] = st.session_state["sampled_cells"]
+    st.session_state[SAMPLE_DATASET_KEY] = dataset
+    st.session_state[SAMPLE_BUDGET_KEY] = st.session_state.get("labeling_budget", 10)
+
+# Auto-run sampling only if no samples exist for the current dataset
+_current_budget = st.session_state.get("labeling_budget", 10)
+if (
+    SAMPLE_KEY not in st.session_state
+    or st.session_state.get(SAMPLE_DATASET_KEY) != dataset
+    or st.session_state.get(SAMPLE_BUDGET_KEY) != _current_budget
+):
+    run_sampling()
+
+if SAMPLE_KEY in st.session_state:
+    cards: List[Dict[str, Any]] = st.session_state.get(SAMPLE_KEY, [])
+    # Log: initializing cards (console)
+    logger.info(
+        "Initializing cards (n=%s, dataset=%s, budget=%s)",
+        len(cards),
+        st.session_state.get(SAMPLE_DATASET_KEY),
+        st.session_state.get(SAMPLE_BUDGET_KEY),
+    )
     card_data = [c for c in (make_card(card) for card in cards) if c]
 
     # Show bulk annotation status
@@ -257,9 +308,10 @@ if st.session_state.run_quality_folding:
                     card_id = cards[idx]["id"]
                     key = str(card_id)
                     new_val = action == "right"
-                    if st.session_state.labeling_results.get(key) is None:
-                        st.session_state.labeling_results[key] = new_val
-                        made_changes = True
+                    prev_val = st.session_state.labeling_results.get(key)
+                if prev_val is None or prev_val != new_val:
+                    st.session_state.labeling_results[key] = new_val
+                    made_changes = True
             if made_changes:
                 # Only mark dirty if we actually recorded new swipes in this render
                 mark_pipeline_dirty()

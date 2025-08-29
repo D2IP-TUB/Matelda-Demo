@@ -44,7 +44,8 @@ if "dataset_select" not in st.session_state:
 # ---------------------------------------------------------------------------
 selected_dataset = st.session_state.dataset_select
 if st.button("🔁 Propagate Errors", key="propagate_errors", use_container_width=False):
-    cards = st.session_state.get("sampled_cells", [])
+    # Prefer namespaced key from Labeling; fallback to legacy key
+    cards = st.session_state.get("labeling.sampled_cells") or st.session_state.get("sampled_cells", [])
     labeling_results = st.session_state.get("labeling_results", {})
     labeled_cells = []
     for cell in cards:
