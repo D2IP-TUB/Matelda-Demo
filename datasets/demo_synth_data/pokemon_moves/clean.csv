@@ -1,46 +1,51 @@
-Move_Name,Move_Type,Category,Power,Accuracy
-Dragon Pulse Dragon Attack,Ice Type Pokemon,Physical Pokemon Attack,109,91
-Surf Water Attack,Ghost Type Pokemon,Special Pokemon Attack,57,85
-Flamethrower Fire Attack,Ghost Type Pokemon,Special Pokemon Attack,51,75
-Shadow Ball Ghost Attack,Grass Type Pokemon,Physical Pokemon Attack,46,89
-Surf Water Attack,Fire Type Pokemon,Physical Pokemon Attack,72,76
-Iron Head Steel Attack,Dragon Type Pokemon,Physical Pokemon Attack,63,78
-Close Combat Fighting Attack,Fighting Type Pokemon,Special Pokemon Attack,98,99
-Shadow Ball Ghost Attack,Water Type Pokemon,Physical Pokemon Attack,44,96
-Psychic Mind Attack,Grass Type Pokemon,Status Pokemon Move,54,86
-Iron Head Steel Attack,Fire Type Pokemon,Special Pokemon Attack,102,92
-Iron Head Steel Attack,Grass Type Pokemon,Status Pokemon Move,62,99
-Ice Beam Ice Attack,Ghost Type Pokemon,Status Pokemon Move,75,100
-Close Combat Fighting Attack,Electric Type Pokemon,Status Pokemon Move,85,84
-Dragon Pulse Dragon Attack,Grass Type Pokemon,Status Pokemon Move,60,84
-Dragon Pulse Dragon Attack,Fighting Type Pokemon,Status Pokemon Move,110,85
-Solar Beam Grass Attack,Electric Type Pokemon,Status Pokemon Move,116,84
-Thunderbolt Electric Attack,Ghost Type Pokemon,Special Pokemon Attack,49,92
-Flamethrower Fire Attack,Psychic Type Pokemon,Physical Pokemon Attack,74,89
-Iron Head Steel Attack,Ghost Type Pokemon,Status Pokemon Move,107,89
-Shadow Ball Ghost Attack,Dragon Type Pokemon,Special Pokemon Attack,48,94
-Ice Beam Ice Attack,Ice Type Pokemon,Physical Pokemon Attack,87,93
-Solar Beam Grass Attack,Grass Type Pokemon,Physical Pokemon Attack,95,98
-Ice Beam Ice Attack,Ghost Type Pokemon,Special Pokemon Attack,78,94
-Close Combat Fighting Attack,Grass Type Pokemon,Special Pokemon Attack,72,79
-Close Combat Fighting Attack,Dragon Type Pokemon,Status Pokemon Move,79,71
-Surf Water Attack,Electric Type Pokemon,Physical Pokemon Attack,100,91
-Close Combat Fighting Attack,Ice Type Pokemon,Special Pokemon Attack,54,100
-Thunderbolt Electric Attack,Steel Type Pokemon,Special Pokemon Attack,67,70
-Surf Water Attack,Ghost Type Pokemon,Special Pokemon Attack,64,75
-Psychic Mind Attack,Water Type Pokemon,Physical Pokemon Attack,102,98
-Flamethrower Fire Attack,Grass Type Pokemon,Status Pokemon Move,69,80
-Thunderbolt Electric Attack,Ghost Type Pokemon,Physical Pokemon Attack,65,76
-Dragon Pulse Dragon Attack,Psychic Type Pokemon,Special Pokemon Attack,41,85
-Dragon Pulse Dragon Attack,Electric Type Pokemon,Physical Pokemon Attack,97,85
-Psychic Mind Attack,Water Type Pokemon,Status Pokemon Move,87,94
-Thunderbolt Electric Attack,Psychic Type Pokemon,Physical Pokemon Attack,84,79
-Iron Head Steel Attack,Fighting Type Pokemon,Special Pokemon Attack,113,100
-Psychic Mind Attack,Fighting Type Pokemon,Special Pokemon Attack,80,82
-Thunderbolt Electric Attack,Psychic Type Pokemon,Special Pokemon Attack,112,90
-Close Combat Fighting Attack,Fighting Type Pokemon,Status Pokemon Move,60,92
-Thunderbolt Electric Attack,Dragon Type Pokemon,Physical Pokemon Attack,48,93
-Iron Head Steel Attack,Ice Type Pokemon,Physical Pokemon Attack,93,80
-Flamethrower Fire Attack,Steel Type Pokemon,Status Pokemon Move,94,79
-Iron Head Steel Attack,Ghost Type Pokemon,Status Pokemon Move,105,70
-Thunderbolt Electric Attack,Ghost Type Pokemon,Physical Pokemon Attack,86,98
+Pokemon_Name,Pokemon_Type,Move_Name,Move_Type,Power,Accuracy,Category
+Lucario,Fighting,Close Combat,Fighting,120,100,Physical
+Machamp,Fighting,Dragon Pulse,Dragon,85,100,Special
+Gengar,Ghost,Shadow Ball,Ghost,80,100,Special
+Alakazam,Psychic,Psychic,Psychic,90,100,Special
+Alakazam,Psychic,Flamethrower,Fire,90,100,Special
+Machamp,Fighting,Close Combat,Fighting,120,100,Physical
+Charizard,Fire,Ice Beam,Ice,90,100,Special
+Dragonite,Dragon,Dragon Pulse,Dragon,85,100,Special
+Pikachu,Electric,Thunderbolt,Electric,90,100,Special
+Dragonite,Dragon,Solar Beam,Grass,120,100,Special
+Gengar,Ghost,Shadow Ball,Ghost,80,100,Special
+Mewtwo,Psychic,Psychic,Psychic,90,100,Special
+Charizard,Fire,Surf,Water,90,100,Special
+Lucario,Fighting,Close Combat,Fighting,120,100,Physical
+Pikachu,Electric,Thunderbolt,Electric,90,100,Special
+Mewtwo,Psychic,Psychic,Psychic,90,100,Special
+Lucario,Fighting,Close Combat,Fighting,120,100,Physical
+Alakazam,Psychic,Psychic,Psychic,90,100,Special
+Alakazam,Psychic,Psychic,Psychic,90,100,Special
+Charizard,Fire,Flamethrower,Fire,90,100,Special
+Pikachu,Electric,Solar Beam,Grass,120,100,Special
+Lucario,Fighting,Shadow Ball,Ghost,80,100,Special
+Alakazam,Psychic,Psychic,Psychic,90,100,Special
+Pikachu,Electric,Dragon Pulse,Dragon,85,100,Special
+Blastoise,Water,Surf,Water,90,100,Special
+Mewtwo,Psychic,Psychic,Psychic,90,100,Special
+Pikachu,Electric,Close Combat,Fighting,120,100,Physical
+Venusaur,Grass,Solar Beam,Grass,120,100,Special
+Pikachu,Electric,Dragon Pulse,Dragon,85,100,Special
+Machamp,Fighting,Close Combat,Fighting,120,100,Physical
+Pikachu,Electric,Thunderbolt,Electric,90,100,Special
+Lucario,Fighting,Thunderbolt,Electric,90,100,Special
+Mewtwo,Psychic,Psychic,Psychic,90,100,Special
+Gengar,Ghost,Shadow Ball,Ghost,80,100,Special
+Machamp,Fighting,Close Combat,Fighting,120,100,Physical
+Pikachu,Electric,Thunderbolt,Electric,90,100,Special
+Mewtwo,Psychic,Psychic,Psychic,90,100,Special
+Pikachu,Electric,Thunderbolt,Electric,90,100,Special
+Gengar,Ghost,Shadow Ball,Ghost,80,100,Special
+Charizard,Fire,Flamethrower,Fire,90,100,Special
+Gengar,Ghost,Thunderbolt,Electric,90,100,Special
+Dragonite,Dragon,Dragon Pulse,Dragon,85,100,Special
+Pikachu,Electric,Ice Beam,Ice,90,100,Special
+Machamp,Fighting,Close Combat,Fighting,120,100,Physical
+Lucario,Fighting,Close Combat,Fighting,120,100,Physical
+Charizard,Fire,Flamethrower,Fire,90,100,Special
+Blastoise,Water,Surf,Water,90,100,Special
+Dragonite,Dragon,Dragon Pulse,Dragon,85,100,Special
+Charizard,Fire,Flamethrower,Fire,90,100,Special
+Charizard,Fire,Flamethrower,Fire,90,100,Special

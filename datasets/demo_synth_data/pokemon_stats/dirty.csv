@@ -1,46 +1,56 @@
-Pokemon_Name,Type,Region,HP,Attack
-Dragonite Dragon Pokemon,Ghost Type Pokemon,Unova Pokemon Region,40,75
-Mewtwo Legendary Pokemon,Ghost Type Pokemon,Galar Pokemon Region,103,123
-Alakazam Psychic Pokemon,Steel Type Pokemon,Sinnoh Pokemon Region,140,43
-Alakazam Psychic Pokeemon,Electric Type Pokemon,Kalos Pokemon Region,95,119
-Lucario Steel Pokemon,Steel Type Pokemon,Alola Pokemon Region,91,150
-Venusaur Grass Pokemon,Psychic Type Pokemon,Unova Pokemon Region,500,1
-Machamp Fighting Pokemon,Fire Type Pokemon,Kalos Pokemon Region,41,74
-Machamp Fighting Pokemon,Dragon Type Pokemon,Kalos Pokemon Region,80,180
-Mewtwo Legendary Pokemon,Electric Type Pokemon,Johto Pokemon Region,127,54
-Machamp Fighting Pokemon,Ghost Type Pokemon,Johto Pokemon Region,114,45
-Charizard Fire Pokemon,Fire Type Pokemon,Johto Pokemon Region,122,150
-Gengar Ghost Pokemon,Ice Type Pokemon,Hoenn Pokemon Region,500,43
-Blastoise Water Pokemon,Water Type Pokemon,Unova Pokemon Region,67,2
-Mewtwo Legendary Pokemon,Wateer Type Pokemon,Unova Pokemon Region,128,178
-Blastoisee Water Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,133,0
-Mewtwo Legendary Pokemon,Ice Type Pokemon,Kalos Pokemon Region,125,142
-Mewtwo Legendary Pokemon,Dragon Type Pokemon,Alola Pokemon Region,74,2
-Gengar Ghost Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,107,143
-Charizard Fire Pokemon,Dragon Type Pokemon,Unova Pokemon Region,48,73
-Venusaur Grass Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,106,52
-Gengar Ghost Pokemon,Dragon Type Pokemon,Kanto Pokemon Region,86,67
-Lucario Steel Pokemon,Ghost Type Pokemon,Sinnoh Pokemon Region,500,500
-Mewtwo Legendary Pokemon,Dragon Type Pokemon,Kanto Pokemon Region,85,117
-Blastoise Water Pokemon,Ice Type Pokemon,Kalos Pokemon Region,72,36
-Alakazam Psychic Pokemon,Ghost Type Pokemon,Galar Pokemon Region,114,131
-Charizard Fire Pokemon,Water-Type-Pokemon,Kanto Pokemon Region,88,131
-Dragonite Dragon Pokemon,Grass Type Pokemon,Sinnoh Pokemon Region,47,500
-Blastoise Water Pokemon,Firee Type Pokemon,Unova Pokemon Region,0,101
-Lucario Steel Pokemon,Water-Type-Pokemon,Galar Pokemon Region,91,64
-Machamp Fighting Pokemon,Psychic_Type_Pokemon,Unova Pokemon Region,142,100
-Machamp Fighting Pokemon,Ghost Type Pokemon,Hoenn Pokemon Region,1,93
-Alakazam Psychic Pokemon,Electric Type Pokemon,Hoenn Pokemon Region,0,37
-Gengar Ghost Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,87,2
-Dragonite Dragon Pokemon,Ghost Type Pokemon,Hoenn Pokemon Region,114,999
-Charizard Fire Pokemon,Ice Type Pokemon,Alola Pokemon Region,105,999
-Machamp Fighting Pokeemon,Water Type Pokemon,Johto Pokemon Region,139,79
-Mewtwo Legendary Pokemon,Dragon_Type_Pokemon,Hoenn Pokemon Region,95,151
-Meewtwo Legendary Pokemon,Ghost Type Pokemon,Kanto Pokemon Region,95,104
-Blastoise Water Pokemon,Grass Type Pokemon,Johto Pokemon Region,55,119
-Pikachu Electric Pokemon,Steel Type Pokemon,Kanto Pokemon Region,111,2
-Dragonite Dragon Pokemon,Fire_Type_Pokemon,Kalos Pokemon Region,103,0
-Alakazam Psychic Pokemon,Electric Type Pokemon,Sinnoh Pokemon Region,82,0
-Venusaur Grass Pokemon,Fighting Type Pokemon,Johto Pokemon Region,500,131
-Blastoise Water Pokemon,Steel Type Pokemon,Hoenn Pokemon Region,72,79
-Alakazam Psychic Pokemon,Steel Type Pokemon,Galar Pokemon Region,82,115
+Pokemon_Name,Type,Region,HP,Attack,Evolution_Stage
+Charizard,Fire,Kanto,2,95,Final
+Machamp,Fighting,Kanto,93,143,Final
+Mewtwo,Psychic,Kanto,500,105,Basic
+Venusaur,Dragon,Kanto,82,88,Final
+Charizard,Fire,Kanto,75,93,Final
+Charizard,Fire,Kanto,77,83,Final
+Charizard,Fire,Kanto,91,85,Final
+Pikachu,Electric,Kanto,48,64,Basic
+Blastoise,Water,Kanto,74,82,Final
+Blastoise,Water,Kanto,84,97,Final
+Dragonite,Dragon,Kanto,2,133,Final
+Gengar,Ghost,Kanto,73,250,Final
+Blastoise,Water,Kanto,93,1,Final
+Machamp,Fighting,Kanto,97,126,Final
+Machamp,Fighting,Kanto,2,128,Final
+Venusaur,Grass,Kanto,79,1,Final
+Charizard,Fire,Kanto,82,79,Final
+Alakazam,Psychic,Kanto,68,47,Final
+Venusaur,Grass,Kanto,76,92,Final
+Blastoise,Water,Kanto,2,1,Final
+Dragonite,Dragon,Kanto,2,133,Final
+Venusaur,Grass,Kanto,500,97,Final
+Pikachu,Electric,Kanto,42,67,Basic
+Charizard,Fire,Kanto,81,80,Final
+Dragonite,Dragon,Kanto,95,129,Final
+Machamp,Fighting,Kanto,91,125,Final
+Alakazam,Psychic,Kanto,300,50,Final
+Dragonite,Fighting,Kanto,99,250,Final
+Lucario,Fighting,Sinnoh,76,122,Final
+Gengar,Ghost,Kanto,61,64,Final
+Blastoise,Water,Kanto,74,250,Final
+Venusaur,Grass,Kanto,81,91,Final
+Gengar,Ghost,Kanto,72,71,Final
+Pikachu,Electric,Kanto,37,250,Basic
+Machamp,Fighting,Kanto,99,130,Final
+Lucario,Fighting,Sinnoh,72,122,Final
+Lucario,Fighting,Sinnoh,82,120,Final
+Gengar,Ghost,Kanto,55,250,Final
+Lucario,Fighting,Sinnoh,69,122,Final
+Alakazam,Psychic,Kanto,69,58,Final
+Machamp,Fighting,Kanto,89,137,Final
+Mewtwo,Psychic,Kanto,117,113,Basic
+Charizard,Fire,Kanto,83,400,Final
+Mewtwo,Psychic,Kanto,119,119,Basic
+Charizard,Fire,Kanto,81,84,Final
+Mewtwo,Psychic,Kanto,118,250,Basic
+Machamp,Fighting,Kanto,104,133,Final
+Mewtwo,Psychic,Kanto,101,108,Basic
+Venusaur,Grass,Kanto,76,85,Final
+Venusaur,Grass,Kanto,2,94,Final
+Blastoise,Water,Kanto,83,89,Final
+Gengar,Ghost,Kanto,66,66,Final
+Gengar,Ghost,Kanto,72,68,Final
+Mewtwo,Psychic,Kanto,118,400,Basic
+Dragonite,Dragon,Kanto,97,139,Final

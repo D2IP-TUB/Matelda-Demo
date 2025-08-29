@@ -1,51 +1,61 @@
-Event,Format,White_Player,Black_Player,Result
-Open Chess Championship,Tournament Chess,Ding Liren,Wesley So,Player Resignation
-International Chess League,Match Chess,Fabiano Caruanax,Anish Giri,Player Resignation
-Chess Masters Cup,Blitz Chess,Magnus Carlsen,Alireza Firouzja,Chess Game Draw
-Elite Chess Series,Tournament Chess,Magnus Carlsen,Fabiano Caruana,Black Player Victory
-Elite Chess Series,Tournament Chess,Hikaru Nakamura,Ian Nepomniachtchi,Checkmate Victory
-International Chess League,Blitz Cheess,Ian Nepomniachtchi,Wesley So,Chess Time Out
-Elite Chess Series,Classical Chess,Wesley So,Ding Liren,Black Player Victory
-Chess Masters Cup,Bulleet Chess,Ian Nepomniachtchi,Anish Giri,Chess Game Draw
-International Chess League,Standard Chess,Ding Liren,Ian Nepomniachtchi,Game Forfeit
-Cheess Masters Cup,Classical Chess,Alireza Firouzja,Magnus Carlsen,Chess Game Draw
-Chess Tournament Finals,Standard Chess,Fabiano Caruana,Wesley So,Chess Game Draw
-Chess Master Tournament,Blitz Chess,Ian Nepomniachtchi,Wesley So,Checkmate Victory
-Chess Tournament Finals,Match Chess,Magnus Carlseen,Hikaru Nakamura,White Player Victory
-Chess Tournament Finals,Match Chess,Hikaru Nakamura,Anish Giri,Cheess Time Out
-Chess Master Tournament,Blitz Chess,Hikaru Nakamura,Wesley So,White Player Victory
-Chess Masters Cup,Blitz Chess,Fabiano Caruana,Wesley So,Playeer Resignation
-Chess Masters Cup,Classical Chess,Ian Nepomniachtchi,Ding Liren,Black Player Victory
-Elite Chess Series,Tournament Chess,Hikaru Nakamura,Ding Liren,Chess Game Draw
-Elite Chess Series,Blitz Chess,Alireeza Firouzja,Hikaru Nakamura,Chess Time Out
-Chess Masters Cup,Blitz Chess,Ding Liren,Alireza Firouzja,Chess Game Drawx
-World Chess Championship,Tournament Chess,Hikaru Nakamura,Maagnus Carlsen,Black Player Victory
-Elite Chess Series,Rapid Chess,Ding Lireen,Hikaru Nakamura,Chess Game Draw
-Chess Master Tournament,Tournament Chess,Magnus Carlsen,Ian Nepomniachtchi,Chess Time Out
-Chess Tournament Finals,Standard Chess,Wesley So,Hikaru Nakamura,Player Resignation
-Cheess Tournament Finals,Tournament Chess,Alireza Firouzja,Anish Giri,Chess Game Draw
-Elitee Chess Series,Bullet Chess,Ding Liren,Anish Giri,Chess Game Draw
- World Cheess Championship ,Standard Cheess,Hikaru Nakamura,Ian Nepomniachtchi,Checkmate Victory
-ChessGrandPrix,Bullet Chess,Wesley So,Ian Nepomniachtchi,White Player Victory
-World Chess Championship,Match Chess,Wesley So,Ding Liren,Chess Time Out
-International Chess League,Bullet Chess,Ian Nepomniachtchi,Alireza Firouzja,Game Forfeit
-Chess Master Tournament,Match Chess,Alireza Firouzja,Ding Liren,Black Player Victory
-WorldChessChampionship,Classical Chess,Alireza Firouzja,Anish Giri,Chess Game Draw
-Elite Chess Series,Bullet Chess,Hikaru Nakamura,Ding Liren,Player Resignation
-Elite Chess Series,Tournament Chess,Fabiano Caruana,Ian Nepomniachtchi,Game Forfeit
-Chess Masters Cup,Match Chess,Magnus Carlsen,Hikaru Nakamura,Player Resignation
-Chess Masters Cup,Blitz Chess,Hikaru Nakamura,Alireza Firouzja,Player Resignation
-International Chess League,Match Chess,Ding Liren,Anish Giri,Game Forfeit
-Chess-Grand-Prix,Standard Chess,Ian Nepomniachtchi,Ding Liren,White Player Victory
-InternationalChessLeague,Match Chess,Wesley So,Ding Liren,Black Player Victory
-Chess Masters Cup,Bullet Chess,Anish Giri,Magnus Carlsen,White Player Victory
-Chess Grand Prix,Rapid Chess,Magnus Carlsen,Wesley So,Chess Game Draw
-EliteChessSeries,Match Chess,Magnus Carlsen,Fabiano Caruana,Chess Game Draw
-Elite Chess Series,Match Chess,Ding Liren,Wesley So,Game Forfeit
-Elite Chess Series,Bullet Chess,Ding Liren,Alireza Firouzja,Chess Time Out
-Elite Chess Series,Bullet Chess,Alireza Firouzja,Ding Liren,Cheeckmate Victory
-Chess Masters Cup,Tournament Chess,Wesley So,Ding Liren,Chess Game Draw
-International Chess League,Match Chess,Ian Nepomniachtchi,Fabiano Caruana,Black Playeer Victory
-Chess Grand Prix,Classical Chess,Hikaru Nakamura,Ian Nepomniachtchi,Chess Time Out
-Chess Grand Prix,Standard Chess,Ian Nepomniachtchi,Alireza Firouzja,Chess Time Out
-Chess Tournament Finals,Tournament Chess,Ding Liren,Ian Nepomniachtchi,Game Forfeit
+Event,Format,White_Player,White_Country,White_Rating,Black_Player,Result
+Elite Chess Series,Blitz,Alireza Firouzja,France,2740,Ian Nepomniachtchi,0-1
+Open Chess Championship,Blitz,Magnus Carlsen,Norway,2830,Wesley So,1/2-1/2
+Elite Chess Series,Classical,Ian Nepomniachtchi,Russia,2770,Alireza Firouzja,1-0
+World Chess Championship,Rapid,Ian Nepomniachtchi,Russia,2770,Hikaru Nakamura,1/2-1/2
+World Chess Championship,Rapid,Anish Giri,Netherlands,2760,Hikaru Nakamura,0-1
+Chess Grand Prix,Rapid,Ding Liren,China,2780,Magnus Carlsen,0-1
+World Chess Championship,Rapid,Hikaru Nakamura,USA,2760,Alireza Firouzja,1/2-1/2
+Elite Chess Series,Rapid,Hikaru Nakamura,USA,2760,Alireza Firouzja,0-1
+Chess Tournament Finals,Classical,Anish Giri,Netherlands,2760,Fabiano Caruana,1/2-1/2
+Chess Grand Prix,Classical,Wesley So,USA,2750,Hikaru Nakamura,0-1
+Elite Chess Series,Rapid,Hikaru Nakamura,USA,2760,Magnus Carlsen,0-1
+Chess Tournament Finals,Rapid,Wesley So,USA,2750,Alireza Firouzja,1-0
+Chess Tournament Finals,Classical,Ian Nepomniachtchi,Russia,2770,Anish Giri,1/2-1/2
+World Chess Championship,Classical,Alireza Firouzja,France,2740,Hikaru Nakamura,0-1
+World Chess Championship,Blitz,Hikaru Nakamura,USA,2760,Wesley So,0-1
+International Chess League,Classical,Ding Liren,China,2780,Hikaru Nakamura,0-1
+Chess Master Tournament,Rapid,Magnus Carlsen,Norway,2830,Wesley Sox,1-0
+Chess Tournament Finals,Blitz,Ian Nepomniachtchi,Russia,2770,Ding Liren,1-0
+Open Chess Championship,Blitz,Ding Liren,China,2780,Alireza Firouzja,1/2-1/2
+Elite Chess Series,Rapid,Magnus Carlsen,Norway,2830,Alireza Firouzja,1/2-1/2
+Elite Chess Series,Blitz,Fabiano Caruana,USA,2790,Alireza Firouzja,0-1
+World Chess Championship,Blitz,Fabiano Caruana,USA,2790,Hikaru Nakamura,1/2-1/2
+Open Chess Championship,Classical,Hikaru Nakamura,USA,2760,Fabiano Caruana,1/2-1/2
+Elite Chess Series,Blitz,Alireza Firouzja,France,2740,Hikaru Nakamura,1/2-1/2
+Chess Grand Prix,Classical,Hikaru Nakamura,USA,2760,Ian Nepomniachtchi,1-0
+Chess Master Tournament,Rapid,Wesley So,USA,2750,Fabiano Caruanax,1-0
+World Chess Championship,Rapid,Ian Nepomniachtchi,Russia,2770,Wesley So,0-1
+Chess Grand Prix,Classical,Alireza Firouzja,France,2740,Ding Liren,0-1
+International Chess League,Blitz,Fabiano Caruana,USA,2790,Anish Giri,1/2-1/2
+World Chess Championship,Rapid,Magnus Carlsen,Norway,2830,Alireza Firouzja,0-1
+Chess Master Tournamentx,Blitz,Fabiano Caruana,USA,2782,Wesley So,1-0
+World Chess Championship,Rapid,Wesley So,USA,2750,Hikaru Nakamura,1-0
+Chess Masters Cup,Classical,Magnus Carlsen,Norway,2830,Ian Nepomniachtchi,1-0
+Elite Chess Series,Rapid,Ian Nepomniachtchi,Russia,2770,Fabiano Caruana,0-1
+World Chess Championship,Classical,Fabiano Caruana,USA,2790,Ding Lirenx,1-0
+Chess Master Tournament,Blitz,Hikaru Nakamura,USA,2760,Magnus Carlsen,0-1
+Chess Grand Prix,Rapid,Magnus Carlsen,Norway,2787,Hikaru Nakamura,1-0
+Chess Masters Cup,Blitz,Ian Nepomniachtchi,Russia,2768,Hikaru Nakamura,0-1
+International Chess League,Classical,Ian Nepomniachtchi,Russia,2770,Ding Liren,1-0
+Chess Grand Prix,Blitz,Magnus Carlsen,Norway,2830,Ian Nepomniachtchi,1-0
+Chess Masters Cup,Blitz,Fabiano Caruana,USA,2790,Wesley So,1-0
+Chess Grand Prix,Rapid,Alireza Firouzja,France,2740,Wesley So,0-1
+Chess Grand Prix,Rapid,Ian Nepomniachtchi,Russia,2770,Ding Liren,1/2-1/2
+International Chess League,Rapid,Fabiano Caruana,USA,2790,Wesley So,1-0
+World Chess Championship,Rapid,Hikaru Nakamura,USA,2728,Fabiano Caruana,0-1
+Chess Master Tournament,Rapid,Fabiano Caruana,USA,2800,Ding Liren,0-1
+International Chess League,Rapid,Wesley So,USA,2750,Ian Nepomniachtchi,1-0
+World Chess Championship,Rapid,Fabiano Caruana,USA,2790,Alireza Firouzja,0-1
+Chess Master Tournament,Classical,Wesley So,USA,2750,Ian Nepomniachtchi,1-0
+Chess Master Tournamentx,Rapid,Anish Giri,Netherlands,2760,Fabiano Caruana,1-0
+Chess Master Tournament,Classical,Magnus Carlsen,Norway,2830,Ian Nepomniachtchi,0-1
+Chess Tournament Finals,Classical,Magnus Carlsen,Norway,2830,Alireza Firouzja,1-0
+Open Chess Championship,Rapid,Fabiano Caruana,USA,2834,Magnus Carlsen,1/2-1/2
+Elite Chess Series,Blitz,Ian Nepomniachtchi,Russia,2770,Wesley So,1-0
+Chess Masters Cup,Blitz,Fabiano Caruana,USA,2807,Wesley So,0-1
+World Chess Championship,Classical,Hikaru Nakamura,USA,2760,Ding Liren,1/2-1/2
+International Chess League,Classical,Ding Liren,China,2780,Magnus Carlsen,1-0
+Chess Master Tournament,Classical,Magnus Carlsen,Norway,2830,Ian Nepomniachtchi,1/2-1/2
+Chess Tournament Finals,Rapid,Ding Liren,China,2780,Hikaru Nakamura,1-0
+International Chess League,Classical,Hikaru Nakamura,USA,2760,Ian Nepomniachtchi,1-0

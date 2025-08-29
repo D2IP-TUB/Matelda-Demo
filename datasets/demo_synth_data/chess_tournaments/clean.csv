@@ -1,41 +1,46 @@
-Event,City,Year,Participants
-Chess Grand Prix,Tokyo Chess Arena,2024,111
-Open Chess Championship,Vienna Chess Institute,2022,95
-Chess Tournament Finals,New York Chess Club,2024,198
-Open Chess Championship,London Chess Center,2024,79
-Chess Master Tournament,Madrid Chess Palace,2023,197
-International Chess League,Tokyo Chess Arena,2024,145
-International Chess League,London Chess Center,2024,157
-Chess Masters Cup,Madrid Chess Palace,2024,167
-Chess Master Tournament,New York Chess Club,2022,116
-Chess Master Tournament,Madrid Chess Palace,2022,158
-Open Chess Championship,Tokyo Chess Arena,2024,85
-Chess Tournament Finals,Madrid Chess Palace,2023,182
-International Chess League,Vienna Chess Institute,2024,169
-International Chess League,Moscow Chess Hall,2023,196
-Chess Tournament Finals,Tokyo Chess Arena,2022,142
-Chess Masters Cup,Paris Chess Stadium,2024,102
-Open Chess Championship,London Chess Center,2024,52
-World Chess Championship,Paris Chess Stadium,2024,96
-International Chess League,Moscow Chess Hall,2022,126
-Elite Chess Series,New York Chess Club,2024,162
-Chess Master Tournament,Moscow Chess Hall,2024,126
-Chess Grand Prix,Vienna Chess Institute,2023,100
-Elite Chess Series,London Chess Center,2023,199
-Chess Masters Cup,Paris Chess Stadium,2023,115
-Chess Masters Cup,Vienna Chess Institute,2023,98
-Chess Tournament Finals,Tokyo Chess Arena,2023,196
-Chess Masters Cup,Tokyo Chess Arena,2022,167
-Open Chess Championship,Vienna Chess Institute,2024,107
-World Chess Championship,Moscow Chess Hall,2024,87
-Chess Tournament Finals,Tokyo Chess Arena,2022,149
-Chess Grand Prix,Berlin Chess Academy,2022,108
-International Chess League,New York Chess Club,2023,156
-Elite Chess Series,Tokyo Chess Arena,2022,92
-Chess Master Tournament,New York Chess Club,2024,121
-Chess Masters Cup,Paris Chess Stadium,2024,64
-Elite Chess Series,New York Chess Club,2022,176
-Open Chess Championship,New York Chess Club,2024,116
-Chess Master Tournament,New York Chess Club,2024,169
-Chess Master Tournament,Berlin Chess Academy,2022,59
-Chess Grand Prix,London Chess Center,2024,130
+Event,City,Year,Participants,Organizer,Organizer_Country
+International Chess League,New York,2022,24,Magnus Carlsen,Norway
+Chess Masters Cup,Tokyo,2024,12,Hikaru Nakamura,USA
+World Chess Championship,London,2024,16,Magnus Carlsen,Norway
+Chess Grand Prix,Berlin,2022,20,Hikaru Nakamura,USA
+Open Chess Championship,Paris,2023,64,Ding Liren,China
+World Chess Championship,London,2022,16,Alireza Firouzja,France
+World Chess Championship,London,2022,16,Ding Liren,China
+Elite Chess Series,Madrid,2022,8,Hikaru Nakamura,USA
+Chess Masters Cup,Tokyo,2023,12,Wesley So,USA
+Chess Grand Prix,Berlin,2022,20,Hikaru Nakamura,USA
+World Chess Championship,London,2024,16,Anish Giri,Netherlands
+Chess Grand Prix,Berlin,2022,20,Magnus Carlsen,Norway
+World Chess Championship,London,2022,16,Hikaru Nakamura,USA
+International Chess League,New York,2024,24,Hikaru Nakamura,USA
+Elite Chess Series,Madrid,2022,8,Hikaru Nakamura,USA
+Chess Tournament Finals,Vienna,2022,16,Magnus Carlsen,Norway
+Chess Grand Prix,Berlin,2023,20,Ian Nepomniachtchi,Russia
+Chess Grand Prix,Berlin,2023,20,Ian Nepomniachtchi,Russia
+World Chess Championship,London,2023,16,Fabiano Caruana,USA
+Open Chess Championship,Paris,2024,64,Ian Nepomniachtchi,Russia
+Chess Master Tournament,Moscow,2023,32,Fabiano Caruana,USA
+Open Chess Championship,Paris,2024,64,Ian Nepomniachtchi,Russia
+Chess Masters Cup,Tokyo,2023,12,Fabiano Caruana,USA
+Chess Master Tournament,Moscow,2023,32,Wesley So,USA
+Chess Tournament Finals,Vienna,2022,16,Wesley So,USA
+Chess Master Tournament,Moscow,2022,32,Magnus Carlsen,Norway
+Chess Masters Cup,Tokyo,2024,12,Ding Liren,China
+Chess Grand Prix,Berlin,2023,20,Hikaru Nakamura,USA
+Chess Tournament Finals,Vienna,2022,16,Hikaru Nakamura,USA
+Chess Master Tournament,Moscow,2024,32,Ding Liren,China
+Chess Master Tournament,Moscow,2024,32,Alireza Firouzja,France
+Open Chess Championship,Paris,2023,64,Fabiano Caruana,USA
+Elite Chess Series,Madrid,2024,8,Anish Giri,Netherlands
+Elite Chess Series,Madrid,2023,8,Fabiano Caruana,USA
+Elite Chess Series,Madrid,2022,8,Alireza Firouzja,France
+Elite Chess Series,Madrid,2022,8,Magnus Carlsen,Norway
+Chess Tournament Finals,Vienna,2023,16,Magnus Carlsen,Norway
+Elite Chess Series,Madrid,2024,8,Fabiano Caruana,USA
+Chess Tournament Finals,Vienna,2022,16,Ding Liren,China
+World Chess Championship,London,2024,16,Hikaru Nakamura,USA
+Chess Masters Cup,Tokyo,2024,12,Anish Giri,Netherlands
+Elite Chess Series,Madrid,2022,8,Anish Giri,Netherlands
+Chess Tournament Finals,Vienna,2022,16,Alireza Firouzja,France
+International Chess League,New York,2024,24,Anish Giri,Netherlands
+Chess Masters Cup,Tokyo,2024,12,Hikaru Nakamura,USA
