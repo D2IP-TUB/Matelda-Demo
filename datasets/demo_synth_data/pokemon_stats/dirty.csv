@@ -1,36 +1,46 @@
-Pokemon_Name,Pokemon_Type,Pokemon_HP,Pokemon_Attack,Pokemon_Defense
-Electric Mouse Pokemon,Fire Type Flame,127,71,99
-Fire Dragon Pokemon,Water Type Liquid,64,34,144
-Water Turtle Pokemon,Grass Type Plant,112,56,73
-Electric Mouse Pokemon,Electric Type Energy,100,162,32
-Fire@Dragon@Poke#mon183,Psychic Type Mental,121,117,51
-CORRUPTED_CREATURE_ERROR,Grass Type Plant,46,90,61
-Water Turtle Pokemon,Psychic Type Mental,143,8888,112
-Water Turtle Pokemon,Psychic Type Mental,96,72,68
-INVALID_POKEMON_TYPE_XXX,Fire Type Flame,61,128,78
-BROKEN_POKEMON_DATA,Grass Type Plant,103,37,8888
-Ghost@Shadow@Poke#mon435,Dragon Type Mystic,99,83,107
-ERROR_CREATURE_SPECIES,Fighting Type Physical,1,45,32
-UNKNOWN_POKEMON_SPECIES_999,SYSTEM_POKEMON_FAILURE,107,80,152
-Electric Mouse Pokemon,Water Type Liquid,81,81,104
-UNKNOWN_POKEMON_SPECIES_999,Grass Type Plant,9999,85,9000
-Grass Seed Pokemon,UNKNOWN_POKEMON_SPECIES_999,118,163,31
-Grass Seed Pokemon,Fighting Type Physical,79,160,128
-Fighting Muscle Pokemon,Water Type Liquid,84,83,2
-ERROR_CREATURE_SPECIES,Water Type Liquid,143,8888,69
-Dragon Wing Pokemon,Ghost Type Spirit,99,140,52
-Electric Mouse Pokemon,CORRUPTED_CREATURE_ERROR,43,33,-88
-INVALID_POKEMON_TYPE_XXX,Dragon Type Mystic,143,125,8888
-Fighting Muscle Pokemon,Electric Type Energy,115,95,35
-Dragon Wing Pokemon,Psychic Type Mental,80,110,143
-Fire Dragon Pokemon,Fighting Type Physical,5000,98,156
-Grass Seed Pokemon,Water Type Liquid,150,142,84
-Psychic Humanoid Pokemon,Grass Type Plant,-99,2,128
-Water Turtle Pokemon,Ghost Type Spirit,136,33,72
-ERROR_CREATURE_SPECIES,Ghost Type Spirit,94,9000,34
-INVALID_POKEMON_TYPE_XXX,Fighting Type Physical,133,161,95
-Fighting Muscle Pokemon,CORRUPTED_CREATURE_ERROR,82,8888,113
-Electric Mouse Pokemon,Psychic Type Mental,59,68,129
-CORRUPTED_CREATURE_ERROR,Water Type Liquid,101,61,74
-Fire Dragon Pokemon,Fire Type Flame,1,153,2
-Water Turtle Pokemon,Grass Type Plant,85,138,84
+Pokemon_Name,Type,Region,HP,Attack
+Dragonite Dragon Pokemon,Ghost Type Pokemon,Unova Pokemon Region,40,75
+Mewtwo Legendary Pokemon,Ghost Type Pokemon,Galar Pokemon Region,103,123
+Alakazam Psychic Pokemon,Steel Type Pokemon,Sinnoh Pokemon Region,140,43
+Alakazam Psychic Pokeemon,Electric Type Pokemon,Kalos Pokemon Region,95,119
+Lucario Steel Pokemon,Steel Type Pokemon,Alola Pokemon Region,91,150
+Venusaur Grass Pokemon,Psychic Type Pokemon,Unova Pokemon Region,500,1
+Machamp Fighting Pokemon,Fire Type Pokemon,Kalos Pokemon Region,41,74
+Machamp Fighting Pokemon,Dragon Type Pokemon,Kalos Pokemon Region,80,180
+Mewtwo Legendary Pokemon,Electric Type Pokemon,Johto Pokemon Region,127,54
+Machamp Fighting Pokemon,Ghost Type Pokemon,Johto Pokemon Region,114,45
+Charizard Fire Pokemon,Fire Type Pokemon,Johto Pokemon Region,122,150
+Gengar Ghost Pokemon,Ice Type Pokemon,Hoenn Pokemon Region,500,43
+Blastoise Water Pokemon,Water Type Pokemon,Unova Pokemon Region,67,2
+Mewtwo Legendary Pokemon,Wateer Type Pokemon,Unova Pokemon Region,128,178
+Blastoisee Water Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,133,0
+Mewtwo Legendary Pokemon,Ice Type Pokemon,Kalos Pokemon Region,125,142
+Mewtwo Legendary Pokemon,Dragon Type Pokemon,Alola Pokemon Region,74,2
+Gengar Ghost Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,107,143
+Charizard Fire Pokemon,Dragon Type Pokemon,Unova Pokemon Region,48,73
+Venusaur Grass Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,106,52
+Gengar Ghost Pokemon,Dragon Type Pokemon,Kanto Pokemon Region,86,67
+Lucario Steel Pokemon,Ghost Type Pokemon,Sinnoh Pokemon Region,500,500
+Mewtwo Legendary Pokemon,Dragon Type Pokemon,Kanto Pokemon Region,85,117
+Blastoise Water Pokemon,Ice Type Pokemon,Kalos Pokemon Region,72,36
+Alakazam Psychic Pokemon,Ghost Type Pokemon,Galar Pokemon Region,114,131
+Charizard Fire Pokemon,Water-Type-Pokemon,Kanto Pokemon Region,88,131
+Dragonite Dragon Pokemon,Grass Type Pokemon,Sinnoh Pokemon Region,47,500
+Blastoise Water Pokemon,Firee Type Pokemon,Unova Pokemon Region,0,101
+Lucario Steel Pokemon,Water-Type-Pokemon,Galar Pokemon Region,91,64
+Machamp Fighting Pokemon,Psychic_Type_Pokemon,Unova Pokemon Region,142,100
+Machamp Fighting Pokemon,Ghost Type Pokemon,Hoenn Pokemon Region,1,93
+Alakazam Psychic Pokemon,Electric Type Pokemon,Hoenn Pokemon Region,0,37
+Gengar Ghost Pokemon,Psychic Type Pokemon,Hoenn Pokemon Region,87,2
+Dragonite Dragon Pokemon,Ghost Type Pokemon,Hoenn Pokemon Region,114,999
+Charizard Fire Pokemon,Ice Type Pokemon,Alola Pokemon Region,105,999
+Machamp Fighting Pokeemon,Water Type Pokemon,Johto Pokemon Region,139,79
+Mewtwo Legendary Pokemon,Dragon_Type_Pokemon,Hoenn Pokemon Region,95,151
+Meewtwo Legendary Pokemon,Ghost Type Pokemon,Kanto Pokemon Region,95,104
+Blastoise Water Pokemon,Grass Type Pokemon,Johto Pokemon Region,55,119
+Pikachu Electric Pokemon,Steel Type Pokemon,Kanto Pokemon Region,111,2
+Dragonite Dragon Pokemon,Fire_Type_Pokemon,Kalos Pokemon Region,103,0
+Alakazam Psychic Pokemon,Electric Type Pokemon,Sinnoh Pokemon Region,82,0
+Venusaur Grass Pokemon,Fighting Type Pokemon,Johto Pokemon Region,500,131
+Blastoise Water Pokemon,Steel Type Pokemon,Hoenn Pokemon Region,72,79
+Alakazam Psychic Pokemon,Steel Type Pokemon,Galar Pokemon Region,82,115

@@ -1,9 +1,10 @@
 import logging
+import re
 from typing import Dict, List
 
 import numpy as np
-from hdbscan import HDBSCAN
 from nltk.corpus import stopwords
+from sklearn.cluster import HDBSCAN
 from transformers import BertModel, BertTokenizer
 
 from ..core.base_fold import BaseCellFold
@@ -78,6 +79,7 @@ class DomainCellFold(BaseCellFold):
         for idx, (table_id, cells) in enumerate(tables_cells.items()):
             # Concatenate all cell values from this table
             table_text = " ".join([str(cell.dirty_value) for cell in cells])
+            table_text = re.sub(r"\b\d+\.?\d*\b", "", table_text)
             processed_text = self.preprocess_text(table_text)
 
             documents.append(processed_text)

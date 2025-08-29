@@ -21,7 +21,7 @@ apply_base_styles()
 render_sidebar()
 
 st.title("Results")
-st.write("### Model Performance Metrics")
+# st.write("### Model Performance Metrics")
 
 
 def load_config(path):
@@ -41,20 +41,65 @@ if "pipeline_path" in st.session_state:
     results = config.get("results", [])
     current_labeling_budget = config.get("labeling_budget", "N/A")
 
-    if results:
+    # Try to get metrics from error detection results first (most recent)
+    recall_score = 0
+    f1_score = 0
+    precision_score = 0
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Check if we have fresh error detection results in session state
+    if "error_detection_results" in st.session_state:
+        error_results = st.session_state.error_detection_results
+        metrics = error_results.get("metrics", {})
+
+        # Handle both lowercase and capitalized metric keys
+        precision_score = metrics.get("precision", metrics.get("Precision", 0))
+        recall_score = metrics.get("recall", metrics.get("Recall", 0))
+        f1_score = metrics.get("f1", metrics.get("F1", 0))
+
+        # Save these results to configuration if not already saved
+        if results:
+            latest_result = results[-1]
+            latest_time = latest_result.get("Time", "")
+            today = datetime.datetime.now().strftime("%Y-%m-%d")
+            if not latest_time.startswith(today):
+                # Add today's results
+                new_result = {
+                    "Time": current_time,
+                    "metrics": {
+                        "Precision": precision_score,
+                        "Recall": recall_score,
+                        "F1": f1_score,
+                    },
+                }
+                results.append(new_result)
+                config["results"] = results
+                with open(config_path, "w") as f:
+                    json.dump(config, f, indent=2)
+        else:
+            # No results yet, create first entry
+            new_result = {
+                "Time": current_time,
+                "metrics": {
+                    "Precision": precision_score,
+                    "Recall": recall_score,
+                    "F1": f1_score,
+                },
+            }
+            config["results"] = [new_result]
+            with open(config_path, "w") as f:
+                json.dump(config, f, indent=2)
+
+    elif results:
+        # Fallback to saved results
         latest_result = results[-1]
         metrics = latest_result.get("metrics", {})
-        recall_score = metrics.get("Recall", 0)
-        f1_score = metrics.get("F1", 0)
-        precision_score = metrics.get("Precision", 0)
+        recall_score = metrics.get("Recall", metrics.get("recall", 0))
+        f1_score = metrics.get("F1", metrics.get("f1", 0))
+        precision_score = metrics.get("Precision", metrics.get("precision", 0))
         current_time = latest_result.get(
             "Time", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
-    else:
-        recall_score = 0
-        f1_score = 0
-        precision_score = 0
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 else:
     st.warning("⚠️ Pipeline not configured.")
     if st.button("Go back to Configurations"):
@@ -84,11 +129,11 @@ dirty = is_pipeline_dirty()
 
 if dataset_configured:
     with col1:
-        st.metric(label="Recall", value=f"{recall_score:.2f}")
-    with col2:
-        st.metric(label="F1 Score", value=f"{f1_score:.2f}")
-    with col3:
         st.metric(label="Precision", value=f"{precision_score:.2f}")
+    with col2:
+        st.metric(label="Recall", value=f"{recall_score:.2f}")
+    with col3:
+        st.metric(label="F1 Score", value=f"{f1_score:.2f}")
     with col4:
         st.metric(label="Labeling Budget", value=str(current_labeling_budget))
 else:

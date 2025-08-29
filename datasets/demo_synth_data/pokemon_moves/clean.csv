@@ -1,36 +1,46 @@
-Move_Name,Move_Type,Move_Category,Move_Power,Move_Accuracy
-Fighting Close Combat,Fighting Type Physical,Special Dragon Move,69,93
-Thunder Electric Attack,Ghost Type Spirit,Physical Fire Move,116,74
-Flame Fire Blast,Grass Type Plant,Special Psychic Move,50,80
-Dragon Mystic Pulse,Psychic Type Mental,Physical Fighting Move,107,78
-Psychic Mind Power,Grass Type Plant,Special Ghost Move,92,93
-Thunder Electric Attack,Psychic Type Mental,Physical Fighting Move,85,72
-Fighting Close Combat,Ghost Type Spirit,Physical Fighting Move,65,85
-Dragon Mystic Pulse,Water Type Liquid,Physical Fire Move,63,86
-Flame Fire Blast,Fighting Type Physical,Physical Fighting Move,51,96
-Thunder Electric Attack,Grass Type Plant,Special Dragon Move,61,94
-Thunder Electric Attack,Water Type Liquid,Physical Fighting Move,76,70
-Dragon Mystic Pulse,Water Type Liquid,Special Electric Move,66,85
-Solar Grass Beam,Fire Type Flame,Special Grass Move,99,84
-Fighting Close Combat,Fire Type Flame,Special Electric Move,114,81
-Shadow Ghost Ball,Fire Type Flame,Special Water Move,112,87
-Shadow Ghost Ball,Fighting Type Physical,Special Grass Move,87,79
-Solar Grass Beam,Electric Type Energy,Special Dragon Move,47,82
-Shadow Ghost Ball,Grass Type Plant,Special Water Move,112,100
-Dragon Mystic Pulse,Electric Type Energy,Special Water Move,103,86
-Dragon Mystic Pulse,Electric Type Energy,Special Grass Move,74,75
-Dragon Mystic Pulse,Fire Type Flame,Special Electric Move,105,70
-Flame Fire Blast,Grass Type Plant,Special Dragon Move,64,91
-Water Hydro Cannon,Water Type Liquid,Special Water Move,97,85
-Dragon Mystic Pulse,Psychic Type Mental,Special Ghost Move,53,88
-Psychic Mind Power,Grass Type Plant,Special Electric Move,78,98
-Fighting Close Combat,Water Type Liquid,Special Grass Move,93,100
-Fighting Close Combat,Fire Type Flame,Special Grass Move,49,94
-Dragon Mystic Pulse,Water Type Liquid,Special Psychic Move,101,100
-Shadow Ghost Ball,Water Type Liquid,Special Electric Move,67,77
-Flame Fire Blast,Fighting Type Physical,Special Dragon Move,74,94
-Shadow Ghost Ball,Fire Type Flame,Physical Fire Move,119,76
-Solar Grass Beam,Electric Type Energy,Special Psychic Move,72,72
-Flame Fire Blast,Ghost Type Spirit,Special Electric Move,67,81
-Water Hydro Cannon,Fighting Type Physical,Special Psychic Move,88,92
-Dragon Mystic Pulse,Electric Type Energy,Special Grass Move,98,85
+Move_Name,Move_Type,Category,Power,Accuracy
+Dragon Pulse Dragon Attack,Ice Type Pokemon,Physical Pokemon Attack,109,91
+Surf Water Attack,Ghost Type Pokemon,Special Pokemon Attack,57,85
+Flamethrower Fire Attack,Ghost Type Pokemon,Special Pokemon Attack,51,75
+Shadow Ball Ghost Attack,Grass Type Pokemon,Physical Pokemon Attack,46,89
+Surf Water Attack,Fire Type Pokemon,Physical Pokemon Attack,72,76
+Iron Head Steel Attack,Dragon Type Pokemon,Physical Pokemon Attack,63,78
+Close Combat Fighting Attack,Fighting Type Pokemon,Special Pokemon Attack,98,99
+Shadow Ball Ghost Attack,Water Type Pokemon,Physical Pokemon Attack,44,96
+Psychic Mind Attack,Grass Type Pokemon,Status Pokemon Move,54,86
+Iron Head Steel Attack,Fire Type Pokemon,Special Pokemon Attack,102,92
+Iron Head Steel Attack,Grass Type Pokemon,Status Pokemon Move,62,99
+Ice Beam Ice Attack,Ghost Type Pokemon,Status Pokemon Move,75,100
+Close Combat Fighting Attack,Electric Type Pokemon,Status Pokemon Move,85,84
+Dragon Pulse Dragon Attack,Grass Type Pokemon,Status Pokemon Move,60,84
+Dragon Pulse Dragon Attack,Fighting Type Pokemon,Status Pokemon Move,110,85
+Solar Beam Grass Attack,Electric Type Pokemon,Status Pokemon Move,116,84
+Thunderbolt Electric Attack,Ghost Type Pokemon,Special Pokemon Attack,49,92
+Flamethrower Fire Attack,Psychic Type Pokemon,Physical Pokemon Attack,74,89
+Iron Head Steel Attack,Ghost Type Pokemon,Status Pokemon Move,107,89
+Shadow Ball Ghost Attack,Dragon Type Pokemon,Special Pokemon Attack,48,94
+Ice Beam Ice Attack,Ice Type Pokemon,Physical Pokemon Attack,87,93
+Solar Beam Grass Attack,Grass Type Pokemon,Physical Pokemon Attack,95,98
+Ice Beam Ice Attack,Ghost Type Pokemon,Special Pokemon Attack,78,94
+Close Combat Fighting Attack,Grass Type Pokemon,Special Pokemon Attack,72,79
+Close Combat Fighting Attack,Dragon Type Pokemon,Status Pokemon Move,79,71
+Surf Water Attack,Electric Type Pokemon,Physical Pokemon Attack,100,91
+Close Combat Fighting Attack,Ice Type Pokemon,Special Pokemon Attack,54,100
+Thunderbolt Electric Attack,Steel Type Pokemon,Special Pokemon Attack,67,70
+Surf Water Attack,Ghost Type Pokemon,Special Pokemon Attack,64,75
+Psychic Mind Attack,Water Type Pokemon,Physical Pokemon Attack,102,98
+Flamethrower Fire Attack,Grass Type Pokemon,Status Pokemon Move,69,80
+Thunderbolt Electric Attack,Ghost Type Pokemon,Physical Pokemon Attack,65,76
+Dragon Pulse Dragon Attack,Psychic Type Pokemon,Special Pokemon Attack,41,85
+Dragon Pulse Dragon Attack,Electric Type Pokemon,Physical Pokemon Attack,97,85
+Psychic Mind Attack,Water Type Pokemon,Status Pokemon Move,87,94
+Thunderbolt Electric Attack,Psychic Type Pokemon,Physical Pokemon Attack,84,79
+Iron Head Steel Attack,Fighting Type Pokemon,Special Pokemon Attack,113,100
+Psychic Mind Attack,Fighting Type Pokemon,Special Pokemon Attack,80,82
+Thunderbolt Electric Attack,Psychic Type Pokemon,Special Pokemon Attack,112,90
+Close Combat Fighting Attack,Fighting Type Pokemon,Status Pokemon Move,60,92
+Thunderbolt Electric Attack,Dragon Type Pokemon,Physical Pokemon Attack,48,93
+Iron Head Steel Attack,Ice Type Pokemon,Physical Pokemon Attack,93,80
+Flamethrower Fire Attack,Steel Type Pokemon,Status Pokemon Move,94,79
+Iron Head Steel Attack,Ghost Type Pokemon,Status Pokemon Move,105,70
+Thunderbolt Electric Attack,Ghost Type Pokemon,Physical Pokemon Attack,86,98

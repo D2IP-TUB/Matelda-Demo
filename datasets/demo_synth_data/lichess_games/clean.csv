@@ -1,41 +1,51 @@
-Chess_Event,Chess_Site,White_Player,Black_Player,Game_Result
-Classical Match Game,https://worldchess.com/game/ko58gn,Ding Liren,Wesley So,White Wins
-Rated Blitz Tournament,https://chessmaster.org/match/9hew4e,Alireza Firouzja,Magnus Carlsen,Draw Game
-Classical Championship Match,https://chessmaster.org/match/lvutfd,Magnus Carlsen,Wesley So,White Wins
-Bullet Arena Competition,https://chesschampion.net/play/9axwj0,Ian Nepomniachtchi,Magnus Carlsen,Checkmate White
-Rapid Tournament Game,https://chessgrandmaster.com/tournament/m1a7mk,Ding Liren,Hikaru Nakamura,Checkmate White
-Rated Blitz Tournament,https://chesschampion.net/play/b7h8h3,Alireza Firouzja,Hikaru Nakamura,Black Wins
-Classical Match Game,https://worldchess.com/game/208vv8,Anish Giri,Magnus Carlsen,Checkmate White
-Classical Match Game,https://chessgrandmaster.com/tournament/aolsx8,Wesley So,Fabiano Caruana,Black Wins
-Rated Blitz Tournament,https://chesschampion.net/play/oyo65p,Ding Liren,Ian Nepomniachtchi,Checkmate Black
-Classical Championship Match,https://chesschampion.net/play/z6nfoo,Ian Nepomniachtchi,Anish Giri,Checkmate Black
-Rapid Tournament Game,https://chessgrandmaster.com/tournament/x534f6,Ian Nepomniachtchi,Anish Giri,Checkmate White
-Blitz Championship Round,https://chesschampion.net/play/audomg,Ian Nepomniachtchi,Alireza Firouzja,White Wins
-Rapid Tournament Game,https://chessmaster.org/match/m54trh,Anish Giri,Hikaru Nakamura,Checkmate White
-Classical Match Game,https://chessmaster.org/match/zcjirf,Anish Giri,Ian Nepomniachtchi,Checkmate Black
-Rapid Tournament Game,https://chessgrandmaster.com/tournament/lkeop0,Anish Giri,Ding Liren,Black Wins
-Rapid Tournament Game,https://chessgrandmaster.com/tournament/g3n3so,Anish Giri,Hikaru Nakamura,Black Wins
-Blitz Championship Round,https://chessgrandmaster.com/tournament/zizxa7,Wesley So,Ian Nepomniachtchi,White Wins
-Rated Blitz Tournament,https://chessmaster.org/match/ogepgs,Fabiano Caruana,Alireza Firouzja,White Wins
-Blitz Championship Round,https://chesschampion.net/play/5ytgbh,Alireza Firouzja,Fabiano Caruana,Black Wins
-Bullet Arena Competition,https://worldchess.com/game/e5dr1q,Alireza Firouzja,Ian Nepomniachtchi,Checkmate White
-Rated Blitz Tournament,https://chessmaster.org/match/3yoxab,Fabiano Caruana,Wesley So,Black Wins
-Bullet Arena Competition,https://chesschampion.net/play/yrjkar,Ian Nepomniachtchi,Alireza Firouzja,White Wins
-Blitz Championship Round,https://chessmaster.org/match/m2dw09,Alireza Firouzja,Hikaru Nakamura,White Wins
-Classical Match Game,https://chessmaster.org/match/mc35gj,Magnus Carlsen,Anish Giri,White Wins
-Bullet Arena Competition,https://chessmaster.org/match/he1ofo,Hikaru Nakamura,Anish Giri,Checkmate White
-Rapid Tournament Game,https://chesschampion.net/play/khxerp,Alireza Firouzja,Hikaru Nakamura,White Wins
-Classical Championship Match,https://worldchess.com/game/oh3e8c,Ding Liren,Wesley So,White Wins
-Blitz Championship Round,https://worldchess.com/game/s385d2,Ding Liren,Wesley So,Black Wins
-Bullet Arena Competition,https://worldchess.com/game/nwe047,Ding Liren,Hikaru Nakamura,Checkmate Black
-Rapid Tournament Game,https://worldchess.com/game/ag3duq,Ding Liren,Hikaru Nakamura,Checkmate Black
-Rated Blitz Tournament,https://chessgrandmaster.com/tournament/9n4vjx,Fabiano Caruana,Hikaru Nakamura,Checkmate Black
-Bullet Arena Competition,https://worldchess.com/game/bosre1,Anish Giri,Fabiano Caruana,Checkmate White
-Classical Championship Match,https://chesschampion.net/play/x25kuy,Anish Giri,Ian Nepomniachtchi,Draw Game
-Bullet Arena Competition,https://chesschampion.net/play/egvceb,Alireza Firouzja,Wesley So,White Wins
-Blitz Championship Round,https://chesschampion.net/play/u8ok53,Ian Nepomniachtchi,Hikaru Nakamura,Checkmate Black
-Classical Match Game,https://chessmaster.org/match/sb84dx,Wesley So,Fabiano Caruana,White Wins
-Classical Championship Match,https://chessmaster.org/match/ab0c2o,Ian Nepomniachtchi,Hikaru Nakamura,Draw Game
-Classical Championship Match,https://chessmaster.org/match/jdk5xw,Anish Giri,Ding Liren,Draw Game
-Rated Blitz Tournament,https://worldchess.com/game/zfi0sj,Alireza Firouzja,Ian Nepomniachtchi,White Wins
-Bullet Arena Competition,https://chessgrandmaster.com/tournament/w8jx1f,Anish Giri,Ian Nepomniachtchi,Checkmate White
+Event,Format,White_Player,Black_Player,Result
+Open Chess Championship,Tournament Chess,Ding Liren,Wesley So,Player Resignation
+International Chess League,Match Chess,Fabiano Caruana,Anish Giri,Player Resignation
+Chess Masters Cup,Blitz Chess,Magnus Carlsen,Alireza Firouzja,Chess Game Draw
+Elite Chess Series,Tournament Chess,Magnus Carlsen,Fabiano Caruana,Black Player Victory
+Elite Chess Series,Tournament Chess,Hikaru Nakamura,Ian Nepomniachtchi,Checkmate Victory
+International Chess League,Blitz Chess,Ian Nepomniachtchi,Wesley So,Chess Time Out
+Elite Chess Series,Classical Chess,Wesley So,Ding Liren,Black Player Victory
+Chess Masters Cup,Bullet Chess,Ian Nepomniachtchi,Anish Giri,Chess Game Draw
+International Chess League,Standard Chess,Ding Liren,Ian Nepomniachtchi,Game Forfeit
+Chess Masters Cup,Classical Chess,Alireza Firouzja,Magnus Carlsen,Chess Game Draw
+Chess Tournament Finals,Standard Chess,Fabiano Caruana,Wesley So,Chess Game Draw
+Chess Master Tournament,Blitz Chess,Ian Nepomniachtchi,Wesley So,Checkmate Victory
+Chess Tournament Finals,Match Chess,Magnus Carlsen,Hikaru Nakamura,White Player Victory
+Chess Tournament Finals,Match Chess,Hikaru Nakamura,Anish Giri,Chess Time Out
+Chess Master Tournament,Blitz Chess,Hikaru Nakamura,Wesley So,White Player Victory
+Chess Masters Cup,Blitz Chess,Fabiano Caruana,Wesley So,Player Resignation
+Chess Masters Cup,Classical Chess,Ian Nepomniachtchi,Ding Liren,Black Player Victory
+Elite Chess Series,Tournament Chess,Hikaru Nakamura,Ding Liren,Chess Game Draw
+Elite Chess Series,Blitz Chess,Alireza Firouzja,Hikaru Nakamura,Chess Time Out
+Chess Masters Cup,Blitz Chess,Ding Liren,Alireza Firouzja,Chess Game Draw
+World Chess Championship,Tournament Chess,Hikaru Nakamura,Magnus Carlsen,Black Player Victory
+Elite Chess Series,Rapid Chess,Ding Liren,Hikaru Nakamura,Chess Game Draw
+Chess Master Tournament,Tournament Chess,Magnus Carlsen,Ian Nepomniachtchi,Chess Time Out
+Chess Tournament Finals,Standard Chess,Wesley So,Hikaru Nakamura,Player Resignation
+Chess Tournament Finals,Tournament Chess,Alireza Firouzja,Anish Giri,Chess Game Draw
+Elite Chess Series,Bullet Chess,Ding Liren,Anish Giri,Chess Game Draw
+World Chess Championship,Standard Chess,Hikaru Nakamura,Ian Nepomniachtchi,Checkmate Victory
+Chess Grand Prix,Bullet Chess,Wesley So,Ian Nepomniachtchi,White Player Victory
+World Chess Championship,Match Chess,Wesley So,Ding Liren,Chess Time Out
+International Chess League,Bullet Chess,Ian Nepomniachtchi,Alireza Firouzja,Game Forfeit
+Chess Master Tournament,Match Chess,Alireza Firouzja,Ding Liren,Black Player Victory
+World Chess Championship,Classical Chess,Alireza Firouzja,Anish Giri,Chess Game Draw
+Elite Chess Series,Bullet Chess,Hikaru Nakamura,Ding Liren,Player Resignation
+Elite Chess Series,Tournament Chess,Fabiano Caruana,Ian Nepomniachtchi,Game Forfeit
+Chess Masters Cup,Match Chess,Magnus Carlsen,Hikaru Nakamura,Player Resignation
+Chess Masters Cup,Blitz Chess,Hikaru Nakamura,Alireza Firouzja,Player Resignation
+International Chess League,Match Chess,Ding Liren,Anish Giri,Game Forfeit
+Chess Grand Prix,Standard Chess,Ian Nepomniachtchi,Ding Liren,White Player Victory
+International Chess League,Match Chess,Wesley So,Ding Liren,Black Player Victory
+Chess Masters Cup,Bullet Chess,Anish Giri,Magnus Carlsen,White Player Victory
+Chess Grand Prix,Rapid Chess,Magnus Carlsen,Wesley So,Chess Game Draw
+Elite Chess Series,Match Chess,Magnus Carlsen,Fabiano Caruana,Chess Game Draw
+Elite Chess Series,Match Chess,Ding Liren,Wesley So,Game Forfeit
+Elite Chess Series,Bullet Chess,Ding Liren,Alireza Firouzja,Chess Time Out
+Elite Chess Series,Bullet Chess,Alireza Firouzja,Ding Liren,Checkmate Victory
+Chess Masters Cup,Tournament Chess,Wesley So,Ding Liren,Chess Game Draw
+International Chess League,Match Chess,Ian Nepomniachtchi,Fabiano Caruana,Black Player Victory
+Chess Grand Prix,Classical Chess,Hikaru Nakamura,Ian Nepomniachtchi,Chess Time Out
+Chess Grand Prix,Standard Chess,Ian Nepomniachtchi,Alireza Firouzja,Chess Time Out
+Chess Tournament Finals,Tournament Chess,Ding Liren,Ian Nepomniachtchi,Game Forfeit

@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 from datetime import datetime
 
 import numpy as np
@@ -159,8 +160,10 @@ def serialize_table(df):
     then concatenate 10 rows into a larger string to treat table as single sentence.
     """
     try:
-        df = df.head(10)  # Limit to first 10 rows for serialization
+        # df = df.head(10)  # Limit to first 10 rows for serialization
         text = " ".join(df.values.astype(str).flatten())
+        text = re.sub(r"\b\d+\.?\d*\b", "", text)
+        text = re.sub(r"\s+", " ", text).strip()
         processed_text = preprocess_text(text)
 
         return processed_text

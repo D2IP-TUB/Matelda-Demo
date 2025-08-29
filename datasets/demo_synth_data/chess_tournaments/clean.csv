@@ -1,31 +1,41 @@
-Tournament_Event,Chess_Organizer,Chess_Location,Tournament_Year,Chess_Participants
-National Chess Tournament,Chess Tournament Board,Professional Chess Club,2022,132
-World Chess Championship,Global Chess Organization,International Chess Arena,2023,190
-Candidates Tournament,Professional Chess League,Professional Chess Club,2024,135
-Candidates Tournament,Chess Tournament Board,International Chess Arena,2024,191
-Candidates Tournament,Chess Masters Association,International Chess Arena,2024,102
-Continental Championship,International Chess Union,Chess Masters Stadium,2023,96
-Continental Championship,Chess Tournament Board,World Chess Hall,2023,74
-Continental Championship,Global Chess Organization,Championship Chess Venue,2023,187
-Continental Championship,Chess Tournament Board,Chess Center Moscow,2023,99
-Grand Prix Series,Chess Tournament Board,Chess Masters Stadium,2023,113
-Continental Championship,Professional Chess League,World Chess Hall,2022,167
-Chess Olympiad Event,Professional Chess League,World Chess Hall,2022,97
-Continental Championship,Global Chess Organization,Chess Masters Stadium,2024,159
-National Chess Tournament,Professional Chess League,Chess Center Moscow,2024,91
-Continental Championship,Chess Masters Association,Professional Chess Club,2024,110
-Grand Prix Series,Chess Masters Association,Chess Masters Stadium,2023,145
-Continental Championship,Global Chess Organization,Championship Chess Venue,2024,190
-Candidates Tournament,Global Chess Organization,Professional Chess Club,2024,194
-Grand Prix Series,International Chess Union,Chess Masters Stadium,2023,73
-National Chess Tournament,Chess Masters Association,Chess Center Moscow,2024,129
-World Chess Championship,Chess Tournament Board,Professional Chess Club,2023,150
-World Chess Championship,Professional Chess League,Professional Chess Club,2022,79
-Chess Olympiad Event,Professional Chess League,International Chess Arena,2023,150
-Chess Olympiad Event,Chess Tournament Board,World Chess Hall,2023,194
-Continental Championship,Global Chess Organization,International Chess Arena,2022,128
-Chess Olympiad Event,Professional Chess League,Championship Chess Venue,2024,162
-World Chess Championship,Professional Chess League,Chess Center Moscow,2023,194
-Grand Prix Series,Chess Masters Association,Chess Center Moscow,2023,119
-National Chess Tournament,Chess Tournament Board,Professional Chess Club,2024,51
-Grand Prix Series,Global Chess Organization,Championship Chess Venue,2024,130
+Event,City,Year,Participants
+Chess Grand Prix,Tokyo Chess Arena,2024,111
+Open Chess Championship,Vienna Chess Institute,2022,95
+Chess Tournament Finals,New York Chess Club,2024,198
+Open Chess Championship,London Chess Center,2024,79
+Chess Master Tournament,Madrid Chess Palace,2023,197
+International Chess League,Tokyo Chess Arena,2024,145
+International Chess League,London Chess Center,2024,157
+Chess Masters Cup,Madrid Chess Palace,2024,167
+Chess Master Tournament,New York Chess Club,2022,116
+Chess Master Tournament,Madrid Chess Palace,2022,158
+Open Chess Championship,Tokyo Chess Arena,2024,85
+Chess Tournament Finals,Madrid Chess Palace,2023,182
+International Chess League,Vienna Chess Institute,2024,169
+International Chess League,Moscow Chess Hall,2023,196
+Chess Tournament Finals,Tokyo Chess Arena,2022,142
+Chess Masters Cup,Paris Chess Stadium,2024,102
+Open Chess Championship,London Chess Center,2024,52
+World Chess Championship,Paris Chess Stadium,2024,96
+International Chess League,Moscow Chess Hall,2022,126
+Elite Chess Series,New York Chess Club,2024,162
+Chess Master Tournament,Moscow Chess Hall,2024,126
+Chess Grand Prix,Vienna Chess Institute,2023,100
+Elite Chess Series,London Chess Center,2023,199
+Chess Masters Cup,Paris Chess Stadium,2023,115
+Chess Masters Cup,Vienna Chess Institute,2023,98
+Chess Tournament Finals,Tokyo Chess Arena,2023,196
+Chess Masters Cup,Tokyo Chess Arena,2022,167
+Open Chess Championship,Vienna Chess Institute,2024,107
+World Chess Championship,Moscow Chess Hall,2024,87
+Chess Tournament Finals,Tokyo Chess Arena,2022,149
+Chess Grand Prix,Berlin Chess Academy,2022,108
+International Chess League,New York Chess Club,2023,156
+Elite Chess Series,Tokyo Chess Arena,2022,92
+Chess Master Tournament,New York Chess Club,2024,121
+Chess Masters Cup,Paris Chess Stadium,2024,64
+Elite Chess Series,New York Chess Club,2022,176
+Open Chess Championship,New York Chess Club,2024,116
+Chess Master Tournament,New York Chess Club,2024,169
+Chess Master Tournament,Berlin Chess Academy,2022,59
+Chess Grand Prix,London Chess Center,2024,130

@@ -1080,9 +1080,9 @@ def backend_pull_errors(selected_dataset: str) -> Dict[str, Any]:
         # Extract metrics
         metrics = detection_results.get("metrics", {})
         formatted_metrics = {
-            "precision": metrics.get("Precision", 0.0),
-            "recall": metrics.get("Recall", 0.0),
-            "f1": metrics.get("F1", 0.0),
+            "precision": metrics.get("precision", 0.0),
+            "recall": metrics.get("recall", 0.0),
+            "f1": metrics.get("f1", 0.0),
             "fold_label_influence": _calculate_fold_influence(detected_cells),
         }
 
@@ -1147,31 +1147,64 @@ def _load_pipeline_config(pipeline_path: str) -> Dict:
 
 def _save_results_to_config(pipeline_path: str, detection_results: Dict[str, Any]):
     """Save detection results to configurations.json"""
-    config_path = os.path.join(pipeline_path, "configurations.json")
+    try:
+        config_path = os.path.join(pipeline_path, "configurations.json")
 
-    # Load existing config
-    if os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            config = json.load(f)
-    else:
+        # Load existing config
         config = {}
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config = json.load(f)
 
-    # Add results
-    if "results" not in config:
-        config["results"] = []
+        # Add detection results
+        import datetime
 
-    result_entry = {
-        "Time": detection_results["Time"],
-        "metrics": detection_results["metrics"],
-    }
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    config["results"].append(result_entry)
+        # Convert lowercase metric keys to capitalized ones for compatibility
+        metrics = detection_results.get("metrics", {})
+        formatted_metrics = {
+            "Precision": metrics.get("precision", 0.0),
+            "Recall": metrics.get("recall", 0.0),
+            "F1": metrics.get("f1", 0.0),
+            # Keep additional metrics as-is
+            **{
+                k: v
+                for k, v in metrics.items()
+                if k not in ["precision", "recall", "f1"]
+            },
+        }
 
-    # Save back to file
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2)
+        results_entry = {
+            "Time": current_time,
+            "metrics": formatted_metrics,
+        }
 
-    logging.info(f"Saved results to {config_path}")
+        # Add to results list
+        if "results" not in config:
+            config["results"] = []
+
+        # Replace today's result if it exists, otherwise append
+        today = current_time.split(" ")[0]
+        config["results"] = [
+            r for r in config["results"] if not r.get("Time", "").startswith(today)
+        ]
+        config["results"].append(results_entry)
+
+        # Save back to file
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+
+        logging.info(
+            f"Saved detection results to configuration: P={formatted_metrics['Precision']:.3f}, R={formatted_metrics['Recall']:.3f}, F1={formatted_metrics['F1']:.3f}"
+        )
+
+    except Exception as e:
+        logging.error(f"Error saving results to config: {e}")
+        import traceback
+
+        logging.error(traceback.format_exc())
 
 
 def _load_latest_detection_results(pipeline_name: str) -> Dict[str, Any]:
@@ -1309,12 +1342,30 @@ def _run_complete_error_detection(selected_dataset: str) -> Dict[str, Any]:
 
         # Save results to configurations.json for Results page
         if detection_results:
+            # Ensure timestamp is set
+            if "Time" not in detection_results:
+                import datetime
+
+                detection_results["Time"] = datetime.datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
             _save_results_to_config(pipeline_path, detection_results)
+
+            # Log successful completion
+            metrics = detection_results.get("metrics", {})
+            logging.info("Error detection completed successfully:")
+            logging.info(f"  - Precision: {metrics.get('precision', 0):.3f}")
+            logging.info(f"  - Recall: {metrics.get('recall', 0):.3f}")
+            logging.info(f"  - F1: {metrics.get('f1', 0):.3f}")
 
         return detection_results
 
     except Exception as e:
         logging.error(f"Error running complete error detection: {e}")
+        import traceback
+
+        logging.error(traceback.format_exc())
         return None
 
 
@@ -1381,9 +1432,23 @@ def _save_results_to_config(pipeline_path: str, detection_results: Dict[str, Any
 
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        # Convert lowercase metric keys to capitalized ones for compatibility
+        metrics = detection_results.get("metrics", {})
+        formatted_metrics = {
+            "Precision": metrics.get("precision", 0.0),
+            "Recall": metrics.get("recall", 0.0),
+            "F1": metrics.get("f1", 0.0),
+            # Keep additional metrics as-is
+            **{
+                k: v
+                for k, v in metrics.items()
+                if k not in ["precision", "recall", "f1"]
+            },
+        }
+
         results_entry = {
             "Time": current_time,
-            "metrics": detection_results.get("metrics", {}),
+            "metrics": formatted_metrics,
             "detected_cells": detection_results.get("detected_cells", []),
             "propagated_errors": _organize_errors_by_table(
                 detection_results.get("detected_cells", [])

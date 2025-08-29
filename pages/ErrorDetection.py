@@ -137,6 +137,59 @@ if not st.session_state.error_detection_completed:
                 if results and results.get("propagated_errors"):
                     st.session_state.error_detection_results = results
                     st.session_state.error_detection_completed = True
+
+                    # Also try to save results to config if we have access to pipeline path
+                    if "pipeline_path" in st.session_state:
+                        try:
+                            import datetime
+                            import json
+
+                            config_path = os.path.join(
+                                st.session_state.pipeline_path, "configurations.json"
+                            )
+
+                            # Load existing config
+                            config = {}
+                            if os.path.exists(config_path):
+                                with open(config_path, "r") as f:
+                                    config = json.load(f)
+
+                            # Add results
+                            current_time = datetime.datetime.now().strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                            metrics = results.get("metrics", {})
+
+                            result_entry = {
+                                "Time": current_time,
+                                "metrics": {
+                                    "Precision": metrics.get("precision", 0.0),
+                                    "Recall": metrics.get("recall", 0.0),
+                                    "F1": metrics.get("f1", 0.0),
+                                },
+                            }
+
+                            if "results" not in config:
+                                config["results"] = []
+
+                            # Replace today's result if it exists, otherwise append
+                            today = current_time.split(" ")[0]
+                            config["results"] = [
+                                r
+                                for r in config["results"]
+                                if not r.get("Time", "").startswith(today)
+                            ]
+                            config["results"].append(result_entry)
+
+                            # Save back to file
+                            with open(config_path, "w") as f:
+                                json.dump(config, f, indent=2)
+
+                        except Exception as save_error:
+                            st.warning(
+                                f"Results computed but couldn't save to config: {save_error}"
+                            )
+
                     st.success("✅ Error detection completed successfully!")
                     st.rerun()
                 else:
