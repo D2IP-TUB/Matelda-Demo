@@ -1,30 +1,30 @@
-# cache_utils.py
+# Simple cache utilities that work with session state and configurations only
+# Removed temp-cache directory functionality
 
-import os
-import pickle
-
-_cache_root_dir = "/home/fatemeh/matelda-demo/temp-cache"  # fallback default
-
-
-def set_cache_dir(path):
-    global _cache_root_dir
-    _cache_root_dir = path
+import logging
 
 
 def save_to_cache(pipeline_name, obj, filename):
-    pipeline_dir = os.path.join(_cache_root_dir, pipeline_name)
-    os.makedirs(pipeline_dir, exist_ok=True)
-    with open(os.path.join(pipeline_dir, filename), "wb") as f:
-        pickle.dump(obj, f)
+    """Dummy function - temp-cache functionality removed"""
+    logging.info(f"Cache save ignored for {pipeline_name}/{filename} (temp-cache disabled)")
+    pass
 
 
 def load_from_cache(pipeline_name, filename):
-    try:
-        with open(os.path.join(_cache_root_dir, pipeline_name, filename), "rb") as f:
-            return pickle.load(f)
-    except FileNotFoundError:
-        return None
+    """Dummy function - temp-cache functionality removed"""
+    logging.info(f"Cache load ignored for {pipeline_name}/{filename} (temp-cache disabled)")
+    return None
 
 
 def exists_in_cache(pipeline_name, filename):
-    return os.path.exists(os.path.join(_cache_root_dir, pipeline_name, filename))
+    """Dummy function - temp-cache functionality removed"""
+    return False
+
+
+if __name__ == "__main__":
+    print("Testing dummy cache functions...")
+    save_to_cache('test', {'data': 'test'}, 'test.pkl')
+    result = load_from_cache('test', 'test.pkl')  
+    exists = exists_in_cache('test', 'test.pkl')
+    print(f'Cache functions work: save=None, load={result}, exists={exists}')
+    print("Cache utilities functioning correctly (all disabled)")

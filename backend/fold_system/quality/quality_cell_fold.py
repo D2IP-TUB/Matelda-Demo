@@ -147,8 +147,9 @@ class QualityCellFold(BaseCellFold):
 
         # Set strategies
         parser = ErrorDetectionParser()
-        if (cell.col_idx, cell.row_idx) in cell_to_strategies:
-            strategies = cell_to_strategies[(cell.col_idx, cell.row_idx)]
+        # FIXED: Use correct coordinate order (row, col) to match strategy detection
+        if (cell.row_idx, cell.col_idx) in cell_to_strategies:
+            strategies = cell_to_strategies[(cell.row_idx, cell.col_idx)]
             cell.strategies = parser.parse(strategies)
         else:
             cell.strategies = []

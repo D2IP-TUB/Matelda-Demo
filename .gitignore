@@ -77,3 +77,5 @@ pipelines/*
 # Ignore dataset directories with numbered suffixes
 datasets/Demo*/
 datasets/Quintet*/
+
+.streamlit/*

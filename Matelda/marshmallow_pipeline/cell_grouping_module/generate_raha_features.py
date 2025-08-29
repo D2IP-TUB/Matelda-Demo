@@ -210,16 +210,58 @@ def run_strategies(self, d):
     sp_folder_path = os.path.join(d.results_folder, "strategy-profiling")
 
     if not self.STRATEGY_FILTERING:
+        strategy_profiles_list = []
+
+        # Check if cached results exist and are compatible with current strategy selection
         if os.path.exists(sp_folder_path):
-            sys.stderr.write(
-                "I just load strategies' results as they have already been run on the dataset!\n"
-            )
-            strategy_profiles_list = [
-                pickle.load(open(os.path.join(sp_folder_path, strategy_file), "rb"))
-                for strategy_file in os.listdir(sp_folder_path)
-                if not strategy_file.startswith(".")
+            # Load only strategy profiles that match current ERROR_DETECTION_ALGORITHMS
+            cached_files = [
+                f for f in os.listdir(sp_folder_path) if not f.startswith(".")
             ]
-        else:
+
+            # Check if we have results for all selected algorithms
+            missing_strategies = set(self.ERROR_DETECTION_ALGORITHMS)
+            compatible_profiles = []
+
+            for strategy_file in cached_files:
+                try:
+                    strategy_profile = pickle.load(
+                        open(os.path.join(sp_folder_path, strategy_file), "rb")
+                    )
+                    strategy_name = strategy_profile.get("name")
+                    if strategy_name:
+                        strategy = json.loads(strategy_name)
+                        algorithm_name = strategy[0]
+
+                        # Check if this strategy is in our selected algorithms
+                        if algorithm_name in self.ERROR_DETECTION_ALGORITHMS:
+                            compatible_profiles.append(strategy_profile)
+                            # Remove from missing strategies
+                            if algorithm_name in missing_strategies:
+                                missing_strategies.discard(algorithm_name)
+                except Exception as e:
+                    logging.warning(
+                        f"Error loading cached strategy file {strategy_file}: {e}"
+                    )
+
+            # If we have all required strategies cached, use them
+            if not missing_strategies:
+                sys.stderr.write(
+                    f"Loading cached strategies for selected algorithms: {self.ERROR_DETECTION_ALGORITHMS}\n"
+                )
+                strategy_profiles_list = compatible_profiles
+            else:
+                # Some strategies are missing, need to regenerate
+                sys.stderr.write(
+                    f"Missing cached results for strategies: {missing_strategies}. Regenerating all strategies.\n"
+                )
+                # Clear the cache to regenerate with current selection
+                import shutil
+
+                shutil.rmtree(sp_folder_path)
+
+        # If no compatible cache exists or strategies are missing, generate new ones
+        if not strategy_profiles_list:
             pool = multiprocessing.Pool()
             if self.SAVE_RESULTS:
                 os.mkdir(sp_folder_path)
@@ -541,6 +583,12 @@ def generate_raha_features(parent_path, dataset_name, raha_config):
     detect.SAVE_RESULTS = raha_config["save_results"]
     detect.STRATEGY_FILTERING = 0
     detect.ERROR_DETECTION_ALGORITHMS = raha_config["error_detection_algorithms"]
+
+    # Log the selected strategies
+    logging.info(
+        f"Generating RAHA features with selected strategies: {raha_config['error_detection_algorithms']}"
+    )
+
     d = detect.initialize_dataset(dataset_dictionary)
     d.VERBOSE = False
     d.SAVE_RESULTS = raha_config["save_results"]

@@ -1,11 +1,9 @@
-import hashlib
 import json
 import logging
 import os
 from typing import Any, Dict, List
 
 from backend.cache_utils import (
-    exists_in_cache,
     load_from_cache,
     save_to_cache,
 )
@@ -98,28 +96,11 @@ def backend_qbf(
     selected_strategies: List[str],
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     """
-    Backend function that performs quality-based folding with caching support.
+    Backend function that performs quality-based folding.
     """
     logging.info(f"Starting quality-based folding for dataset: {selected_dataset}")
     logging.info(f"Labeling budget: {labeling_budget}")
-
-    # Generate cache key based on inputs
-    cache_key = _generate_cache_key(selected_dataset, labeling_budget, domain_folds)
-    cache_filename = f"qbf_results_{cache_key}.pickle"
-    pipeline_name = f"quality_folding_{selected_dataset}"
-
-    # Try to load from cache first
-    if exists_in_cache(pipeline_name, cache_filename):
-        logging.info("Loading quality folding results from cache...")
-        try:
-            cached_result = load_from_cache(pipeline_name, cache_filename)
-            if cached_result is not None:
-                logging.info("Successfully loaded results from cache")
-                return cached_result
-        except Exception as e:
-            logging.warning(
-                f"Failed to load from cache: {e}, proceeding with fresh computation"
-            )
+    logging.info(f"Selected strategies: {selected_strategies}")
 
     # Setup
     base_path = os.path.join("datasets", selected_dataset)
@@ -128,6 +109,8 @@ def backend_qbf(
         "strategy_filtering": False,
         "error_detection_algorithms": [],
     }
+
+    # Only add algorithms if strategies are selected
     if selected_strategies:
         if "Outlier Detector - Histogram" in selected_strategies:
             raha_config["error_detection_algorithms"].append("ODH")
@@ -138,6 +121,14 @@ def backend_qbf(
             raha_config["error_detection_algorithms"].append("RVD_orig")
         if "Typo Detector" in selected_strategies:
             raha_config["error_detection_algorithms"].append("TypoD")
+    else:
+        logging.warning(
+            "No error detection strategies selected - cells will be grouped by structural features only"
+        )
+
+    logging.info(
+        f"RAHA error detection algorithms: {raha_config['error_detection_algorithms']}"
+    )
 
     all_table_names = set()
     for table_names in domain_folds.values():
@@ -150,7 +141,7 @@ def backend_qbf(
     all_table_features = quality_fold._generate_features_for_all_tables(all_table_names)
 
     try:
-        logging.info("Cache miss - computing quality folding from scratch...")
+        logging.info("Computing quality folding...")
 
         # Read all cells
         reader = DataReader()
@@ -263,38 +254,11 @@ def backend_qbf(
 
                 result[domain_fold_name] = domain_result
 
-        # Save result to cache
-        logging.info("Saving quality folding results to cache...")
-        try:
-            save_to_cache(pipeline_name, result, cache_filename)
-            logging.info("Successfully saved results to cache")
-        except Exception as e:
-            logging.warning(f"Failed to save to cache: {e}")
-
         return result
 
     except Exception as e:
         logging.error(f"Error in quality-based folding: {e}")
         return {}
-
-
-def _generate_cache_key(
-    selected_dataset: str, labeling_budget: int, domain_folds: Dict[str, List[str]]
-) -> str:
-    """Generate a unique cache key based on inputs"""
-
-    # Create deterministic string from inputs
-    cache_input = {
-        "dataset": selected_dataset,
-        "budget": labeling_budget,
-        "domain_folds": sorted([(k, sorted(v)) for k, v in domain_folds.items()]),
-    }
-
-    # Create hash
-    cache_string = json.dumps(cache_input, sort_keys=True)
-    cache_hash = hashlib.md5(cache_string.encode()).hexdigest()[:12]
-
-    return cache_hash
 
 
 def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
@@ -306,6 +270,26 @@ def _convert_features_to_strategies(features: List[float]) -> Dict[str, bool]:
         strategies[strategy_name] = bool(feature_value > 0)
 
     return strategies
+
+
+def _load_bulk_annotations(selected_dataset: str) -> Dict[str, str]:
+    """Load bulk annotations from pipeline configuration"""
+    import streamlit as st
+
+    bulk_annotations = {}
+
+    # Try to load from session state first
+    if "pipeline_path" in st.session_state:
+        cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path) as f:
+                    cfg = json.load(f)
+                bulk_annotations = cfg.get("cell_fold_labels", {})
+            except Exception as e:
+                logging.warning(f"Failed to load bulk annotations: {e}")
+
+    return bulk_annotations
 
 
 def backend_sample_labeling(
@@ -320,14 +304,30 @@ def backend_sample_labeling(
     logging.info(f"Labeling budget: {labeling_budget}")
 
     try:
+        # Load bulk annotations from configuration
+        bulk_annotations = _load_bulk_annotations(selected_dataset)
+        logging.info(f"Found bulk annotations for {len(bulk_annotations)} folds")
+
         # Just collect pre-selected cells (centroids already chosen in quality folding)
         sampled_cells = []
         total_selected = 0
+        skipped_bulk_annotated = 0
 
         for domain_name, domain_cell_folds in cell_folds.items():
             domain_selected = 0
 
             for cell_fold_name, cells_data in domain_cell_folds.items():
+                # Skip folds that have been bulk annotated
+                if cell_fold_name in bulk_annotations:
+                    bulk_label = bulk_annotations[cell_fold_name]
+                    logging.info(
+                        f"Skipping bulk-annotated fold '{cell_fold_name}' (labeled as '{bulk_label}')"
+                    )
+                    skipped_bulk_annotated += len(
+                        [c for c in cells_data if c.get("selected_for_labeling", False)]
+                    )
+                    continue
+
                 cell_fold_selected = 0
 
                 for cell_data in cells_data:
@@ -348,11 +348,18 @@ def backend_sample_labeling(
                         sampled_cells.append(sampled_cell)
                         cell_fold_selected += 1
 
-                logging.info(f"{cell_fold_name}: {cell_fold_selected} selected cells")
+                if cell_fold_selected > 0:
+                    logging.info(
+                        f"{cell_fold_name}: {cell_fold_selected} selected cells"
+                    )
                 domain_selected += cell_fold_selected
 
             logging.info(f"Domain {domain_name}: {domain_selected} selected cells")
             total_selected += domain_selected
+
+        logging.info(
+            f"Skipped {skipped_bulk_annotated} cells from bulk-annotated folds"
+        )
 
         # Validate against labeling budget
         if len(sampled_cells) > labeling_budget:
@@ -477,8 +484,13 @@ def backend_label_propagation(
     logging.info(f"Processing {len(labeled_cells)} labeled cells")
 
     try:
-        # Step 1: Convert cell_fold_label to is_error boolean
+        # Step 0: Load bulk annotations and create additional labeled cells from them
+        bulk_annotations = _load_bulk_annotations(selected_dataset)
+
+        # Step 1: Convert cell_fold_label to is_error boolean and add bulk annotations
         processed_labeled_cells = []
+
+        # Process individual labeled cells
         for cell in labeled_cells:
             processed_cell = cell.copy()
 
@@ -492,6 +504,40 @@ def backend_label_propagation(
                     processed_cell["is_error"] = False  # Default to not error
 
             processed_labeled_cells.append(processed_cell)
+
+        # Add bulk-annotated cells as labeled cells
+        if bulk_annotations:
+            logging.info(f"Processing {len(bulk_annotations)} bulk annotations")
+            cell_folds = _load_complete_cell_folds_structure(selected_dataset)
+
+            if cell_folds:
+                for domain_name, domain_cell_folds in cell_folds.items():
+                    for cell_fold_name, cells_data in domain_cell_folds.items():
+                        if cell_fold_name in bulk_annotations:
+                            bulk_label = bulk_annotations[cell_fold_name]
+                            is_error = (
+                                bulk_label == "false"
+                            )  # "false" means error, "correct" means not error
+
+                            # Add all cells from this fold as labeled
+                            for cell_data in cells_data:
+                                bulk_labeled_cell = {
+                                    "table": cell_data["table"],
+                                    "row": cell_data["row"],
+                                    "col": cell_data["col"],
+                                    "val": cell_data["val"],
+                                    "is_error": is_error,
+                                    "domain_fold": domain_name,
+                                    "cell_fold": cell_fold_name,
+                                    "source": "bulk_annotation",
+                                }
+                                processed_labeled_cells.append(bulk_labeled_cell)
+
+                            logging.info(
+                                f"Added {len(cells_data)} bulk-labeled cells from fold '{cell_fold_name}' (label: {bulk_label})"
+                            )
+
+        logging.info(f"Total processed labeled cells: {len(processed_labeled_cells)}")
 
         # Step 2: Load the complete cell_folds structure from cache or configuration
         cell_folds = _load_complete_cell_folds_structure(selected_dataset)
@@ -1208,42 +1254,10 @@ def _save_results_to_config(pipeline_path: str, detection_results: Dict[str, Any
 
 
 def _load_latest_detection_results(pipeline_name: str) -> Dict[str, Any]:
-    """Load the most recent error detection results from cache"""
-
-    # Try to find the most recent cache file
-    # This is a simplified approach - in production you might want to track cache timestamps
-
-    cache_dir = os.path.join(
-        "/home/fatemeh/matelda-demo/temp-cache", pipeline_name
-    )  # Use your cache root
-
-    if not os.path.exists(cache_dir):
-        return None
-
-    # Find all error detection cache files
-    cache_files = [f for f in os.listdir(cache_dir) if f.startswith("error_detection_")]
-
-    if not cache_files:
-        return None
-
-    # Sort by modification time and get the latest
-    cache_files_with_time = []
-    for cache_file in cache_files:
-        file_path = os.path.join(cache_dir, cache_file)
-        mtime = os.path.getmtime(file_path)
-        cache_files_with_time.append((mtime, cache_file))
-
-    if cache_files_with_time:
-        # Get the most recent file
-        latest_file = sorted(cache_files_with_time, reverse=True)[0][1]
-
-        try:
-            result = load_from_cache(pipeline_name, latest_file)
-            logging.info(f"Loaded latest error detection results from {latest_file}")
-            return result
-        except Exception as e:
-            logging.error(f"Failed to load cache file {latest_file}: {e}")
-
+    """Load the most recent error detection results - temp-cache disabled"""
+    logging.info(
+        f"Latest detection results not available for {pipeline_name} (temp-cache disabled)"
+    )
     return None
 
 

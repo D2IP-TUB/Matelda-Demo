@@ -63,6 +63,24 @@ h1 {{
     background-color: rgba({primary_rgb[0]}, {primary_rgb[1]}, {primary_rgb[2]}, 0.8) !important;
     border-color: rgba({primary_rgb[0]}, {primary_rgb[1]}, {primary_rgb[2]}, 0.8) !important;
 }}
+/* Fix button height consistency - target all cell buttons */
+.stButton > button {{
+    min-height: 42px !important;
+    height: auto !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    padding: 8px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+}}
+/* Specific targeting for cell buttons in columns */
+div[data-testid="column"] .stButton > button {{
+    min-height: 42px !important;
+    max-height: none !important;
+    height: auto !important;
+}}
 </style>
 """,
     unsafe_allow_html=True,
@@ -202,8 +220,13 @@ for key, val in defaults.items():
 # Labeling Budget (editable) #
 ##############################
 
-# Initialize labeling budget from pipeline config if missing in session
-if ("budget_slider" not in st.session_state) or ("budget_input" not in st.session_state):
+# Initialize labeling budget from pipeline config if missing in session or zero
+if (
+    ("budget_slider" not in st.session_state)
+    or ("budget_input" not in st.session_state)
+    or (st.session_state.get("budget_slider", 0) <= 0)
+    or (st.session_state.get("budget_input", 0) <= 0)
+):
     cfg_budget = 10
     if "pipeline_path" in st.session_state:
         _cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
@@ -214,17 +237,22 @@ if ("budget_slider" not in st.session_state) or ("budget_input" not in st.sessio
                 cfg_budget = int(_cfg_tmp.get("labeling_budget", 10))
             except Exception:
                 cfg_budget = 10
-    st.session_state.setdefault("budget_slider", min(int(cfg_budget), 100))
-    st.session_state.setdefault("budget_input", int(cfg_budget))
+
+    # Set both values to the same valid budget
+    st.session_state["budget_slider"] = min(int(cfg_budget), 100)
+    st.session_state["budget_input"] = int(cfg_budget)
+
 
 def _sync_slider_to_input() -> None:
     st.session_state.budget_input = st.session_state.budget_slider
+
 
 def _sync_input_to_slider() -> None:
     try:
         st.session_state.budget_slider = min(int(st.session_state.budget_input), 100)
     except Exception:
         st.session_state.budget_slider = 100
+
 
 st.subheader("Labeling Budget")
 col_slider, col_input = st.columns([3, 1])
@@ -248,7 +276,9 @@ with col_input:
     )
 
 # Use number input as source of truth
-_current_labeling_budget = int(st.session_state.get("budget_input", st.session_state.get("budget_slider", 10)))
+_current_labeling_budget = int(
+    st.session_state.get("budget_input", st.session_state.get("budget_slider", 10))
+)
 
 st.markdown("---")
 
@@ -271,7 +301,12 @@ if st.button("▶️ Run Quality Based Folding"):
         cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
         with open(cfg_path) as f:
             cfg = json.load(f)
-        labeling_budget = int(st.session_state.get("budget_input", st.session_state.get("budget_slider", cfg.get("labeling_budget", 10))))
+        labeling_budget = int(
+            st.session_state.get(
+                "budget_input",
+                st.session_state.get("budget_slider", cfg.get("labeling_budget", 10)),
+            )
+        )
         cfg["labeling_budget"] = labeling_budget
         # Persist current strategies selection
         cfg["selected_strategies"] = st.session_state.get("selected_strategies", [])
@@ -415,22 +450,20 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("### Folds / Tables")
 
-# Display folds
-# When bulk annotation is enabled we need more room for the two action buttons.
-action_col_width = 2 if st.session_state.bulk_annotate_mode else 1
-header_cols = st.columns([4, action_col_width])
-header_cols[0].markdown("**Fold / Cell**")
-header_cols[1].markdown("**Select**")
-
+# Display folds in a simple, clean table format
 for dom, folds in st.session_state.cell_folds.items():
-    # Limit initially visible folds per domain to 1, with a 'show more' button
+    st.markdown(f"#### Domain: {dom}")
+
+    # Limit initially visible folds per domain to 3, with a 'show more' button
     fold_names = list(folds.keys())
     total_folds_in_domain = len(fold_names)
     visible_folds_key = f"visible_folds_{dom}"
     if visible_folds_key not in st.session_state:
-        st.session_state[visible_folds_key] = 1
+        st.session_state[visible_folds_key] = min(3, total_folds_in_domain)
     # Clamp
-    st.session_state[visible_folds_key] = max(1, min(st.session_state[visible_folds_key], total_folds_in_domain))
+    st.session_state[visible_folds_key] = max(
+        1, min(st.session_state[visible_folds_key], total_folds_in_domain)
+    )
     show_fold_names = fold_names[: st.session_state[visible_folds_key]]
 
     for fname in show_fold_names:
@@ -449,17 +482,83 @@ for dom, folds in st.session_state.cell_folds.items():
             fold_label
         )
 
-        fold_cols = st.columns([4, action_col_width])
+        # Create fold header row
+        fold_cols = st.columns(
+            [3, 1, 2]
+            if (st.session_state.bulk_annotate_mode or st.session_state.merge_mode)
+            else [4, 1]
+        )
+
+        # Fold name with color coding and cell count
         if label_color:
             fold_cols[0].markdown(
-                f'📦 **<span style="color: {label_color}">{fname}</span>**',
+                f'📦 **<span style="color: {label_color}">{fname}</span>** ({len(cell_list)} cells)',
                 unsafe_allow_html=True,
             )
         else:
-            fold_cols[0].markdown(f"📦 **{fname}**")
+            fold_cols[0].markdown(f"📦 **{fname}** ({len(cell_list)} cells)")
 
-        if st.session_state.merge_mode:
-            merge_selected = fold_cols[1].checkbox(
+        # Show/hide toggle
+        show_fold_key = f"show_fold_{fname}"
+        if show_fold_key not in st.session_state:
+            # Try to load fold visibility state from config
+            if "pipeline_path" in st.session_state:
+                cfg_path = os.path.join(
+                    st.session_state.pipeline_path, "configurations.json"
+                )
+                if os.path.exists(cfg_path):
+                    try:
+                        with open(cfg_path) as f:
+                            cfg = json.load(f)
+                        fold_visibility = cfg.get("fold_visibility", {})
+                        saved_state = fold_visibility.get(fname, False)
+                        st.session_state[show_fold_key] = saved_state
+                        # Debug: Show if we loaded state
+                        if saved_state:
+                            st.sidebar.success(
+                                f"Loaded fold state for {fname}: {saved_state}"
+                            )
+                    except Exception as e:
+                        st.session_state[show_fold_key] = False
+                        st.sidebar.error(f"Failed to load fold state: {str(e)}")
+                else:
+                    st.session_state[show_fold_key] = False
+                    st.sidebar.warning("No config file found")
+            else:
+                st.session_state[show_fold_key] = False
+                st.sidebar.warning("No pipeline path set")
+
+        if fold_cols[1].button(
+            "Hide" if st.session_state[show_fold_key] else "Show",
+            key=f"toggle_{fname}",
+            use_container_width=True,
+        ):
+            st.session_state[show_fold_key] = not st.session_state[show_fold_key]
+
+            # Save fold visibility state to config
+            if "pipeline_path" in st.session_state:
+                cfg_path = os.path.join(
+                    st.session_state.pipeline_path, "configurations.json"
+                )
+                if os.path.exists(cfg_path):
+                    try:
+                        with open(cfg_path) as f:
+                            cfg = json.load(f)
+                        if "fold_visibility" not in cfg:
+                            cfg["fold_visibility"] = {}
+                        cfg["fold_visibility"][fname] = st.session_state[show_fold_key]
+                        with open(cfg_path, "w") as f:
+                            json.dump(cfg, f, indent=2, default=_json_default)
+                        st.sidebar.success(
+                            f"Saved fold state for {fname}: {st.session_state[show_fold_key]}"
+                        )
+                    except Exception as e:
+                        st.sidebar.error(f"Failed to save fold state: {str(e)}")
+            st.rerun()
+
+        # Action controls (merge/bulk annotate)
+        if st.session_state.merge_mode and len(fold_cols) > 2:
+            merge_selected = fold_cols[2].checkbox(
                 "Select fold", key=f"merge_{fname}", label_visibility="hidden"
             )
             if (
@@ -472,8 +571,8 @@ for dom, folds in st.session_state.cell_folds.items():
                 and fname in st.session_state.selected_folds_for_merge
             ):
                 st.session_state.selected_folds_for_merge.remove(fname)
-        elif st.session_state.bulk_annotate_mode:
-            button_cols = fold_cols[1].columns(2)
+        elif st.session_state.bulk_annotate_mode and len(fold_cols) > 2:
+            button_cols = fold_cols[2].columns(2)
             if button_cols[0].button(
                 "✓", key=f"correct_{fname}", use_container_width=True
             ):
@@ -508,71 +607,267 @@ for dom, folds in st.session_state.cell_folds.items():
                             json.dump(cfg, f, indent=2, default=_json_default)
                         mark_pipeline_dirty()
                         st.rerun()
-        else:
-            fold_cols[1].empty()
 
-        # Limit initial cells shown and add incremental reveal button
-        visible_key = f"visible_cells_{fname}"
-        total_cells = len(cell_list)
-        if visible_key not in st.session_state:
-            st.session_state[visible_key] = 3
-        # Clamp in case fold sizes change
-        st.session_state[visible_key] = max(
-            0, min(st.session_state[visible_key], total_cells)
-        )
-        show_upto = st.session_state[visible_key]
+        # Show fold contents if toggled on
+        if st.session_state.get(show_fold_key, False):
+            # Group cells by table and column for better organization
+            def organize_cells(cells):
+                organized = {}
+                for cell in cells:
+                    table = cell["table"]
+                    column = cell["col"]
+                    if table not in organized:
+                        organized[table] = {}
+                    if column not in organized[table]:
+                        organized[table][column] = []
+                    organized[table][column].append(cell)
+                return organized
 
-        for cell_idx, cell in enumerate(cell_list[:show_upto]):
-            r, c, tbl, v = cell["row"], cell["col"], cell["table"], cell["val"]
-            lbl = str(v)[:30] + "..." if isinstance(v, str) and len(v) > 30 else str(v)
-            cell_cols = st.columns([4, action_col_width])
-            with cell_cols[0]:
-                if st.button(lbl, key=f"cell_{fname}_{tbl}_{r}_{c}_{cell_idx}"):
-                    show_cell_dialog(cell, fname)
-            if st.session_state.split_mode:
-                split_selected = cell_cols[1].checkbox(
-                    "Split here",
-                    key=f"split_{fname}_{tbl}_{r}_{c}_{cell_idx}",
-                    label_visibility="hidden",
+            organized_data = organize_cells(cell_list)
+
+            # Create indented container for fold contents
+            with st.container():
+                st.markdown(
+                    '<div style="margin-left: 15px; padding-left: 15px; border-left: 2px solid #e0e0e0;">',
+                    unsafe_allow_html=True,
                 )
-                if fname not in st.session_state.selected_cells_for_split:
-                    st.session_state.selected_cells_for_split[fname] = []
-                selected_cells = st.session_state.selected_cells_for_split.get(
-                    fname, []
-                )
-                if split_selected and cell not in selected_cells:
-                    selected_cells.append(cell)
-                    st.session_state.selected_cells_for_split[fname] = selected_cells
-                elif not split_selected and cell in selected_cells:
-                    selected_cells.remove(cell)
-                    st.session_state.selected_cells_for_split[fname] = selected_cells
-            else:
-                cell_cols[1].empty()
 
-        # Show more button per fold if more cells are available
-        if show_upto < total_cells:
-            btn_row = st.columns([4, action_col_width])
-            with btn_row[0]:
-                st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
-                if st.button(
-                    "+ show more cells",
-                    key=f"show_more_{fname}",
-                    use_container_width=False,
-                ):
-                    # Update visible cells and immediately rerun to reflect change
-                    st.session_state[visible_key] = min(total_cells, show_upto + 5)
-                    st.rerun()
+                # Display each table
+                for table_name in sorted(organized_data.keys()):
+                    table_columns = organized_data[table_name]
+
+                    # Table header
+                    st.markdown(f"**📊 Table: `{table_name}`**")
+
+                    # Display each column within the table
+                    for column_name in sorted(table_columns.keys()):
+                        cells_in_column = table_columns[column_name]
+
+                        # Column header with cell count
+                        st.markdown(
+                            f"&nbsp;&nbsp;&nbsp;&nbsp;📋 **Column: `{column_name}`** ({len(cells_in_column)} cells)"
+                        )
+
+                        # Limit visible cells per column with "show more" functionality
+                        visible_cells_key = (
+                            f"visible_cells_{fname}_{table_name}_{column_name}"
+                        )
+                        if visible_cells_key not in st.session_state:
+                            # Try to load visible cells count from config
+                            if "pipeline_path" in st.session_state:
+                                cfg_path = os.path.join(
+                                    st.session_state.pipeline_path,
+                                    "configurations.json",
+                                )
+                                if os.path.exists(cfg_path):
+                                    try:
+                                        with open(cfg_path) as f:
+                                            cfg = json.load(f)
+                                        visible_cells_state = cfg.get(
+                                            "visible_cells_state", {}
+                                        )
+                                        saved_count = visible_cells_state.get(
+                                            visible_cells_key,
+                                            min(4, len(cells_in_column)),
+                                        )
+                                        st.session_state[visible_cells_key] = (
+                                            saved_count
+                                        )
+                                    except Exception:
+                                        st.session_state[visible_cells_key] = min(
+                                            4, len(cells_in_column)
+                                        )
+                                else:
+                                    st.session_state[visible_cells_key] = min(
+                                        4, len(cells_in_column)
+                                    )
+                            else:
+                                st.session_state[visible_cells_key] = min(
+                                    4, len(cells_in_column)
+                                )
+
+                        # Clamp to valid range
+                        st.session_state[visible_cells_key] = max(
+                            0,
+                            min(
+                                st.session_state[visible_cells_key],
+                                len(cells_in_column),
+                            ),
+                        )
+
+                        visible_cells_count = st.session_state[visible_cells_key]
+                        visible_cells = cells_in_column[:visible_cells_count]
+
+                        # Create a grid of buttons for visible cells in this column
+                        cells_per_row = 4
+                        if len(visible_cells) > 0:
+                            for i in range(0, len(visible_cells), cells_per_row):
+                                # Create a consistent button row with proper spacing
+                                button_cols = st.columns(cells_per_row, gap="small")
+
+                                for j in range(cells_per_row):
+                                    with button_cols[j]:
+                                        if i + j < len(visible_cells):
+                                            cell = visible_cells[i + j]
+                                            r, c, tbl, v = (
+                                                cell["row"],
+                                                cell["col"],
+                                                cell["table"],
+                                                cell["val"],
+                                            )
+                                            strategies = cell.get("strategies", [])
+                                            error_count = len(strategies)
+
+                                            # Create clean button label - standardized length
+                                            display_val = (
+                                                str(v)[:15] + "..."
+                                                if isinstance(v, str) and len(v) > 15
+                                                else str(v)
+                                            )
+
+                                            # Pad short values to ensure consistent button sizes
+                                            if len(display_val) < 10:
+                                                display_val = display_val.ljust(10)
+
+                                            # Status indicator
+                                            if error_count > 0:
+                                                status = f"❌{error_count}"
+                                            else:
+                                                status = "✅"
+
+                                            # Clean button text with consistent format
+                                            button_label = (
+                                                f"R{r}: {display_val}\n{status}"
+                                            )
+
+                                            # Create a container for consistent sizing
+                                            with st.container():
+                                                st.markdown(
+                                                    '<div style="height: 60px; display: flex; align-items: stretch;">',
+                                                    unsafe_allow_html=True,
+                                                )
+                                                if st.button(
+                                                    button_label,
+                                                    key=f"cell_{fname}_{table_name}_{column_name}_{r}_{i + j}",
+                                                    use_container_width=True,
+                                                    type="secondary",
+                                                    help=f"Table: {tbl}, Column: {c}, Row: {r}, Value: {v}",
+                                                ):
+                                                    show_cell_dialog(cell, fname)
+                                                st.markdown(
+                                                    "</div>", unsafe_allow_html=True
+                                                )
+
+                                            # Split mode checkbox
+                                            if st.session_state.split_mode:
+                                                split_selected = st.checkbox(
+                                                    "Split here",
+                                                    key=f"split_{fname}_{table_name}_{column_name}_{r}_{i + j}",
+                                                    label_visibility="hidden",
+                                                )
+                                                if (
+                                                    fname
+                                                    not in st.session_state.selected_cells_for_split
+                                                ):
+                                                    st.session_state.selected_cells_for_split[
+                                                        fname
+                                                    ] = []
+                                                selected_cells = st.session_state.selected_cells_for_split.get(
+                                                    fname, []
+                                                )
+
+                                                if (
+                                                    split_selected
+                                                    and cell not in selected_cells
+                                                ):
+                                                    selected_cells.append(cell)
+                                                    st.session_state.selected_cells_for_split[
+                                                        fname
+                                                    ] = selected_cells
+                                                elif (
+                                                    not split_selected
+                                                    and cell in selected_cells
+                                                ):
+                                                    selected_cells.remove(cell)
+                                                    st.session_state.selected_cells_for_split[
+                                                        fname
+                                                    ] = selected_cells
+                                        else:
+                                            # Empty column placeholder with consistent height
+                                            st.markdown(
+                                                '<div style="height: 60px; display: flex; align-items: center; justify-content: center; color: #ccc;">',
+                                                unsafe_allow_html=True,
+                                            )
+                                            st.markdown("—")
+                                            st.markdown(
+                                                "</div>", unsafe_allow_html=True
+                                            )
+                        else:
+                            st.info("No cells to display in this column.")
+
+                        # Show more cells button if there are more cells to show
+                        if visible_cells_count < len(cells_in_column):
+                            remaining_cells = len(cells_in_column) - visible_cells_count
+                            show_more_count = min(4, remaining_cells)
+
+                            col1, col2, col3 = st.columns([1, 2, 1])
+                            with col2:
+                                if st.button(
+                                    f"+ Show {show_more_count} more cells",
+                                    key=f"show_more_{fname}_{table_name}_{column_name}",
+                                    use_container_width=True,
+                                ):
+                                    st.session_state[visible_cells_key] = min(
+                                        len(cells_in_column),
+                                        visible_cells_count + show_more_count,
+                                    )
+
+                                    # Save visible cells state to config
+                                    if "pipeline_path" in st.session_state:
+                                        cfg_path = os.path.join(
+                                            st.session_state.pipeline_path,
+                                            "configurations.json",
+                                        )
+                                        if os.path.exists(cfg_path):
+                                            try:
+                                                with open(cfg_path) as f:
+                                                    cfg = json.load(f)
+                                                if "visible_cells_state" not in cfg:
+                                                    cfg["visible_cells_state"] = {}
+                                                cfg["visible_cells_state"][
+                                                    visible_cells_key
+                                                ] = st.session_state[visible_cells_key]
+                                                with open(cfg_path, "w") as f:
+                                                    json.dump(
+                                                        cfg,
+                                                        f,
+                                                        indent=2,
+                                                        default=_json_default,
+                                                    )
+                                            except Exception:
+                                                pass
+
+                                    st.rerun()
+
+                        # Add some spacing between columns
+                        st.markdown("&nbsp;")
+
+                    # Add spacing between tables
+                    st.markdown("---")
+
                 st.markdown("</div>", unsafe_allow_html=True)
 
-    # Domain-level 'show more cell folds' button if more folds are available
+    # Domain-level 'show more folds' button if more folds are available
     if st.session_state[visible_folds_key] < total_folds_in_domain:
-        domain_btn_row = st.columns([4, action_col_width])
-        with domain_btn_row[0]:
-            st.markdown('<div class="small-show-more">', unsafe_allow_html=True)
-            if st.button("+ show more cell folds", key=f"show_more_folds_{dom}", use_container_width=False):
-                st.session_state[visible_folds_key] = min(total_folds_in_domain, st.session_state[visible_folds_key] + 3)
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+        if st.button(
+            "+ Show More Folds", key=f"show_more_folds_{dom}", use_container_width=False
+        ):
+            st.session_state[visible_folds_key] = min(
+                total_folds_in_domain, st.session_state[visible_folds_key] + 3
+            )
+            st.rerun()
+
+    st.markdown("---")
 
 
 # Global Confirm Merge: if merge mode is active and more than one fold is selected
