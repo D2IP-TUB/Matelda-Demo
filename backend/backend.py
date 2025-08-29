@@ -308,69 +308,117 @@ def backend_sample_labeling(
         bulk_annotations = _load_bulk_annotations(selected_dataset)
         logging.info(f"Found bulk annotations for {len(bulk_annotations)} folds")
 
-        # Just collect pre-selected cells (centroids already chosen in quality folding)
-        sampled_cells = []
-        total_selected = 0
-        skipped_bulk_annotated = 0
+        # First, collect originally selected cells and separate bulk-annotated vs available
+        available_folds = {}  # Non-bulk-annotated folds with their cells
+        originally_selected_from_bulk = (
+            0  # Budget that was allocated to bulk-annotated folds
+        )
+        originally_selected_from_available = (
+            0  # Budget already allocated to available folds
+        )
 
         for domain_name, domain_cell_folds in cell_folds.items():
-            domain_selected = 0
+            available_folds[domain_name] = {}
 
             for cell_fold_name, cells_data in domain_cell_folds.items():
-                # Skip folds that have been bulk annotated
+                originally_selected_in_fold = len(
+                    [c for c in cells_data if c.get("selected_for_labeling", False)]
+                )
+
                 if cell_fold_name in bulk_annotations:
                     bulk_label = bulk_annotations[cell_fold_name]
                     logging.info(
-                        f"Skipping bulk-annotated fold '{cell_fold_name}' (labeled as '{bulk_label}')"
+                        f"Skipping bulk-annotated fold '{cell_fold_name}' (labeled as '{bulk_label}'), "
+                        f"freeing up {originally_selected_in_fold} budget slots"
                     )
-                    skipped_bulk_annotated += len(
-                        [c for c in cells_data if c.get("selected_for_labeling", False)]
-                    )
-                    continue
+                    originally_selected_from_bulk += originally_selected_in_fold
+                else:
+                    # This fold is available for sampling
+                    available_folds[domain_name][cell_fold_name] = cells_data
+                    originally_selected_from_available += originally_selected_in_fold
 
-                cell_fold_selected = 0
+        # Calculate how much extra budget we can distribute
+        freed_budget = originally_selected_from_bulk
+        total_available_budget = originally_selected_from_available + freed_budget
+        effective_budget = min(total_available_budget, labeling_budget)
 
+        logging.info("Budget analysis:")
+        logging.info(f"  - Original budget: {labeling_budget}")
+        logging.info(f"  - Freed from bulk annotations: {freed_budget}")
+        logging.info(
+            f"  - Originally allocated to available folds: {originally_selected_from_available}"
+        )
+        logging.info(f"  - Effective budget for sampling: {effective_budget}")
+
+        # Now collect samples from available folds up to the effective budget
+        sampled_cells = []
+
+        # Strategy: Round-robin sampling across available folds until we hit the budget
+        # This ensures fair distribution of the extra budget
+        remaining_budget = effective_budget
+
+        # Create a list of all available cells from non-bulk-annotated folds
+        all_available_cells = []
+        for domain_name, domain_cell_folds in available_folds.items():
+            for cell_fold_name, cells_data in domain_cell_folds.items():
                 for cell_data in cells_data:
-                    if cell_data.get("selected_for_labeling", False):
-                        sampled_cell = {
-                            "id": len(sampled_cells) + 1,
-                            "name": f"{cell_fold_name} - {cell_data['table']}",
-                            "table": cell_data["table"],
-                            "row": cell_data["row"],
-                            "col": cell_data["col"],
-                            "val": cell_data["val"],
-                            "domain_fold": domain_name,
-                            "cell_fold": cell_fold_name,
-                            "cell_fold_label": "neutral",
-                            "features": cell_data.get("features", {}),
-                            "strategies": cell_data.get("strategies", []),
-                        }
-                        sampled_cells.append(sampled_cell)
-                        cell_fold_selected += 1
-
-                if cell_fold_selected > 0:
-                    logging.info(
-                        f"{cell_fold_name}: {cell_fold_selected} selected cells"
-                    )
-                domain_selected += cell_fold_selected
-
-            logging.info(f"Domain {domain_name}: {domain_selected} selected cells")
-            total_selected += domain_selected
+                    cell_info = {
+                        "cell_data": cell_data,
+                        "domain_name": domain_name,
+                        "cell_fold_name": cell_fold_name,
+                        "was_originally_selected": cell_data.get(
+                            "selected_for_labeling", False
+                        ),
+                    }
+                    all_available_cells.append(cell_info)
 
         logging.info(
-            f"Skipped {skipped_bulk_annotated} cells from bulk-annotated folds"
+            f"Total available cells across all non-bulk folds: {len(all_available_cells)}"
         )
 
-        # Validate against labeling budget
-        if len(sampled_cells) > labeling_budget:
-            logging.warning(
-                f"Selected {len(sampled_cells)} cells exceeds budget {labeling_budget}, truncating"
+        # Prioritize originally selected cells first, then add more if budget allows
+        originally_selected_cells = [
+            c for c in all_available_cells if c["was_originally_selected"]
+        ]
+        not_originally_selected_cells = [
+            c for c in all_available_cells if not c["was_originally_selected"]
+        ]
+
+        # Take originally selected cells first
+        cells_to_sample = originally_selected_cells[:remaining_budget]
+        remaining_budget -= len(cells_to_sample)
+
+        # If we have remaining budget, add more cells from the same folds
+        if remaining_budget > 0 and not_originally_selected_cells:
+            additional_cells = not_originally_selected_cells[:remaining_budget]
+            cells_to_sample.extend(additional_cells)
+            logging.info(
+                f"Added {len(additional_cells)} additional cells to utilize full budget"
             )
-            sampled_cells = sampled_cells[:labeling_budget]
+
+        # Convert to the expected format
+        for i, cell_info in enumerate(cells_to_sample):
+            cell_data = cell_info["cell_data"]
+            sampled_cell = {
+                "id": i + 1,
+                "name": f"{cell_info['cell_fold_name']} - {cell_data['table']}",
+                "table": cell_data["table"],
+                "row": cell_data["row"],
+                "col": cell_data["col"],
+                "val": cell_data["val"],
+                "domain_fold": cell_info["domain_name"],
+                "cell_fold": cell_info["cell_fold_name"],
+                "cell_fold_label": "neutral",
+                "features": cell_data.get("features", {}),
+                "strategies": cell_data.get("strategies", []),
+            }
+            sampled_cells.append(sampled_cell)
 
         logging.info(
             f"Successfully sampled {len(sampled_cells)} cells for labeling (budget: {labeling_budget})"
         )
+        logging.info(f"Utilized budget: {len(sampled_cells)}/{effective_budget}")
+
         return sampled_cells
 
     except Exception as e:

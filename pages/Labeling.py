@@ -176,6 +176,7 @@ def _compute_sampled_cells(
     labeling_budget: int,
     cell_folds: Dict[str, Any],
     domain_folds: Dict[str, Any],
+    bulk_annotations_hash: str,  # New parameter to break cache when bulk annotations change
 ):
     # Log only when actually computing (i.e., cache miss)
     logger.info(
@@ -197,8 +198,11 @@ def get_cached_sampled_cells(
     labeling_budget: int,
     cell_folds: Dict[str, Any],
     domain_folds: Dict[str, Any],
+    bulk_annotations_hash: str,
 ):
-    return _compute_sampled_cells(dataset, labeling_budget, cell_folds, domain_folds)
+    return _compute_sampled_cells(
+        dataset, labeling_budget, cell_folds, domain_folds, bulk_annotations_hash
+    )
 
 
 def run_sampling():
@@ -206,16 +210,40 @@ def run_sampling():
         labeling_budget = st.session_state.get("labeling_budget", 10)
         cell_folds = st.session_state.get("cell_folds", {})
         domain_folds = st.session_state.get("domain_folds", {})
+
+        # Generate hash of bulk annotations to break cache when they change
+        bulk_annotations_hash = ""
+        if "pipeline_path" in st.session_state:
+            cfg_path = os.path.join(
+                st.session_state.pipeline_path, "configurations.json"
+            )
+            if os.path.exists(cfg_path):
+                try:
+                    with open(cfg_path) as f:
+                        cfg = json.load(f)
+                    bulk_annotations = cfg.get("cell_fold_labels", {})
+                    import hashlib
+
+                    bulk_annotations_hash = hashlib.md5(
+                        str(sorted(bulk_annotations.items())).encode()
+                    ).hexdigest()
+                except Exception:
+                    bulk_annotations_hash = "error"
+
         sampled_cells = get_cached_sampled_cells(
             dataset=dataset,
             labeling_budget=labeling_budget,
             cell_folds=cell_folds,
             domain_folds=domain_folds,
+            bulk_annotations_hash=bulk_annotations_hash,
         )
         # Persist in session state to avoid re-sampling on reload
         st.session_state[SAMPLE_KEY] = sampled_cells
         st.session_state[SAMPLE_DATASET_KEY] = dataset
         st.session_state[SAMPLE_BUDGET_KEY] = labeling_budget
+        st.session_state["last_bulk_hash"] = (
+            bulk_annotations_hash  # Store hash for change detection
+        )
         # Small delay to make spinner visible and UX smooth
         time.sleep(0.3)
 
@@ -226,13 +254,37 @@ if "sampled_cells" in st.session_state and SAMPLE_KEY not in st.session_state:
     st.session_state[SAMPLE_DATASET_KEY] = dataset
     st.session_state[SAMPLE_BUDGET_KEY] = st.session_state.get("labeling_budget", 10)
 
-# Auto-run sampling only if no samples exist for the current dataset
+# Auto-run sampling only if no samples exist for the current dataset or if bulk annotations changed
 _current_budget = st.session_state.get("labeling_budget", 10)
-if (
+
+# Check if we need to resample due to changes
+needs_resampling = (
     SAMPLE_KEY not in st.session_state
     or st.session_state.get(SAMPLE_DATASET_KEY) != dataset
     or st.session_state.get(SAMPLE_BUDGET_KEY) != _current_budget
-):
+)
+
+# Also check if bulk annotations have changed since last sampling
+if not needs_resampling and "pipeline_path" in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            bulk_annotations = cfg.get("cell_fold_labels", {})
+            import hashlib
+
+            current_bulk_hash = hashlib.md5(
+                str(sorted(bulk_annotations.items())).encode()
+            ).hexdigest()
+            stored_bulk_hash = st.session_state.get("last_bulk_hash", "")
+            if current_bulk_hash != stored_bulk_hash:
+                needs_resampling = True
+                logger.info("Bulk annotations changed, forcing re-sampling")
+        except Exception:
+            pass
+
+if needs_resampling:
     run_sampling()
 
 if SAMPLE_KEY in st.session_state:
