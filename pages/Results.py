@@ -304,45 +304,6 @@ st.markdown("#### Result Comparison (All Pipelines/Datasets)")
 st.write("_(Click on column headers to sort the table.)_")
 st.dataframe(styled_all_df)
 
-# Interactive graphs for all datasets/pipelines comparison
-if not all_df.empty and len(all_df) > 1:
-    st.markdown("---")
-    st.markdown("#### Performance vs Labeling Budget")
-
-    # Ensure numeric and sorted budgets for clean X-axis
-    if "Labeling Budget" in all_df.columns:
-        all_df["Labeling Budget"] = pd.to_numeric(
-            all_df["Labeling Budget"], errors="coerce"
-        )
-
-    # Build three separate line charts with legends per pipeline
-    metrics_to_plot = [
-        ("F1", "F1 Score"),
-        ("Precision", "Precision"),
-        ("Recall", "Recall"),
-    ]
-
-    for metric_key, metric_label in metrics_to_plot:
-        # Pivot so each pipeline is a separate series (legend), X = Labeling Budget
-        if (
-            metric_key in all_df.columns
-            and "Pipeline Name" in all_df.columns
-            and "Labeling Budget" in all_df.columns
-        ):
-            pivot_df = all_df.pivot_table(
-                index="Labeling Budget",
-                columns="Pipeline Name",
-                values=metric_key,
-                aggfunc="mean",
-            ).sort_index()
-
-            if not pivot_df.empty:
-                st.markdown(f"##### {metric_label} vs Labeling Budget")
-                st.caption(f"X-axis: Labeling Budget | Y-axis: {metric_label}")
-                # Streamlit will render a legend using the column names (pipeline names)
-                st.line_chart(pivot_df, use_container_width=True)
-
-
 st.markdown("---")
 
 # Social Share Section (only if dataset is configured)
