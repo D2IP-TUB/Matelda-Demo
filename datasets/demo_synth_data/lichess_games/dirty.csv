@@ -1,0 +1,41 @@
+Chess_Event,Chess_Site,White_Player,Black_Player,Game_Result
+CORRUPTED_TOURNAMENT_ERROR,https://worldchess.com/game/ko58gn,Ding Liren,Wesley So@84,White Wins
+Rated Blitz Tournament,https://chessmaster.org/match/9hew4e,Alireza Firouzja,Magnus Carlsen@19,Draw Game
+INVALID_CHESS_EVENT_999,https://chessmaster.org/match/lvutfd,Magnus Carlsen,Wesley So,White Wins
+BROKEN_CHESS_MATCH_XXX,https://chesschampion.net/play/9axwj0,Ian Nepomniachtchi,Magnus Carlsen,Checkmate White
+Rapid Tournament Game,htt#s:@@chessgrandmaster$com@tournament@m1a7mk,Ding Liren,Hikaru Nakamura,Checkmate White
+Rated Blitz Tournament,https://chesschampion.net/play/b7h8h3,Alireza Firouzja,Hikaru Nakamura,Black Wins
+INVALID_CHESS_COMPETITION,https://worldchess.com/game/208vv8,Anish Giri,Magnus Carlsen,Checkmate White
+INVALID_CHESS_EVENT_999,https://chessgrandmaster.com/tournament/aolsx8,Wesley So,Fabiano Caruana,Match$Error
+Rated Blitz Tournament,https://chesschampion.net/play/oyo65p,Ding Liren,Ian Nepomniachtchi,Checkmate Black
+CORRUPTED_TOURNAMENT_ERROR,htt#s:@@chesschampion.net@play@z6nfoo,Ian Nepomniachtchi,Anish Giri,Checkmate Black
+Rapid Tournament Game,htt#s:@@chessgrandmaster$com@tournament@x534f6,Ian Nepomniachtchi,Anish Giri,Game#Draw
+Blitz Championship Round,htt#s:@@chesschampion.net@play@audomg,Ian Nepomniachtchi,Alireza Firouzja,White Wins
+Rapid Tournament Game,https://chessmaster.org/match/m54trh,Anish Giri,Hikaru Nakamura,Checkmate White
+Classical Match Game,https://chessmaster.org/match/zcjirf,Anish Giri,Ian Nepomniachtchi,Match$Error
+Rapid Tournament Game,https://chessgrandmaster.com/tournament/lkeop0,Anish Giri,Ding Liren,Black Wins
+Rapid Tournament Game,https://chessgrandmaster.com/tournament/g3n3so,Anish Giri,Hikaru Nakamura,Black Wins
+Blitz Championship Round,https://chessgrandmaster.com/tournament/zizxa7,Wesley So,Ian Nepomniachtchi,White Wins
+Rated Blitz Tournament,https://chessmaster.org/match/ogepgs,Fabiano Caruana,Alireza Firouzja,White Wins
+Blitz Championship Round,https://chesschampion.net/play/5ytgbh,Alireza Firouzja,Fabiano Caruana,Black Wins
+Bullet Arena Competition,https://worldchess.com/game/e5dr1q,Alireza Firouzja,Ian Nepomniachtchi,Checkmate White
+Rated Blitz Tournament,https://chessmaster.org/match/3yoxab,Fabiano Caruana,Wesley So,Black Wins
+Bullet Arena Competition,https://chesschampion.net/play/yrjkar,Ian Nepomniachtchi,Alireza Firouzja,White Wins
+SYSTEM_CHESS_FAILURE,https://chessmaster.org/match/m2dw09,Alireza Firouzja,Hikaru Nakamura,White Wins
+BROKEN_CHESS_MATCH_XXX,https://chessmaster.org/match/mc35gj,Magnus Carlsen,Anish Giri,White Wins
+Bullet Arena Competition,https://chessmaster.org/match/he1ofo,Hikaru Nakamura,Anish Giri,Chess@Wins
+SYSTEM_CHESS_FAILURE,htt#s:@@chesschampion.net@play@khxerp,Alireza Firouzja,Hikaru Nakamura,White Wins
+Classical Championship Match,https://worldchess.com/game/oh3e8c,Ding Liren,Wesley So,White Wins
+Blitz Championship Round,https://worldchess.com/game/s385d2,Ding Liren,Wesley So,Black Wins
+ERROR_CHESS_GAME_TYPE,https://worldchess.com/game/nwe047,Ding Liren,Hikaru Nakamura,Checkmate Black
+Rapid Tournament Game,htt#s:@@worldchess$com@game@ag3duq,Ding Liren,Hikaru Nakamura,Checkmate Black
+Rated Blitz Tournament,https://chessgrandmaster.com/tournament/9n4vjx,Fabiano Caruana,Hikaru Nakamura,Chess@Wins
+INVALID_CHESS_COMPETITION,htt#s:@@worldchess$com@game@bosre1,Anish Giri,Fabiano Caruana,Checkmate White
+Classical Championship Match,htt#s:@@chesschampion.net@play@x25kuy,Anish Giri,Ian Nepomniachtchi,Tournament!Void
+ERROR_CHESS_GAME_TYPE,htt#s:@@chesschampion.net@play@egvceb,Alireza Firouzja,Wesley So,White Wins
+Blitz Championship Round,https://chesschampion.net/play/u8ok53,Ian Nepomniachtchi,Hikaru Nakamura,Checkmate Black
+INVALID_CHESS_EVENT_999,https://chessmaster.org/match/sb84dx,Wesley So,Fabiano Caruana,White Wins
+Classical Championship Match,https://chessmaster.org/match/ab0c2o,Ian Nepomniachtchi!62,Hikaru Nakamura,Draw Game
+Classical Championship Match,htt#s:@@chessmaster.org@match@jdk5xw,Anish Giri#77,Ding Liren,Draw Game
+Rated Blitz Tournament,https://worldchess.com/game/zfi0sj,Alireza Firouzja,Ian Nepomniachtchi,White Wins
+INVALID_CHESS_COMPETITION,htt#s:@@chessgrandmaster$com@tournament@w8jx1f,Anish Giri,Ian Nepomniachtchi,Checkmate White

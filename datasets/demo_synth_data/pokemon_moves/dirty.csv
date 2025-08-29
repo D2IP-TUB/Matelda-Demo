@@ -1,0 +1,36 @@
+Move_Name,Move_Type,Move_Category,Move_Power,Move_Accuracy
+Thunder Electric Attack,Fire Type Flame,Special Dragon Move,69,93
+Flame Fire Blast,Water Type Liquid,Physical Fire Move,116,74
+Flame Fire Blast,Grass Type Plant,Special$Psychic$Move!,50,80
+Dragon Mystic Pulse,INVALID_POKEMON_TYPE_XXX,Physical Fighting Move,1,-50
+Psychic Mind Power,Grass Type Plant,Special Ghost Move,92,93
+Thunder Electric Attack,Psychic Type Mental,Physical Fighting Move,85,72
+Fighting Close Combat,Ghost Type Spirit,Physical Fighting Move,65,85
+INVALID_POKEMON_TYPE_XXX,ERROR_CREATURE_SPECIES,Physical$Fire$Move!,63,86
+Flame Fire Blast,ERROR_CREATURE_SPECIES,Physical Fighting Move,51,96
+Thunder Electric Attack,Grass Type Plant,Special Dragon Move,61,94
+Thunder Electric Attack,UNKNOWN_POKEMON_SPECIES_999,Physical$Fighting$Move!,76,70
+UNKNOWN_POKEMON_SPECIES_999,Water Type Liquid,Special Electric Move,66,85
+Solar Grass Beam,Fire Type Flame,Special Grass Move,99,84
+Fighting Close Combat,Fire Type Flame,Special Electric Move,114,-50
+Shadow Ghost Ball,Fire Type Flame,Special Water Move,112,87
+Shadow Ghost Ball,Fighting Type Physical,Special$Grass$Move!,87,79
+Solar Grass Beam,Electric Type Energy,Special Dragon Move,47,82
+Shadow Ghost Ball,Grass Type Plant,Special Water Move,112,100
+Dragon Mystic Pulse,UNKNOWN_POKEMON_SPECIES_999,Special Water Move,103,86
+Dragon Mystic Pulse,Electric Type Energy,Special Grass Move,74,75
+SYSTEM_POKEMON_FAILURE,Fire Type Flame,Special Electric Move,105,70
+UNKNOWN_POKEMON_SPECIES_999,INVALID_POKEMON_TYPE_XXX,Special Dragon Move,1,91
+INVALID_POKEMON_TYPE_XXX,CORRUPTED_CREATURE_ERROR,Special Water Move,97,85
+Dragon Mystic Pulse,Psychic Type Mental,Special Ghost Move,8000,1
+Psychic Mind Power,BROKEN_POKEMON_DATA,Special$Electric$Move!,78,98
+Fighting Close Combat,SYSTEM_POKEMON_FAILURE,Special Grass Move,93,100
+Fighting Close Combat,Fire Type Flame,Special Grass Move,49,94
+Dragon Mystic Pulse,Water Type Liquid,Special Psychic Move,101,100
+Shadow Ghost Ball,Water Type Liquid,Special Electric Move,67,999
+ERROR_CREATURE_SPECIES,Fighting Type Physical,Special Dragon Move,74,94
+Shadow Ghost Ball,BROKEN_POKEMON_DATA,Physical Fire Move,119,76
+Solar Grass Beam,Electric Type Energy,Special Psychic Move,72,72
+Flame Fire Blast,Ghost Type Spirit,Special Electric Move,1,-50
+ERROR_CREATURE_SPECIES,UNKNOWN_POKEMON_SPECIES_999,Special Psychic Move,88,-50
+Dragon Mystic Pulse,Electric Type Energy,Special$Grass$Move!,98,85
