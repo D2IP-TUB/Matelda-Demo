@@ -10,6 +10,9 @@ from Matelda.marshmallow_pipeline.cell_grouping_module.generate_raha_features im
 )
 from sklearn.cluster import MiniBatchKMeans
 
+# Global cache for RAHA features (avoids regenerating for same tables)
+_raha_features_cache = {}
+
 
 class QualityCellFold(BaseCellFold):
     """Folds cells by quality"""
@@ -25,19 +28,34 @@ class QualityCellFold(BaseCellFold):
         return super().fold_cells(cells)
 
     def _generate_features_for_all_tables(self, table_ids: set):
-        """Generate RAHA features for all unique tables once"""
+        """Generate RAHA features for all unique tables once (with caching)"""
         all_features = {}
+
         for table_id in table_ids:
-            if table_id not in all_features:
-                logging.info(f"Generating features for table {table_id}")
-                col_features, col_feature_names, cell_to_strategies = (
-                    generate_raha_features(self.base_path, table_id, self.raha_config)
-                )
-                all_features[table_id] = {
-                    "col_features": col_features,
-                    "col_feature_names": col_feature_names,
-                    "cell_to_strategies": cell_to_strategies,
-                }
+            cache_key = f"{self.base_path}_{table_id}_{hash(str(sorted(self.raha_config.items())))}"
+
+            # Check cache first
+            if cache_key in _raha_features_cache:
+                logging.info(f"✅ Using cached features for table {table_id}")
+                all_features[table_id] = _raha_features_cache[cache_key]
+                continue
+
+            # Generate features if not cached
+            logging.info(f"🔄 Generating features for table {table_id}")
+            col_features, col_feature_names, cell_to_strategies = (
+                generate_raha_features(self.base_path, table_id, self.raha_config)
+            )
+
+            # Store in both local and global cache
+            features_data = {
+                "col_features": col_features,
+                "col_feature_names": col_feature_names,
+                "cell_to_strategies": cell_to_strategies,
+            }
+            all_features[table_id] = features_data
+            _raha_features_cache[cache_key] = features_data
+            logging.info(f"💾 Cached features for table {table_id}")
+
         return all_features
 
     def _populate_precomputed_features(

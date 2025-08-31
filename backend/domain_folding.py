@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from datetime import datetime
 
 import numpy as np
@@ -10,6 +11,32 @@ import pandas as pd
 # from sklearn.cluster import HDBSCAN
 from hdbscan import HDBSCAN
 from transformers import BertModel, BertTokenizer
+
+# Global cache for BERT model and tokenizer (avoids reloading)
+_bert_model_cache = None
+_bert_tokenizer_cache = None
+
+
+def get_cached_bert_models():
+    """
+    Get cached BERT model and tokenizer, loading them only once.
+    Significantly improves performance by avoiding repeated model loading.
+    """
+    global _bert_model_cache, _bert_tokenizer_cache
+
+    if _bert_model_cache is None or _bert_tokenizer_cache is None:
+        print("Loading BERT model (one-time setup)...")
+        try:
+            _bert_tokenizer_cache = BertTokenizer.from_pretrained("bert-base-uncased")
+            _bert_model_cache = BertModel.from_pretrained("bert-base-uncased")
+            print("✅ BERT model loaded and cached")
+        except Exception as e:
+            print(f"❌ Failed to load BERT model: {e}")
+            return None, None
+    else:
+        print("✅ Using cached BERT model (faster!)")
+
+    return _bert_tokenizer_cache, _bert_model_cache
 
 
 def get_tables_hash(tables):
@@ -45,7 +72,10 @@ def load_from_cache(cache_dir, tables):
         cached_hash = cache_data.get("tables_hash")
 
         if current_hash == cached_hash:
-            print(f"Cache hit! Last computed: {cache_data.get('timestamp', 'unknown')}")
+            print(
+                f"✅ Cache hit! Last computed: {cache_data.get('timestamp', 'unknown')}"
+            )
+            print("⚡ Using cached domain folds (much faster!)")
             return cache_data.get("domain_folds")
         else:
             print("Cache invalid: dataset has changed")
@@ -87,15 +117,27 @@ def matelda_domain_folding(datasets_path, tables):
     Domain-based Cell Folding
 
     1. Serialize each table by concatenating all cell values
-    2. Generate BERT embeddings
+    2. Generate BERT embeddings (with caching for speed)
     3. Apply HDBSCAN clustering
     """
-    try:
-        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-        model = BertModel.from_pretrained("bert-base-uncased")
+    start_time = time.time()
 
-    except Exception as tf_error:
-        print(f"embeddding failed: {tf_error}")
+    # Check cache first
+    cache_dir = os.path.join(datasets_path, ".cache_domain_folding")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    cached_result = load_from_cache(cache_dir, tables)
+    if cached_result:
+        elapsed = time.time() - start_time
+        print(f"⚡ Domain folding completed in {elapsed:.2f}s (cached)")
+        return cached_result
+
+    print("🧠 Computing domain folding with BERT embeddings...")
+
+    # Use cached models for better performance
+    tokenizer, model = get_cached_bert_models()
+    if tokenizer is None or model is None:
+        print("Failed to load BERT models")
         return None
 
     # Step 2: Generate contextual embeddings (CE)
@@ -149,6 +191,14 @@ def matelda_domain_folding(datasets_path, tables):
             if fold_name not in DFolds:
                 DFolds[fold_name] = []
             DFolds[fold_name].append(table)
+
+    # Cache the results for future runs
+    save_to_cache(cache_dir, tables, DFolds)
+
+    elapsed = time.time() - start_time
+    print(
+        f"✅ Domain folding completed in {elapsed:.2f}s ({len(DFolds)} folds created)"
+    )
 
     return DFolds
 

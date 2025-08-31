@@ -1,3 +1,0 @@
-time_control,end_time,rated,time_class,rules,username,white_username,white_rating,white_result,black_username,black_rating,black_result
-600,2021-05-23 15:57:57,True,rapid,chess,5091mtp,5091Mtp,1429,resigned,monnocuy,1453,win
-60+1,2021-05-10 07:56:58,True,bullet,chess,ahseng88,mydriasisdh,803,win,AhSeng88,787,timeout
