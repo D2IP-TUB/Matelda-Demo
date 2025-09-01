@@ -180,9 +180,39 @@ def _strategy_runner_process(self, args):
     return strategy_profile
 
 
+def is_numeric(value):
+    """Check if a string represents a number (int, float, scientific notation, etc.)"""
+    if not value or not isinstance(value, str):
+        return False
+
+    # Remove whitespace
+    value = value.strip()
+
+    # Check for empty string after stripping
+    if not value:
+        return False
+
+    try:
+        # Try to convert to float - this handles int, float, scientific notation
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 def check_spelling(words, words_set, checker="aspell"):
+    # Filter out numeric values from words_set before spell checking
+    filtered_words_set = set()
+    for word in words_set:
+        if not is_numeric(word):
+            filtered_words_set.add(word)
+
+    # If no non-numeric words to check, return empty set
+    if not filtered_words_set:
+        return set()
+
     # Prepare the input for the subprocess
-    input_text = "\n".join(words_set)
+    input_text = "\n".join(filtered_words_set)
 
     # Determine the command based on the checker
     if checker == "aspell":

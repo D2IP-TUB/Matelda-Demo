@@ -43,6 +43,18 @@ class DomainCellFold(BaseCellFold):
         # Group cells by table first
         tables_cells = self._group_cells_by_table(cells)
 
+        # Handle single table case - no clustering needed
+        if len(tables_cells) == 1:
+            table_id = list(tables_cells.keys())[0]
+            logging.info(f"Single table detected: {table_id}, creating single domain")
+
+            # Set domain for all cells
+            for cell in tables_cells[table_id]:
+                cell.domain = "domain_0"
+
+            return {"domain_0": tables_cells[table_id]}
+
+        # Multi-table case: proceed with clustering
         # Create documents from each table
         documents, table_names, table_cells_map = self._create_table_documents(
             tables_cells

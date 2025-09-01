@@ -168,8 +168,18 @@ def matelda_domain_folding(datasets_path, tables):
             print(f"Error processing table {table}: {e}")
             continue
 
-    if len(valid_tables) < 2:
+    if len(valid_tables) < 1:
         return None
+
+    # Handle single table case - no clustering needed, just create one fold
+    if len(valid_tables) == 1:
+        single_fold = {"Domain Fold 1": valid_tables}
+        save_to_cache(cache_dir, tables, single_fold)
+        elapsed = time.time() - start_time
+        print(
+            f"✅ Single table domain folding completed in {elapsed:.2f}s (1 fold created)"
+        )
+        return single_fold
 
     # Step 3: HDBSCAN(CE)
     embeddings_array = np.array(CE)

@@ -207,9 +207,45 @@ def get_cached_sampled_cells(
 
 def run_sampling():
     with st.spinner("🔄 Processing... Please wait..."):
-        labeling_budget = st.session_state.get("labeling_budget", 10)
+        # Always read the latest labeling budget from the configuration file
+        # This ensures we get the updated budget when it's changed in QBF
+        labeling_budget = 10  # default
+        if "pipeline_path" in st.session_state:
+            cfg_path = os.path.join(
+                st.session_state.pipeline_path, "configurations.json"
+            )
+            if os.path.exists(cfg_path):
+                try:
+                    with open(cfg_path) as f:
+                        cfg = json.load(f)
+                    labeling_budget = cfg.get("labeling_budget", 10)
+                    # Update session state to reflect the current config
+                    st.session_state["labeling_budget"] = labeling_budget
+                    st.session_state["budget_slider"] = min(
+                        labeling_budget, 100
+                    )  # Clamp slider to 100
+                    st.session_state["budget_input"] = labeling_budget
+                    logger.info(
+                        f"Loaded updated labeling budget from config: {labeling_budget}"
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not read labeling budget from config: {e}")
+                    labeling_budget = st.session_state.get("labeling_budget", 10)
+            else:
+                labeling_budget = st.session_state.get("labeling_budget", 10)
+        else:
+            labeling_budget = st.session_state.get("labeling_budget", 10)
+
         cell_folds = st.session_state.get("cell_folds", {})
         domain_folds = st.session_state.get("domain_folds", {})
+
+        # Check if labeling budget has changed and clear cache if so
+        previous_budget = st.session_state.get(SAMPLE_BUDGET_KEY, None)
+        if previous_budget is not None and previous_budget != labeling_budget:
+            logger.info(
+                f"Labeling budget changed from {previous_budget} to {labeling_budget}, clearing cache"
+            )
+            get_cached_sampled_cells.clear()
 
         # Generate hash of bulk annotations to break cache when they change
         bulk_annotations_hash = ""
@@ -255,7 +291,23 @@ if "sampled_cells" in st.session_state and SAMPLE_KEY not in st.session_state:
     st.session_state[SAMPLE_BUDGET_KEY] = st.session_state.get("labeling_budget", 10)
 
 # Auto-run sampling only if no samples exist for the current dataset or if bulk annotations changed
-_current_budget = st.session_state.get("labeling_budget", 10)
+# First, read the current labeling budget from config file to get the most up-to-date value
+_current_budget = 10  # default
+if "pipeline_path" in st.session_state:
+    cfg_path = os.path.join(st.session_state.pipeline_path, "configurations.json")
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            _current_budget = cfg.get("labeling_budget", 10)
+            logger.info(f"Current budget from config: {_current_budget}")
+        except Exception as e:
+            logger.warning(f"Could not read current budget from config: {e}")
+            _current_budget = st.session_state.get("labeling_budget", 10)
+    else:
+        _current_budget = st.session_state.get("labeling_budget", 10)
+else:
+    _current_budget = st.session_state.get("labeling_budget", 10)
 
 # Check if we need to resample due to changes
 needs_resampling = (

@@ -144,9 +144,39 @@ def generate_cell_features(
     return features_dict, table_tuples_dict, col_feature_names
 
 
+def is_numeric(value):
+    """Check if a string represents a number (int, float, scientific notation, etc.)"""
+    if not value or not isinstance(value, str):
+        return False
+
+    # Remove whitespace
+    value = value.strip()
+
+    # Check for empty string after stripping
+    if not value:
+        return False
+
+    try:
+        # Try to convert to float - this handles int, float, scientific notation
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 def check_spelling(words, words_set, checker="aspell"):
+    # Filter out numeric values from words_set before spell checking
+    filtered_words_set = set()
+    for word in words_set:
+        if not is_numeric(word):
+            filtered_words_set.add(word)
+
+    # If no non-numeric words to check, return all zeros
+    if not filtered_words_set:
+        return [0] * len(words)
+
     # Prepare the input for the subprocess
-    input_text = "\n".join(words_set)
+    input_text = "\n".join(filtered_words_set)
 
     # Determine the command based on the checker
     if checker == "aspell":
@@ -168,13 +198,15 @@ def check_spelling(words, words_set, checker="aspell"):
     spell_check_result = []
     for word in words:
         is_erroneous = 0
-        if word in misspelled_words:
-            is_erroneous = 1
-        else:
-            for subword in word.split(" "):
-                if subword in misspelled_words:
-                    is_erroneous = 1
-                    break
+        # Don't mark numeric values as errors
+        if not is_numeric(word):
+            if word in misspelled_words:
+                is_erroneous = 1
+            else:
+                for subword in word.split(" "):
+                    if not is_numeric(subword) and subword in misspelled_words:
+                        is_erroneous = 1
+                        break
         spell_check_result.append(is_erroneous)
 
     return spell_check_result

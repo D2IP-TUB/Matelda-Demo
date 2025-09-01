@@ -72,15 +72,35 @@ class QualityCellFold(BaseCellFold):
     def _cluster_cells_by_features(
         self, cells: List[Cell], domain_name: str
     ) -> Dict[str, List[Cell]]:
-        """Cluster cells using MiniBatchKMeans"""
+        """Cluster cells using MiniBatchKMeans with table_id/column_id one-hot encoding"""
 
-        # Extract feature vectors
+        # Collect all unique (table_id, col_idx) pairs for one-hot encoding
+        table_col_pairs = set()
+        for cell in cells:
+            if cell.features and len(cell.features) > 0:
+                table_col_pairs.add((cell.table_id, cell.col_idx))
+
+        # Convert to sorted list for consistent ordering
+        all_table_cols = sorted(list(table_col_pairs))
+        logging.info(f"Found {len(all_table_cols)} unique table-column pairs for one-hot encoding")
+
+        # Extract feature vectors with table_id/column_id one-hot encoding
         feature_vectors = []
         valid_cells = []
 
         for cell in cells:
             if cell.features and len(cell.features) > 0:
-                feature_vectors.append(cell.features)
+                # Create one-hot encoded features for table_id and column_id pairs
+                table_col_features = [0] * len(all_table_cols)
+                try:
+                    pair_idx = all_table_cols.index((cell.table_id, cell.col_idx))
+                    table_col_features[pair_idx] = 1
+                except ValueError:
+                    logging.warning(f"Table-column pair ({cell.table_id}, {cell.col_idx}) not found in collected pairs")
+
+                # Combine original features with table-column one-hot features
+                complete_feature_vector = cell.features + table_col_features
+                feature_vectors.append(complete_feature_vector)
                 valid_cells.append(cell)
 
         if len(feature_vectors) < 2:
@@ -113,13 +133,35 @@ class QualityCellFold(BaseCellFold):
     def _cluster_cells_by_features_with_k(
         self, cells: List[Cell], domain_name: str, k: int
     ) -> Dict[str, List[Cell]]:
-        """Cluster cells using exactly k clusters"""
+        """Cluster cells using exactly k clusters with table_id/column_id one-hot encoding"""
         feature_vectors = []
         valid_cells = []
 
+        # Collect all unique (table_id, col_idx) pairs for one-hot encoding
+        table_col_pairs = set()
         for cell in cells:
             if cell.features and len(cell.features) > 0:
-                feature_vectors.append(cell.features)
+                table_col_pairs.add((cell.table_id, cell.col_idx))
+
+        # Convert to sorted list for consistent ordering
+        all_table_cols = sorted(list(table_col_pairs))
+        logging.info(f"Found {len(all_table_cols)} unique table-column pairs for one-hot encoding")
+
+        # Build feature vectors with table_id/column_id one-hot encoding
+        for cell in cells:
+            if cell.features and len(cell.features) > 0:
+                # Create one-hot encoded features for table_id and column_id pairs
+                table_col_features = [0] * len(all_table_cols)
+                try:
+                    pair_idx = all_table_cols.index((cell.table_id, cell.col_idx))
+                    table_col_features[pair_idx] = 1
+                except ValueError:
+                    # This shouldn't happen since we collected all pairs above
+                    logging.warning(f"Table-column pair ({cell.table_id}, {cell.col_idx}) not found in collected pairs")
+
+                # Combine original features with table-column one-hot features
+                complete_feature_vector = cell.features + table_col_features
+                feature_vectors.append(complete_feature_vector)
                 valid_cells.append(cell)
 
         if len(feature_vectors) < 2:

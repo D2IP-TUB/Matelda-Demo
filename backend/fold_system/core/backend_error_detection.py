@@ -95,6 +95,58 @@ def backend_error_detection(
             cell_key = (cell.table_id, cell.row_idx, cell.col_name)
             ground_truth[cell_key] = cell.is_error
 
+        # ⭐ FIX 3: MERGE HUMAN-LABELED ERRORS INTO GROUND TRUTH FOR EVALUATION
+        logging.info(
+            "Merging DIRECT human-labeled errors into ground truth for evaluation..."
+        )
+        human_labels_added = 0
+
+        # Extract ONLY direct human labels (not propagated ones)
+        # The direct human labels come from the "labeled_cells" section
+        labeled_cells = propagated_labels.get("labeled_cells", [])
+        logging.debug(f"Found {len(labeled_cells)} labeled cell groups")
+
+        for labeled_cell in labeled_cells:
+            try:
+                # Debug: Print the structure to understand the format
+                logging.debug(
+                    f"Processing labeled_cell structure: {list(labeled_cell.keys())}"
+                )
+
+                # Try different possible key formats
+                table_id = labeled_cell.get("table") or labeled_cell.get("table_id")
+                row_idx = labeled_cell.get("row") or labeled_cell.get("row_idx")
+                col_name = labeled_cell.get("col") or labeled_cell.get("col_name")
+                is_error = labeled_cell.get("is_error", True)  # Human labeled as error
+
+                if table_id and row_idx is not None and col_name and is_error:
+                    cell_key = (table_id, row_idx, col_name)
+                    # Update ground truth with human label (overrides original if different)
+                    if cell_key in ground_truth:
+                        if ground_truth[cell_key] != is_error:
+                            logging.debug(
+                                f"Direct human label overrides original: {cell_key} {ground_truth[cell_key]} -> {is_error}"
+                            )
+                        ground_truth[cell_key] = is_error
+                        human_labels_added += 1
+                    else:
+                        logging.debug(
+                            f"Direct human label for cell not in dataset: {cell_key}"
+                        )
+                else:
+                    logging.debug(
+                        f"Skipping labeled_cell due to missing fields: table={table_id}, row={row_idx}, col={col_name}, is_error={is_error}"
+                    )
+
+            except Exception as e:
+                logging.warning(
+                    f"Error processing direct human label: {labeled_cell} - {e}"
+                )
+
+        logging.info(
+            f"Added {human_labels_added} DIRECT human labels to ground truth for evaluation"
+        )
+
         # Extract training data
         training_data = _extract_training_data_with_features(
             propagated_labels, all_cells
@@ -166,6 +218,60 @@ def backend_error_detection(
 
                 if not _has_meaningful_features(column_training):
                     feature_issues += 1
+
+        # ⭐ FIX 4: ADD ONLY DIRECT HUMAN-LABELED ERRORS TO DETECTED CELLS FOR UI DISPLAY
+        logging.info(
+            "Adding DIRECT human-labeled errors to detected cells for UI display..."
+        )
+        human_errors_added = 0
+
+        # Extract ONLY direct human-labeled errors (not propagated ones)
+        labeled_cells = propagated_labels.get("labeled_cells", [])
+        for labeled_cell in labeled_cells:
+            try:
+                # Try different possible key formats
+                table_id = labeled_cell.get("table") or labeled_cell.get("table_id")
+                row_idx = labeled_cell.get("row") or labeled_cell.get("row_idx")
+                col_name = labeled_cell.get("col") or labeled_cell.get("col_name")
+                is_error = labeled_cell.get("is_error", True)
+
+                if table_id and row_idx is not None and col_name and is_error:
+                    # Look up the actual cell to get its value
+                    cell_key = (table_id, row_idx, col_name)
+                    cell_value = ""
+
+                    # Try to find the cell in all_cells to get the actual value
+                    for cell in all_cells:
+                        if (cell.table_id, cell.row_idx, cell.col_name) == cell_key:
+                            cell_value = cell.dirty_value or cell.clean_value or ""
+                            break
+
+                    # Add ONLY the direct human label to detected_cells for UI display
+                    # Use the same format as ML-detected cells: "table", "row", "col"
+                    detected_cells.append(
+                        {
+                            "table": table_id,
+                            "row": row_idx,
+                            "col": col_name,
+                            "val": cell_value,  # Now we have the actual cell value
+                            "confidence": 1.0,  # Human labels have max confidence
+                            "source": "direct_human_labeled",
+                        }
+                    )
+                    human_errors_added += 1
+                else:
+                    logging.debug(
+                        f"Skipping labeled_cell for UI due to missing fields: table={table_id}, row={row_idx}, col={col_name}, is_error={is_error}"
+                    )
+
+            except Exception as e:
+                logging.warning(
+                    f"Error adding direct human-labeled error to detected cells: {labeled_cell} - {e}"
+                )
+
+        logging.info(
+            f"Added {human_errors_added} DIRECT human-labeled errors to detected cells"
+        )
 
         # Calculate metrics EXCLUDING training data
         metrics = _calculate_metrics_from_predictions(
@@ -287,54 +393,96 @@ def _extract_training_data_with_features(
         cell_lookup[cell_key] = cell
 
     for labeled_cell in propagated_labels.get("labeled_cells", []):
-        table_id = labeled_cell["table"]
-        col_name = labeled_cell["col"]
-        row_idx = labeled_cell["row"]
-        table_col_key = (table_id, col_name)
+        try:
+            # Use safe access with multiple key format support
+            table_id = labeled_cell.get("table") or labeled_cell.get("table_id")
+            col_name = labeled_cell.get("col") or labeled_cell.get("col_name")
+            row_idx = labeled_cell.get("row") or labeled_cell.get("row_idx")
 
-        if table_col_key not in training_data:
-            training_data[table_col_key] = {"X_train": [], "y_train": [], "cells": []}
+            if not table_id or not col_name or row_idx is None:
+                logging.debug(
+                    f"Skipping labeled_cell due to missing fields in training: table={table_id}, col={col_name}, row={row_idx}"
+                )
+                continue
 
-        # Find the actual cell object to get real features
-        cell_key = (table_id, row_idx, col_name)
-        if cell_key in cell_lookup:
-            cell = cell_lookup[cell_key]
-            features = (
-                cell.features if (cell.features and len(cell.features) > 0) else None
-            )
+            table_col_key = (table_id, col_name)
 
-            if features:  # Only include cells with real features
-                is_error = labeled_cell.get("is_error", False)
-                training_data[table_col_key]["X_train"].append(features)
-                training_data[table_col_key]["y_train"].append(int(is_error))
-                training_data[table_col_key]["cells"].append(cell_key)
-
-        # Also process propagated cells
-        for prop_cell in labeled_cell.get("propagated_cells", []):
-            prop_table_col_key = (prop_cell["table"], prop_cell["col"])
-            if prop_table_col_key not in training_data:
-                training_data[prop_table_col_key] = {
+            if table_col_key not in training_data:
+                training_data[table_col_key] = {
                     "X_train": [],
                     "y_train": [],
                     "cells": [],
                 }
 
-            prop_cell_key = (prop_cell["table"], prop_cell["row"], prop_cell["col"])
-            if prop_cell_key in cell_lookup:
-                prop_cell_obj = cell_lookup[prop_cell_key]
-                prop_features = (
-                    prop_cell_obj.features
-                    if (prop_cell_obj.features and len(prop_cell_obj.features) > 0)
+            # Find the actual cell object to get real features
+            cell_key = (table_id, row_idx, col_name)
+            if cell_key in cell_lookup:
+                cell = cell_lookup[cell_key]
+                features = (
+                    cell.features
+                    if (cell.features and len(cell.features) > 0)
                     else None
                 )
 
-                if prop_features:  # Only include cells with real features
-                    is_error = labeled_cell.get(
-                        "is_error", False
-                    )  # Inherit from parent
-                    training_data[prop_table_col_key]["X_train"].append(prop_features)
-                    training_data[prop_table_col_key]["y_train"].append(int(is_error))
-                    training_data[prop_table_col_key]["cells"].append(prop_cell_key)
+                if features:  # Only include cells with real features
+                    is_error = labeled_cell.get("is_error", False)
+                    training_data[table_col_key]["X_train"].append(features)
+                    training_data[table_col_key]["y_train"].append(int(is_error))
+                    training_data[table_col_key]["cells"].append(cell_key)
+
+            # Also process propagated cells
+            for prop_cell in labeled_cell.get("propagated_cells", []):
+                try:
+                    # Safe access for propagated cells too
+                    prop_table = prop_cell.get("table") or prop_cell.get("table_id")
+                    prop_col = prop_cell.get("col") or prop_cell.get("col_name")
+                    prop_row = prop_cell.get("row") or prop_cell.get("row_idx")
+
+                    if not prop_table or not prop_col or prop_row is None:
+                        continue
+
+                    prop_table_col_key = (prop_table, prop_col)
+                    if prop_table_col_key not in training_data:
+                        training_data[prop_table_col_key] = {
+                            "X_train": [],
+                            "y_train": [],
+                            "cells": [],
+                        }
+
+                    prop_cell_key = (prop_table, prop_row, prop_col)
+                    if prop_cell_key in cell_lookup:
+                        prop_cell_obj = cell_lookup[prop_cell_key]
+                        prop_features = (
+                            prop_cell_obj.features
+                            if (
+                                prop_cell_obj.features
+                                and len(prop_cell_obj.features) > 0
+                            )
+                            else None
+                        )
+
+                        if prop_features:  # Only include cells with real features
+                            is_error = labeled_cell.get(
+                                "is_error", False
+                            )  # Inherit from parent
+                            training_data[prop_table_col_key]["X_train"].append(
+                                prop_features
+                            )
+                            training_data[prop_table_col_key]["y_train"].append(
+                                int(is_error)
+                            )
+                            training_data[prop_table_col_key]["cells"].append(
+                                prop_cell_key
+                            )
+                except Exception as e:
+                    logging.debug(
+                        f"Error processing propagated cell: {prop_cell} - {e}"
+                    )
+
+        except Exception as e:
+            logging.warning(
+                f"Error processing labeled cell in training: {labeled_cell} - {e}"
+            )
 
     return training_data
 
@@ -395,7 +543,7 @@ def _train_and_predict_column_fixed(
     column_cells: List, column_training: Dict
 ) -> Dict[tuple, tuple]:
     """Train classifier with proper feature validation
-    
+
     Returns:
         Dict[tuple, tuple]: Maps cell keys to (prediction, confidence) tuples
     """
@@ -412,7 +560,10 @@ def _train_and_predict_column_fixed(
             )
             for cell in column_cells:
                 cell_key = (cell.table_id, cell.row_idx, cell.col_name)
-                predictions[cell_key] = (False, 0.1)  # Low confidence when no training data
+                predictions[cell_key] = (
+                    False,
+                    0.1,
+                )  # Low confidence when no training data
             return predictions
 
         # Handle edge cases with extreme confidence
@@ -420,12 +571,18 @@ def _train_and_predict_column_fixed(
             # All training samples are correct - predict all as correct with high confidence
             for cell in column_cells:
                 cell_key = (cell.table_id, cell.row_idx, cell.col_name)
-                predictions[cell_key] = (False, 0.95)  # Very high confidence all are correct
+                predictions[cell_key] = (
+                    False,
+                    0.95,
+                )  # Very high confidence all are correct
         elif all(y == 1 for y in y_train):
             # All training samples are errors - predict all as errors with high confidence
             for cell in column_cells:
                 cell_key = (cell.table_id, cell.row_idx, cell.col_name)
-                predictions[cell_key] = (True, 0.95)  # Very high confidence all are errors
+                predictions[cell_key] = (
+                    True,
+                    0.95,
+                )  # Very high confidence all are errors
         else:
             # Mixed training data - train classifier and get real confidence scores
             logging.info(
@@ -458,7 +615,10 @@ def _train_and_predict_column_fixed(
                     logging.warning(
                         f"Cell {cell_key} missing features - predicting as correct with low confidence"
                     )
-                    predictions[cell_key] = (False, 0.2)  # Conservative: predict as correct with low confidence
+                    predictions[cell_key] = (
+                        False,
+                        0.2,
+                    )  # Conservative: predict as correct with low confidence
                     continue
 
             # Only predict for cells that have real features
@@ -471,7 +631,7 @@ def _train_and_predict_column_fixed(
                 for i, cell_key in enumerate(cell_keys):
                     if cell_key not in predictions:  # Not already handled above
                         prediction = bool(predicted_labels[test_idx])
-                        
+
                         # Get the maximum probability (confidence in the prediction)
                         # This gives us the classifier's confidence in its prediction
                         if len(predicted_probabilities[test_idx]) == 2:
@@ -484,7 +644,7 @@ def _train_and_predict_column_fixed(
                         else:
                             # Fallback if probabilities format is unexpected
                             confidence = max(predicted_probabilities[test_idx])
-                        
+
                         predictions[cell_key] = (prediction, float(confidence))
                         test_idx += 1
 
@@ -496,7 +656,10 @@ def _train_and_predict_column_fixed(
         predictions = {}
         for cell in column_cells:
             cell_key = (cell.table_id, cell.row_idx, cell.col_name)
-            predictions[cell_key] = (False, 0.1)  # Safe default with very low confidence
+            predictions[cell_key] = (
+                False,
+                0.1,
+            )  # Safe default with very low confidence
         return predictions
 
 
