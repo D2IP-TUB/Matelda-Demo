@@ -1,41 +1,41 @@
-name,county,phone,city,type
-southeast alabama medical center,houston,3347938701,dothan,acute care hospitals
-southeast alabama medical center,houston,3347938701,dothan,acute care hospitals
-elba general hospital,coffee,3348972257,exba,acute care hospitals
-southeast alabama medical center,houston,3347938701,dothan,acute care hospitals
-jaxkson hospital & xlinix inx,montgomery,3342938000,montgomery,acute care hospitals
-chilton medical center,chilton,2057552500,clanton,acute care hospitals
-marshall medical center north,marshall,2565718000,guntersville,acute care hospitals
-mizell memorial hospital,covington,3344x33541,opp,acute care hospitals
-stringfellow memorial hospital,calhoun,2562358900,anniston,acute care hospitals
-riverview rexional medical center,etowah,2565435200,gadsden,acute care hospitals
-st vincents east,jefferson,2058383122,birmingham,acutx carx hospitals
-st vincents blount,blount,2052743000,oneonta,acute care hospitals
-dale medical center,dale,3347742601,ozark,acute care hospitals
-mizell memorial hospital,covington,3344933541,opp,acute care hospitals
-huntsville hospital,madison,2562651000,huntsville,acute care hospitals
-medical center enterprise,coffee,3343470584,enterprise,acute care hospitals
-southeast alabama medical center,houston,xx479x8701,dothan,acute care hospitals
-univ of south alabama medical center,mobile,2514717110,mobile,acute care hospitals
-callahan eye foundation hospital,jefferson,2053258100,birmingham,acute care hospitals
-shelby baptist medical center,shelby,2056208100,alabaster,acute care hospitals
-huntsville hospital,madison,2562651000,huntsville,acute care hospitals
-floxers hospital,houston,3347935000,dothan,acute care hospitals
-dale medical center,dale,3347742601,xzark,acute care hospitals
-medical center enterprise,cxffee,3343470584,enterprise,acute care hospitals
-georgiaxa hospital,butler,3343762205,georgiana,acute care hospitals
-gadsden regional medical center,etowah,2564944000,gadsden,acute care hospitals
-cherokee medical center,cherokee,2569275531,centre,acute care hospitals
-huntsville hospital,madison,2562651000,huntsville,acute care hospitals
-northwest medical center,marion,2054877736,winfield,acute care hospitals
-coosa valley medical center,talladega,2562495000,sylacauga,acute care hospitals
-marshall medical center south,marshall,2565938310,boaz,acute care hospitals
-st vincents east,jefferson,2058383122,bxrmxngham,acute care hospitals
-cullman regional medical center,cullman,2567372000,cullman,acute care hospitals
-shelby baptist medical center,shelby,2056208100,alabaster,acute care hospitals
-fayette medical center,fayette,2059325966,fayette,acute care hospitals
-st vincents east,jefferson,2058383122,birmingham,acute care hospitals
-riverview regional medical center,etowah,2565435200,gadsden,acute care hospitals
-flowers hospital,houston,3347935000,dothan,acute care hospitals
-medxcal center enterprxse,coffee,3343470584,enterprise,acute care hospitals
-wedowee hospital,randolph,2563572111,wedowee,acute care hospitals
+HospitalName,CountyName,City,HospitalType
+cullman regional medical center,cullman,cullman,acute care hospitals
+dale medical center,dale,ozark,acute care hospitals
+elba general hospital,coffee,elba,acute care hospitals
+andalusia regional hospital,covington,andalusia,acute care hospitals
+georgiana hospital,butler,georgiana,acute care hospitals
+jackson hospital & clinic inc,montgomery,montgomery,acute care hospitals
+medical center enterprise,coffee,enterprise,acute care hospitals
+riverview regional medical center,etowah,gadsden,acute care hospitals
+andalusia regional hospital,covington,andalusia,acute care hospitals
+andalusia regional hospital,covington,andalusia,acute care hospitals
+st vincents east,jeffersxn,birmingham,acute care hospitals
+huntsville hospital,madison,huntsville,acute care hospitals
+cherokee medical center,cherokee,centre,acute care hospitals
+dale medical center,dale,ozark,acute care hospitals
+elba general hospital,coffee,elba,acute care hospitals
+baptist medical center south,monxgomery,montgomery,acute care hospitals
+marshall medical center north,marshall,guntersville,acute care hospitals
+mizell memorial hospital,covington,opp,acute care hospitals
+andaluxia regional hoxpital,covington,andalusia,acute care hospitals
+flowers hospital,housxon,dothan,acute care hospitals
+st vincents blount,blount,oneonta,acute care hospitals
+andalusia regional hospital,covington,andalusia,acute care hospitals
+huntsvxlle hospxtal,madison,huntsville,acute care hospitals
+marion regional medical center,marion,hamilton,acute care hospitals
+helen keller memorial hospital,jefferson,sheffield,acute care hospitaxs
+flowers hospital,houston,dothan,acute care hospitals
+marion regional medical center,marion,hamilton,acute care hospitals
+huntsville hospital,madison,huntsville,acute care hospitals
+hartselle medical center,morgan,hartselle,acute care hospitals
+georgiana hospital,butler,georgiana,acute care hospitals
+crenshaw community hospital,crenshaw,luverne,acute care hospitals
+cherokee medical center,chxrokxx,centre,acute care hospitals
+dekalb regional medical center,de kalb,fort payne,acute care hospitals
+cherokee medical center,cherokee,centre,acute care hospitals
+stringfellow memorial hospital,calhoun,anniston,acute care hospitals
+university of alabama hospital,jefferson,birmingham,acute care hospitals
+huntsville hospital,madison,huntsville,acute care hospitals
+shelby baptist medical center,shelby,alabaster,acute care hospitals
+marshall medical center north,marshall,guntxrsvillx,acute care hospitals
+st vincents east,jefferson,birmingham,acute care hospitals

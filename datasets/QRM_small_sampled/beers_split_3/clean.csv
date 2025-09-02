@@ -1,41 +1,41 @@
-beer-name,style,ounces,abv,ibu,brewery-name,city,state
-The Sword Iron Swan Ale,English Pale Ale,12.0,0.059,,Real Ale Brewing Company,Blanco,TX
-Provision,Saison / Farmhouse Ale,12.0,0.042,25.0,Hop Farm Brewing Company,Pittsburgh,PA
-1492,American Pale Ale (APA),12.0,0.065,,Boxcar Brewing Company,West Chester,PA
-Lights Out Vanilla Cream Extra Stout,American Double / Imperial IPA,12.0,0.077,30.0,Worthy Brewing Company,Bend,OR
-River North Ale,American Amber / Red Ale,16.0,0.05,,River North Brewery,Denver,CO
-Orabelle,Tripel,12.0,0.083,,Great Divide Brewing Company,Denver,CO
-Macon Progress Ale,American Pale Ale (APA),12.0,0.05,,Macon Beer Company,Macon,GA
-Rise Up Red,American Amber / Red Ale,16.0,0.058,60.0,Hopworks Urban Brewery,Portland,OR
-Topcutter India Pale Ale,American IPA,12.0,0.068,70.0,Bale Breaker Brewing Company,Yakima,WA
-Chaotic Double IPA,American Double / Imperial IPA,12.0,0.099,93.0,Manzanita Brewing Company,Santee,CA
-WYLD Extra Pale Ale,American Pale Ale (APA),12.0,0.04,29.0,Uinta Brewing Company,Salt Lake City,UT
-Galena Golden,American Blonde Ale,12.0,0.043,,Sockeye Brewing Company,Boise,ID
-Epicenter Amber Ale (2010),American Amber / Red Ale,12.0,0.055,20.0,SanTan Brewing Company,Chandler,AZ
-Toasted Lager,Vienna Lager,12.0,0.055,28.0,Blue Point Brewing Company,Patchogue,NY
-Redacted Rye IPA,American IPA,16.0,0.07,100.0,Renegade Brewing Company,Denver,CO
-Michelada,Fruit / Vegetable Beer,16.0,0.052,,Atwater Brewery,Detroit,MI
-Bourbon's Barrel Stout,American Stout,16.0,0.075,65.0,Great Crescent Brewery,Aurora,IN
-Firefly Amber Ale,American Amber / Red Ale,12.0,0.05,,Jackie O's Pub & Brewery,Athens,OH
-Bitter Brewer,English Bitter,16.0,0.04,37.0,Surly Brewing Company,Brooklyn Center,MN
-Mountain Creek (2013),American Pale Lager,12.0,0.055,,Minhas Craft Brewery,Monroe,WI
-Mr. Blue Sky,American Pale Wheat Ale,16.0,0.045,6.0,Griffin Claw Brewing Company,Birmingham,MI
-Tarasque,Saison / Farmhouse Ale,12.0,0.059,,Wiseacre Brewing Company,Memphis,TN
-Devil's Cup,American Pale Ale (APA),12.0,0.066,,18th Street Brewery,Gary,IN
-CAPT Black IPA,American Black Ale,12.0,0.073,55.0,Ruhstaller Beer Company,Sacramento,CA
-Mound Builder IPA,American IPA,12.0,0.065,77.0,People's Brewing Company,Lafayette,IN
-Rye Pils Session Lager,German Pilsener,12.0,0.046,,Deep Ellum Brewing Company,Dallas,TX
-Davy Jones Lager,Cream Ale,12.0,0.06,,Heavy Seas Beer,Halethorpe,MD
-Lazy Daze Lager,American Adjunct Lager,16.0,0.055,,Rochester Mills Brewing Company,Rochester,MI
-Hans' Pils (2015),German Pilsener,12.0,0.053,52.0,Real Ale Brewing Company,Blanco,TX
-JP's Ould Sod Irish Red IPA,American IPA,12.0,0.06,,James Page Brewing Company,Stevens Point,WI
-Monk's Blood,Belgian Dark Ale,12.0,0.083,35.0,21st Amendment Brewery,San Francisco,CA
-Farmer's Tan Red Ale,American Amber / Red Ale,12.0,0.06,30.0,Tractor Brewing Company,Albuquerque,NM
-Longboard Island Lager,American Amber / Red Lager,16.0,0.046,18.0,Kona Brewing Company,Kona,HI
-Chickawawa Lemonale,Fruit / Vegetable Beer,12.0,0.05,5.0,Great River Brewery,Davenport,IA
-The Green Room,American IPA,16.0,0.06,75.0,Uncle Billy's Brewery and Smokeh...,Austin,TX
-House Brand IPA,American IPA,12.0,0.06,55.0,Big River Brewing Company,Chattanooga,TN
-Sidekick Extra Pale Ale,American Pale Ale (APA),12.0,0.051,36.0,Two Brothers Brewing Company,Warrenville,IL
-Devils Tramping Ground Tripel,Tripel,12.0,0.092,5.0,Aviator Brewing Company,Fuquay-Varina,NC
-Leroy (2005),American Brown Ale,12.0,0.052,,Oskar Blues Brewery,Lyons,CO
-Hard Apple,Cider,16.0,0.068,,Vander Mill Ciders,Spring Lake,MI
+beer-name,ounces,abv,ibu,brewery-name,city,state
+Brotherhood Steam,12.0,0.056,,Anchor Brewing Company,San Francisco,CA
+Dagger Falls IPA,12.0,0.063,100.0,Sockeye Brewing Company,Boise,ID
+Dreamin' Double IPA,12.0,0.085,85.0,Manayunk Brewing Company,Philadelphia,PA
+Consilium,12.0,0.05,40.0,Renegade Brewing Company,Denver,CO
+Three Skulls Ale Pale Ale,16.0,0.063,42.0,Northwest Brewing Company,Pacific,WA
+33 Select Brown Ale,16.0,0.065,26.0,Okoboji Brewing Company,Spirit Lake,IA
+Upslope Belgian Style Pale Ale,12.0,0.075,30.0,Upslope Brewing Company,Boulder,CO
+Santa Fe Oktoberfest,12.0,,,Santa Fe Brewing Company,Santa Fe,NM
+Caldera Pale Ale (2009),12.0,0.056,55.0,Caldera Brewing Company,Ashland,OR
+SurlyFest,16.0,0.055,34.0,Surly Brewing Company,Brooklyn Center,MN
+Watership Brown Ale,12.0,0.072,55.0,Red Hare Brewing Company,Marietta,GA
+Oasis (2010),16.0,0.072,93.0,Tallgrass Brewing Company,Manhattan,KS
+Chupahopra,12.0,0.075,63.0,Twisted X Brewing Company,Dripping Springs,TX
+Knotty Pine,12.0,0.054,,Lumberyard Brewing Company,Flagstaff,AZ
+Pomegranate Wheat (2008),12.0,0.047,,Matt Brewing Company,Utica,NY
+La Frontera Premium IPA,12.0,0.078,,Big Bend Brewing Company,Alpine,TX
+Keebarlin' Pale Ale,12.0,0.042,,Anderson Valley Brewing Company,Boonville,CA
+Little Boss,12.0,,,Blue Owl Brewing,Austin,TX
+Kölsch 151,12.0,0.049,16.0,Blue Mountain Brewery,Arrington,VA
+Thrasher Session India Pale Ale,12.0,0.045,44.0,Defiance Brewing Company,Hays,KS
+Four Squared (2015),12.0,0.06,50.0,Real Ale Brewing Company,Blanco,TX
+Gran Sport,16.0,0.052,,COOP Ale Works,Oklahoma City,OK
+Green Bullet Organic India Pale Ale,16.0,0.07,45.0,Asher Brewing Company,Boulder,CO
+Vanilla Porter,16.0,0.047,25.0,Red Shedman Farm Brewery and Hop...,Mt. Airy,MD
+Mutton Buster,12.0,0.055,25.0,Payette Brewing Company,Garden City,ID
+Special Amber,12.0,0.05,22.0,Sprecher Brewing Company,Glendale,WI
+Pretzel Stout,16.0,0.065,47.0,Martin House Brewing Company,Fort Worth,TX
+Pernicious Double IPA,12.0,0.096,,Blue Blood Brewing Company,Lincoln,NE
+The Hole in Hadrian's Wall,16.0,0.095,19.0,Okoboji Brewing Company,Spirit Lake,IA
+Carolina Blonde (2006),12.0,0.05,,Carolina Beer & Beverage,Mooresville,NC
+Steel Wheels ESB,12.0,0.065,30.0,Blue Mountain Brewery,Afton,VA
+Pete's Wicked Summer Brew (2002),12.0,0.047,,Pete's Brewing Company,San Antonio,TX
+Hipster Ale (Two Roads Brewing),12.0,0.055,,Evil Twin Brewing,Brooklyn,NY
+Miner's Gold Hefeweizen,12.0,0.05,,Lewis and Clark Brewing Company,Helena,MT
+O'Fallon Pumpkin Beer,12.0,0.055,,O'Fallon Brewery,O'Fallon,MO
+1916 Shore Shiver,12.0,0.069,65.0,Forgotten Boardwalk,Cherry Hill,NJ
+Irregardless IPA,12.0,0.065,75.0,Liquid Hero Brewery,York,PA
+José Martí American Porter,12.0,0.08,65.0,Cigar City Brewing Company,Tampa,FL
+Secret Stache Stout,16.0,0.053,,Finch's Beer Company,Chicago,IL
+Native Amber,16.0,0.063,35.0,COOP Ale Works,Oklahoma City,OK

@@ -38,7 +38,7 @@ Successfully created smaller sampled versions of the QRM datasets according to t
 ### 6. Index Column Removal ✓
 - Removed 'index' columns from all datasets
 - Removed 'tuple_id' from flights data
-- Removed 'id' and 'brewery_id' from beers data
+- Removed 'id', 'brewery_id', and 'style' from beers data (style had no errors)
 
 ### 7. Separate Output Directory ✓
 - Created `/home/fatemeh/matelda-demo/Matelda-Demo/datasets/QRM_small_sampled/`
@@ -79,6 +79,7 @@ Each split directory contains:
 - Applied multiple sampling strategies to optimize error distribution
 - Removed brewery and beer identification indexes
 - Maintained data integrity across clean/dirty pairs
+- **Fixed ounces column**: Replaced messy formats ("12.0 oz", "16.0 ounce", etc.) with clean ground truth values for more realistic error patterns
 
 ## Validation
 - All output files verified for correct structure

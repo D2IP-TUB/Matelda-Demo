@@ -74,15 +74,15 @@ class QualityCellFold(BaseCellFold):
     ) -> Dict[str, List[Cell]]:
         """Cluster cells using MiniBatchKMeans with table_id/column_id one-hot encoding"""
 
-        # Collect all unique (table_id, col_idx) pairs for one-hot encoding
-        table_col_pairs = set()
-        for cell in cells:
-            if cell.features and len(cell.features) > 0:
-                table_col_pairs.add((cell.table_id, cell.col_idx))
+        # COMMENTED OUT: Collect all unique (table_id, col_idx) pairs for one-hot encoding
+        # table_col_pairs = set()
+        # for cell in cells:
+        #     if cell.features and len(cell.features) > 0:
+        #         table_col_pairs.add((cell.table_id, cell.col_idx))
 
         # Convert to sorted list for consistent ordering
-        all_table_cols = sorted(list(table_col_pairs))
-        logging.info(f"Found {len(all_table_cols)} unique table-column pairs for one-hot encoding")
+        # all_table_cols = sorted(list(table_col_pairs))
+        # logging.info(f"Found {len(all_table_cols)} unique table-column pairs for one-hot encoding")
 
         # Extract feature vectors with table_id/column_id one-hot encoding
         feature_vectors = []
@@ -91,15 +91,18 @@ class QualityCellFold(BaseCellFold):
         for cell in cells:
             if cell.features and len(cell.features) > 0:
                 # Create one-hot encoded features for table_id and column_id pairs
-                table_col_features = [0] * len(all_table_cols)
-                try:
-                    pair_idx = all_table_cols.index((cell.table_id, cell.col_idx))
-                    table_col_features[pair_idx] = 1
-                except ValueError:
-                    logging.warning(f"Table-column pair ({cell.table_id}, {cell.col_idx}) not found in collected pairs")
+                # COMMENTED OUT: table_id/column_id one-hot encoding
+                # table_col_features = [0] * len(all_table_cols)
+                # try:
+                #     pair_idx = all_table_cols.index((cell.table_id, cell.col_idx))
+                #     table_col_features[pair_idx] = 1
+                # except ValueError:
+                #     logging.warning(f"Table-column pair ({cell.table_id}, {cell.col_idx}) not found in collected pairs")
 
                 # Combine original features with table-column one-hot features
-                complete_feature_vector = cell.features + table_col_features
+                # COMMENTED OUT: Using only original features without table-column encoding
+                # complete_feature_vector = cell.features + table_col_features
+                complete_feature_vector = cell.features  # Use only original features
                 feature_vectors.append(complete_feature_vector)
                 valid_cells.append(cell)
 
@@ -137,30 +140,33 @@ class QualityCellFold(BaseCellFold):
         feature_vectors = []
         valid_cells = []
 
-        # Collect all unique (table_id, col_idx) pairs for one-hot encoding
-        table_col_pairs = set()
-        for cell in cells:
-            if cell.features and len(cell.features) > 0:
-                table_col_pairs.add((cell.table_id, cell.col_idx))
+        # COMMENTED OUT: Collect all unique (table_id, col_idx) pairs for one-hot encoding
+        # table_col_pairs = set()
+        # for cell in cells:
+        #     if cell.features and len(cell.features) > 0:
+        #         table_col_pairs.add((cell.table_id, cell.col_idx))
 
         # Convert to sorted list for consistent ordering
-        all_table_cols = sorted(list(table_col_pairs))
-        logging.info(f"Found {len(all_table_cols)} unique table-column pairs for one-hot encoding")
+        # all_table_cols = sorted(list(table_col_pairs))
+        # logging.info(f"Found {len(all_table_cols)} unique table-column pairs for one-hot encoding")
 
         # Build feature vectors with table_id/column_id one-hot encoding
         for cell in cells:
             if cell.features and len(cell.features) > 0:
                 # Create one-hot encoded features for table_id and column_id pairs
-                table_col_features = [0] * len(all_table_cols)
-                try:
-                    pair_idx = all_table_cols.index((cell.table_id, cell.col_idx))
-                    table_col_features[pair_idx] = 1
-                except ValueError:
-                    # This shouldn't happen since we collected all pairs above
-                    logging.warning(f"Table-column pair ({cell.table_id}, {cell.col_idx}) not found in collected pairs")
+                # COMMENTED OUT: table_id/column_id one-hot encoding
+                # table_col_features = [0] * len(all_table_cols)
+                # try:
+                #     pair_idx = all_table_cols.index((cell.table_id, cell.col_idx))
+                #     table_col_features[pair_idx] = 1
+                # except ValueError:
+                #     # This shouldn't happen since we collected all pairs above
+                #     logging.warning(f"Table-column pair ({cell.table_id}, {cell.col_idx}) not found in collected pairs")
 
                 # Combine original features with table-column one-hot features
-                complete_feature_vector = cell.features + table_col_features
+                # COMMENTED OUT: Using only original features without table-column encoding
+                # complete_feature_vector = cell.features + table_col_features
+                complete_feature_vector = cell.features  # Use only original features
                 feature_vectors.append(complete_feature_vector)
                 valid_cells.append(cell)
 

@@ -1,41 +1,41 @@
-beer-name,style,ounces,abv,ibu,brewery-name,city,state
-Barney Flats Oatmeal Stout,Oatmeal Stout,12.0,0.057,13.0,Anderson Valley Brewing Company,Boonville,CA
-Hopnoxious Imperial IPA,American Double / Imperial IPA,12.0,0.079,,Sockeye Brewing Company,Boise,ID
-Greenwood Beach,Fruit / Vegetable Beer,12.0,0.04,,Temperance Beer Company,Evanston,IL
-Hardywood Cream Ale,Cream Ale,12.0,0.044,18.0,Hardywood Park Craft Brewery,Richmond,VA
-Freestyle Pilsner,German Pilsener,12.0,0.055,,Santa Fe Brewing Company,Santa Fe,NM
-Narragansett Cream Ale,Cream Ale,16.0,0.05,22.0,Narragansett Brewing Company,Providence,RI
-Gatecrasher,English India Pale Ale (IPA),12.0,0.066,,Temperance Beer Company,Evanston,IL
-Mother in Lager,Munich Dunkel Lager,12.0,0.058,25.0,Karbach Brewing Company,Houston,TX
-Port Barrel Wee Mac,Scotch Ale / Wee Heavy,16.0,0.053,23.0,Sun King Brewing Company,Indianapolis,IN
-Train Hopper,American IPA,12.0,0.058,72.0,Witch's Hat Brewing Company,South Lyon,MI
-Rule G IPA,American IPA,12.0,0.07,88.0,Smartmouth Brewing Company,Norfolk,VA
-Saranac Pale Ale (16 oz.),English Pale Ale,16.0,0.055,,Matt Brewing Company,Utica,NY
-Greenville Pale Ale,American Pale Ale (APA),12.0,0.055,52.0,Twin Lakes Brewing Company,Greenville,DE
-Heal the Bay IPA,American IPA,16.0,0.068,65.0,Golden Road Brewing,Los Angeles,CA
-Cow Creek,American Amber / Red Lager,12.0,0.054,26.0,Twisted X Brewing Company,Dripping Springs,TX
-Curious Traveler Shandy,Shandy,12.0,0.044,,The Traveler Beer Company,Burlington,VT
-Wick For Brains,Pumpkin Ale,12.0,0.061,11.0,Nebraska Brewing Company,Papillion,NE
-Draught Hard Apple Cider,Cider,16.0,0.065,,Uncle John's Fruit House Winery,St. John's,MI
-Pride of Texas Pale Ale,American Pale Ale (APA),12.0,0.058,60.0,Rahr & Sons Brewing Company,Fort Worth,TX
-Modus Hoperandi,American IPA,12.0,0.068,65.0,Ska Brewing Company,Durango,CO
-1554 Black Lager,Euro Dark Lager,12.0,0.056,21.0,New Belgium Brewing Company,Fort Collins,CO
-Outlaw IPA (2015),American IPA,12.0,0.065,,Two Brothers Brewing Company,Warrenville,IL
-FMB 101,Kölsch,12.0,0.048,20.0,Figueroa Mountain Brewing Company,Buellton,CA
-Birth IPA,American IPA,12.0,,,Oskar Blues Brewery,Longmont,CO
-Dundee Summer Wheat Beer,American Pale Wheat Ale,12.0,0.045,18.0,Dundee Brewing Company,Rochester,NY
-Pikeland Pils,German Pilsener,12.0,0.049,44.0,Sly Fox Brewing Company,Pottstown,PA
-Porkslap Pale Ale,American Pale Ale (APA),12.0,0.043,,Butternuts Beer and Ale,Garrattsville,NY
-Grapefruit IPA,American IPA,12.0,0.05,35.0,Perrin Brewing Company,Comstock Park,MI
-Chomolungma Honey Nut Brown Ale,English Brown Ale,12.0,0.067,,Jackie O's Pub & Brewery,Athens,OH
-Rodeo Clown Double IPA,American Double / Imperial IPA,12.0,0.095,85.0,Karbach Brewing Company,Houston,TX
-Dread Brown Ale,American Brown Ale,12.0,0.054,,Santa Cruz Mountain Brewing,Santa Cruz,CA
-El Steinber Dark Lager,Vienna Lager,16.0,0.055,25.0,Anderson Valley Brewing Company,Boonville,CA
-Original Orange Blossom Ale (Current),Herbed / Spiced Beer,16.0,0.058,35.0,Buckbean Brewing Company,Reno,NV
-Dodgy Knight Imperial IPA,American Double / Imperial IPA,12.0,0.08,95.0,TailGate Beer,San Diego,CA
-Festivus (1),Winter Warmer,12.0,0.072,,Manayunk Brewing Company,Philadelphia,PA
-Mazzie,American Pale Ale (APA),12.0,0.054,45.0,Pollyanna Brewing Company,Lemont,IL
-Boat Beer,American IPA,12.0,0.042,35.0,Carton Brewing Company,Atlantic Highlands,NJ
-1327 Pod's ESB,Extra Special / Strong Bitter (ESB),12.0,0.056,37.0,Blue Blood Brewing Company,Lincoln,NE
-Ten Fidy Imperial Stout (2008),Russian Imperial Stout,12.0,0.095,98.0,Oskar Blues Brewery,Lyons,CO
-Woolybugger Wheat,American Pale Wheat Ale,12.0,0.046,12.0,Sockeye Brewing Company,Boise,ID
+beer-name,ounces,abv,ibu,brewery-name,city,state
+Devil's Harvest Extra Pale Ale,16.0,0.058,60.0,Southern Prohibition Brewing Com...,Hattiesburg,MS
+Threadless IPA,16.0,0.075,,Finch's Beer Company,Chicago,IL
+Lee Hill Series Vol. 1 - Barrel Aged Brown Ale,19.2,0.076,,Upslope Brewing Company,Boulder,CO
+Full Nelson Pale Ale,12.0,0.059,60.0,Blue Mountain Brewery,Afton,VA
+Oktoberfest,12.0,0.062,,Rivertowne Brewing Company,Export,PA
+Global Warmer,12.0,0.07,70.0,Sixpoint Craft Ales,Brooklyn,NY
+Boston Lager,16.0,0.049,30.0,Boston Beer Company,Boston,MA
+Fascist Pig Ale,16.0,0.08,72.0,Finch's Beer Company,Chicago,IL
+Be Hoppy IPA,16.0,0.065,69.0,Wormtown Brewery,Worcester,MA
+Sous Chef,16.0,0.082,,Brewery Vivant,Grand Rapids,MI
+Hilliard's Amber Ale,16.0,0.055,60.0,Hilliard's Beer,Seattle,WA
+Bikini Beer,12.0,0.027,,Evil Twin Brewing,Brooklyn,NY
+Maduro Brown Ale,12.0,0.055,25.0,Cigar City Brewing Company,Tampa,FL
+Sunshine Wheat Beer (2009),12.0,0.048,,New Belgium Brewing Company,Fort Collins,CO
+Pete's Wicked Summer Brew (2002),12.0,0.047,,Pete's Brewing Company,San Antonio,TX
+Liquid Amber Ale,12.0,,,Prescott Brewing Company,Prescott,AZ
+Oakshire Amber Ale,12.0,0.054,24.0,Oakshire Brewing,Eugene,OR
+Buffalo Sweat (2010),16.0,0.05,20.0,Tallgrass Brewing Company,Manhattan,KS
+California Route,12.0,0.055,,New Belgium Brewing Company,Fort Collins,CO
+Golden Road Hefeweizen,16.0,0.046,15.0,Golden Road Brewing,Los Angeles,CA
+Double Haul IPA (2009),16.0,0.065,65.0,Kettle House Brewing Company,Missoula,MT
+Summer Swelter,12.0,0.047,,Baxter Brewing Company,Lewiston,ME
+Blueberry Berliner Weisse,12.0,0.055,,White Birch Brewing,Hooksett,NH
+4Beans,12.0,0.1,52.0,Sixpoint Craft Ales,Brooklyn,NY
+Heinnieweisse Weissebier,12.0,0.049,,Butternuts Beer and Ale,Garrattsville,NY
+Köld Lager (2010),16.0,0.05,16.0,Tallgrass Brewing Company,Manhattan,KS
+King Coconut,12.0,0.054,,Catawba Valley Brewing Company,Morganton,NC
+13 Rebels ESB,12.0,0.052,42.0,French Broad Brewery,Asheville,NC
+Dagger Falls IPA,12.0,0.063,100.0,Sockeye Brewing Company,Boise,ID
+Winter White,16.0,0.05,,Bell's Brewery,Kalamazoo,MI
+Filthy Hoppin' IPA,16.0,0.065,72.0,Dirty Bucket Brewing Company,Woodinville,WA
+Moose Drool Brown Ale (2009),12.0,0.051,26.0,Big Sky Brewing Company,Missoula,MT
+Apollo,16.0,0.052,11.0,Sixpoint Craft Ales,Brooklyn,NY
+The Imperial Texan,16.0,0.08,,Martin House Brewing Company,Fort Worth,TX
+Paddy Pale Ale,12.0,0.056,41.0,Wild Onion Brewing Company,Lake Barrington,IL
+30 Min Coma,16.0,,,Sun King Brewing Company,Indianapolis,IN
+Brutus,12.0,0.071,69.0,Texian Brewing Co.,Richmond,TX
+Saint Archer IPA,12.0,0.068,66.0,Saint Archer Brewery,San Diego,CA
+Pamola Xtra Pale Ale,12.0,0.049,28.0,Baxter Brewing Company,Lewiston,ME
+Dog Days Lager,12.0,0.051,17.0,Two Brothers Brewing Company,Warrenville,IL

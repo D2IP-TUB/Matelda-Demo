@@ -374,10 +374,9 @@ def _extract_training_data_with_features(
     for labeled_cell in propagated_labels.get("labeled_cells", []):
         try:
             # Use safe access with multiple key format support
-            table_id = labeled_cell.get("table") or labeled_cell.get("table_id")
-            col_name = labeled_cell.get("col") or labeled_cell.get("col_name")
-            row_idx = labeled_cell.get("row") or labeled_cell.get("row_idx")
-
+            table_id = labeled_cell.get("table")
+            col_name = labeled_cell.get("col")
+            row_idx = labeled_cell.get("row")
             if not table_id or not col_name or row_idx is None:
                 logging.debug(
                     f"Skipping labeled_cell due to missing fields in training: table={table_id}, col={col_name}, row={row_idx}"
