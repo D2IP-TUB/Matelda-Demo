@@ -1,0 +1,2 @@
+Row_ID,Field_Name,Original_Value,Error_Value,Error_Type,Explanation,Detection_Method
+2,Move_Name,Flamethrower,Flamethrower 123,Format Error,Random number suffix added,Manual inspection required

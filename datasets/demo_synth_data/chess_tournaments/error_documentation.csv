@@ -1,0 +1,5 @@
+Row_ID,Field_Name,Original_Value,Error_Value,Error_Type,Explanation,Detection_Method
+8,City,Moscow,Moscow ERROR,Obvious Text Error,Contains ERROR marker,"Look for formatting issues like CAPS, _SPACE_, ERROR suffixes"
+13,City,Moscow,MOSCOW!!!,Format Error,Unusual capitalization and punctuation,Manual inspection required
+21,Event,Open Chess Championship,Open Chess Championship 123,Format Error,Random number suffix added,Manual inspection required
+44,Event,Open Chess Championship,Open_SPACE_Chess_SPACE_Championship,Format Error,Spaces replaced with _SPACE_ (encoding issue),Manual inspection required

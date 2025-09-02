@@ -1,0 +1,25 @@
+Row_ID,Field_Name,Original_Value,Error_Value,Error_Type,Explanation,Detection_Method
+1,White_Rating,2790,3290,Invalid Rating,Rating too high for realistic chess rating,Check if rating is outside 1000-3000 range or negative
+4,Date,2023-06-09,32/01/2023,Invalid Date,Day 32 does not exist,Manual inspection required
+5,Result,1/2-1/2,Win,Format Error,"Result should be score format (1-0, 0-1, 1/2-1/2)",Manual inspection required
+7,Black_Player,Fabiano Caruana,FABIANO CARUANA!!!,Format Error,Unusual capitalization and punctuation,Manual inspection required
+11,White_Player,Fabiano Caruana,Fabiano Caruana 123,Format Error,Random number suffix added,Manual inspection required
+12,Black_Rating,2780,3280,Invalid Rating,Rating too high for realistic chess rating,Check if rating is outside 1000-3000 range or negative
+14,Black_Player,Magnus Carlsen,Magnus Carlsen ERROR,Obvious Text Error,Contains ERROR marker,"Look for formatting issues like CAPS, _SPACE_, ERROR suffixes"
+18,Black_Player,Fabiano Caruana,FABIANO CARUANA!!!,Format Error,Unusual capitalization and punctuation,Manual inspection required
+21,Event,Chess Tournament Finals,Chess Tournament Finals 123,Format Error,Random number suffix added,Manual inspection required
+21,Black_Rating,2770,-2770,Invalid Rating,Negative rating is impossible,Check if rating is outside 1000-3000 range or negative
+27,White_Rating,2790,3290,Invalid Rating,Rating too high for realistic chess rating,Check if rating is outside 1000-3000 range or negative
+27,Result,1/2-1/2,0-2,Impossible Result,Chess games cannot end 0-2,"Check if chess result is not 1-0, 0-1, or 1/2-1/2"
+35,White_Rating,2740,-2740,Invalid Rating,Negative rating is impossible,Check if rating is outside 1000-3000 range or negative
+37,White_Rating,2830,2830.5,Invalid Rating,Chess ratings should be integers,Check if rating is outside 1000-3000 range or negative
+40,Event,International Chess League,International Chess League ERROR,Obvious Text Error,Contains ERROR marker,"Look for formatting issues like CAPS, _SPACE_, ERROR suffixes"
+43,Moves,48,0,Invalid Moves,Games must have at least 1 move,Manual inspection required
+44,White_Player,Ian Nepomniachtchi,IAN NEPOMNIACHTCHI!!!,Format Error,Unusual capitalization and punctuation,Manual inspection required
+46,White_Rating,2760,3260,Invalid Rating,Rating too high for realistic chess rating,Check if rating is outside 1000-3000 range or negative
+49,Black_Rating,2770,2770.5,Invalid Rating,Chess ratings should be integers,Check if rating is outside 1000-3000 range or negative
+52,Moves,37,0,Invalid Moves,Games must have at least 1 move,Manual inspection required
+55,White_Rating,2790,3290,Invalid Rating,Rating too high for realistic chess rating,Check if rating is outside 1000-3000 range or negative
+57,Black_Rating,2830,2830.5,Invalid Rating,Chess ratings should be integers,Check if rating is outside 1000-3000 range or negative
+57,Date,2023-12-04,2023-00-04,Invalid Date,Month 00 does not exist,Manual inspection required
+59,Result,0-1,2-0,Impossible Result,Chess games cannot end 2-0,"Check if chess result is not 1-0, 0-1, or 1/2-1/2"

@@ -1,0 +1,39 @@
+src,flight,sched_dep_time,act_dep_time,sched_arr_time,act_arr_time
+helloflight,UA-2515-DFW-CLT,,7:30 a.m.,,10:43 a.m.
+boston,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+weather,UA-2515-DFW-CLT,7:05 a.m.,,10:31 a.m.,
+airtravelcenter,UA-2515-DFW-CLT,,7:30 a.m.,,10:43 a.m.
+flightview,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+flightstats,UA-2515-DFW-CLT,7:05 a.m.,7:07 a.m.,10:31 a.m.,10:47 a.m.
+panynj,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+flights,UA-2515-DFW-CLT,,7:07 a.m.,,10:47 a.m.
+flightarrival,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+travelocity,UA-2515-DFW-CLT,7:05 a.m.,Contact Airline,10:31 a.m.,Contact Airline
+foxbusiness,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+myrateplan,UA-2515-DFW-CLT,,7:30 a.m.,,10:43 a.m.
+orbitz,UA-2515-DFW-CLT,7:05aDec 1,7:07aDec 1,10:31aDec 1,10:47aDec 1
+flytecomm,UA-2515-DFW-CLT,,7:30 a.m.,,10:43 a.m.
+mytripandmore,UA-2515-DFW-CLT,7:05aDec 1,7:07aDec 1,10:31aDec 1,10:47aDec 1
+ua,UA-2515-DFW-CLT,7:05 a.m.,7:05 a.m.,10:31 a.m.,10:47 a.m.
+flylouisville,UA-2515-DFW-CLT,,7:07 a.m.,,10:47 a.m.
+quicktrip,UA-2515-DFW-CLT,7:05 a.m.,7:07 a.m.,10:31 a.m.,10:47 a.m.
+allegiantair,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+businesstravellogue,UA-2515-DFW-CLT,,7:07 a.m.,,10:47 a.m.
+gofox,UA-2515-DFW-CLT,,7:31 a.m.,,10:45 a.m.
+helloflight,UA-1500-IAH-GUA,8:55 a.m.,,11:45 a.m.,
+boston,UA-1500-IAH-GUA,,9:43 a.m.,,12:10 p.m.
+airtravelcenter,UA-1500-IAH-GUA,8:55 a.m.,,11:45 a.m.,
+flightview,UA-1500-IAH-GUA,,9:43 a.m.,,12:12 p.m.
+panynj,UA-1500-IAH-GUA,,9:43 a.m.,,12:12 p.m.
+flights,UA-1500-IAH-GUA,,9:16 a.m.,,11:45 a.m.
+flightarrival,UA-1500-IAH-GUA,,9:43 a.m.,,12:10 p.m.
+foxbusiness,UA-1500-IAH-GUA,,9:43 a.m.,,12:12 p.m.
+usatoday,UA-1500-IAH-GUA,,9:43 a.m.,,12:10 p.m.
+myrateplan,UA-1500-IAH-GUA,8:55 a.m.,,11:45 a.m.,
+orbitz,UA-1500-IAH-GUA,8:55aDec 1,9:16aDec 1,12:05 p.m.,
+flytecomm,UA-1500-IAH-GUA,8:55 a.m.,,11:45 a.m.,
+ua,UA-1500-IAH-GUA,8:55 a.m.,9:16 a.m.            Delayed,11:45 a.m.,11:56 a.m.
+flylouisville,UA-1500-IAH-GUA,,9:16 a.m.,,11:45 a.m.
+allegiantair,UA-1500-IAH-GUA,,9:43 a.m.,,12:12 p.m.
+businesstravellogue,UA-1500-IAH-GUA,,9:16 a.m.,,11:45 a.m.
+gofox,UA-1500-IAH-GUA,,9:43 a.m.,,12:12 p.m.

@@ -1,0 +1,4 @@
+Row_ID,Field_Name,Original_Value,Error_Value,Error_Type,Explanation,Detection_Method
+13,Pokemon_Name,Dragonite,Dragonite ERROR,Obvious Text Error,Contains ERROR marker,"Look for formatting issues like CAPS, _SPACE_, ERROR suffixes"
+14,Pokemon_Name,Charizard,CHARIZARD!!!,Format Error,Unusual capitalization and punctuation,Manual inspection required
+25,Pokemon_Name,Blastoise,Blastoise ERROR,Obvious Text Error,Contains ERROR marker,"Look for formatting issues like CAPS, _SPACE_, ERROR suffixes"

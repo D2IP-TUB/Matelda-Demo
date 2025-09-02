@@ -83,7 +83,13 @@ def backend_error_detection(
 
         # Organize cells by table and column
         cells_by_table_col = {}
-        ground_truth = {}
+
+        # ✅ GROUND TRUTH: Base evaluation set (from CSV comparison)
+        ground_truth = {}  # SACRED - never modified
+
+        # ✅ IDENTIFY CELL TYPES FOR PROPER HANDLING
+        user_labeled_cells = set()  # Cells with direct user labels
+        cells_to_predict = set()  # Cells that need ML prediction
 
         for cell in all_cells:
             table_col_key = (cell.table_id, cell.col_name)
@@ -91,63 +97,42 @@ def backend_error_detection(
                 cells_by_table_col[table_col_key] = []
             cells_by_table_col[table_col_key].append(cell)
 
-            # Store ground truth for evaluation
+            # Store ORIGINAL ground truth (SACRED - never modified)
             cell_key = (cell.table_id, cell.row_idx, cell.col_name)
             ground_truth[cell_key] = cell.is_error
+            cells_to_predict.add(cell_key)  # Initially all cells need prediction
 
-        # ⭐ FIX 3: MERGE HUMAN-LABELED ERRORS INTO GROUND TRUTH FOR EVALUATION
-        logging.info(
-            "Merging DIRECT human-labeled errors into ground truth for evaluation..."
-        )
-        human_labels_added = 0
+        # ✅ EXTRACT USER LABELED CELLS - these get trusted predictions
+        logging.info("Identifying cells with user labels...")
+        user_predictions = {}  # User labels serve as trusted predictions
 
-        # Extract ONLY direct human labels (not propagated ones)
-        # The direct human labels come from the "labeled_cells" section
         labeled_cells = propagated_labels.get("labeled_cells", [])
-        logging.debug(f"Found {len(labeled_cells)} labeled cell groups")
-
         for labeled_cell in labeled_cells:
             try:
-                # Debug: Print the structure to understand the format
-                logging.debug(
-                    f"Processing labeled_cell structure: {list(labeled_cell.keys())}"
-                )
-
-                # Try different possible key formats
                 table_id = labeled_cell.get("table") or labeled_cell.get("table_id")
                 row_idx = labeled_cell.get("row") or labeled_cell.get("row_idx")
                 col_name = labeled_cell.get("col") or labeled_cell.get("col_name")
-                is_error = labeled_cell.get("is_error", True)  # Human labeled as error
+                is_error = labeled_cell.get("is_error", True)
 
-                if table_id and row_idx is not None and col_name and is_error:
+                if table_id and row_idx is not None and col_name:
                     cell_key = (table_id, row_idx, col_name)
-                    # Update ground truth with human label (overrides original if different)
-                    if cell_key in ground_truth:
-                        if ground_truth[cell_key] != is_error:
-                            logging.debug(
-                                f"Direct human label overrides original: {cell_key} {ground_truth[cell_key]} -> {is_error}"
-                            )
-                        ground_truth[cell_key] = is_error
-                        human_labels_added += 1
-                    else:
-                        logging.debug(
-                            f"Direct human label for cell not in dataset: {cell_key}"
-                        )
-                else:
-                    logging.debug(
-                        f"Skipping labeled_cell due to missing fields: table={table_id}, row={row_idx}, col={col_name}, is_error={is_error}"
-                    )
+
+                    # User label serves as trusted prediction (no ML needed)
+                    user_predictions[cell_key] = is_error
+                    user_labeled_cells.add(cell_key)
+                    cells_to_predict.discard(
+                        cell_key
+                    )  # Don't predict user-labeled cells
 
             except Exception as e:
-                logging.warning(
-                    f"Error processing direct human label: {labeled_cell} - {e}"
-                )
+                logging.warning(f"Error processing user label: {labeled_cell} - {e}")
 
-        logging.info(
-            f"Added {human_labels_added} DIRECT human labels to ground truth for evaluation"
-        )
+        logging.info(f"Ground truth (CSV): {len(ground_truth)} cells")
+        logging.info(f"User labeled cells: {len(user_labeled_cells)} cells")
+        logging.info(f"Cells needing ML prediction: {len(cells_to_predict)} cells")
 
-        # Extract training data
+        # ✅ EXTRACT TRAINING DATA: User labels + Propagated labels
+        logging.info("Extracting training data (user + propagated labels)...")
         training_data = _extract_training_data_with_features(
             propagated_labels, all_cells
         )
@@ -155,8 +140,8 @@ def backend_error_detection(
         # ⭐ FIX 2: VERIFY TRAINING DATA QUALITY
         _verify_training_data_quality(training_data)
 
-        # Perform classification with better handling
-        all_predictions = {}
+        # ✅ PERFORM ML PREDICTIONS: Only on cells that need prediction (not user-labeled)
+        ml_predictions = {}
         detected_cells = []
         trained_columns = 0
         insufficient_columns = 0
@@ -165,26 +150,40 @@ def backend_error_detection(
         for table_col_key, column_cells in cells_by_table_col.items():
             table_id, col_name = table_col_key
 
+            # Filter to cells that need ML prediction (not user-labeled)
+            cells_needing_prediction = [
+                cell
+                for cell in column_cells
+                if (cell.table_id, cell.row_idx, cell.col_name) in cells_to_predict
+            ]
+
+            if not cells_needing_prediction:
+                logging.debug(
+                    f"No cells need prediction in column {table_col_key} (all user-labeled)"
+                )
+                continue
+
             # Get training data for this column
             column_training = training_data.get(
                 table_col_key, {"X_train": [], "y_train": []}
             )
 
-            # ⭐ FIX 3: BETTER TRAINING DATA VALIDATION
+            # ⭐ BETTER TRAINING DATA VALIDATION
             if _has_sufficient_training_data(
                 column_training
             ) and _has_meaningful_features(column_training):
-                # Train classifier with proper features
+                # Train classifier and predict only on cells needing prediction
                 predictions = _train_and_predict_column_fixed(
-                    column_cells, column_training
+                    cells_needing_prediction,
+                    column_training,  # Only predict these cells
                 )
                 trained_columns += 1
 
-                # Store predictions and detected cells with real confidence scores
+                # Store ML predictions and detected cells
                 for cell_key, (prediction, confidence) in predictions.items():
-                    all_predictions[cell_key] = prediction
+                    ml_predictions[cell_key] = prediction
                     if prediction:  # If predicted as error
-                        cell_obj = _find_cell_by_key(column_cells, cell_key)
+                        cell_obj = _find_cell_by_key(cells_needing_prediction, cell_key)
                         if cell_obj:
                             detected_cells.append(
                                 {
@@ -193,14 +192,17 @@ def backend_error_detection(
                                     "col": cell_obj.col_name,
                                     "val": cell_obj.dirty_value,
                                     "confidence": confidence,  # Real classifier confidence
-                                    "source": "trained_classifier",
+                                    "source": "ml_prediction",
                                 }
                             )
             else:
-                # Handle insufficient training data
+                # Handle insufficient training data - only for cells needing prediction
                 try:
                     result = _handle_insufficient_training_data_fixed(
-                        table_col_key, column_cells, column_training, all_predictions
+                        table_col_key,
+                        cells_needing_prediction,
+                        column_training,
+                        ml_predictions,
                     )
                     if result is not None and len(result) == 2:
                         n_samples, detected_from_fallback = result
@@ -219,61 +221,35 @@ def backend_error_detection(
                 if not _has_meaningful_features(column_training):
                     feature_issues += 1
 
-        # ⭐ FIX 4: ADD ONLY DIRECT HUMAN-LABELED ERRORS TO DETECTED CELLS FOR UI DISPLAY
-        logging.info(
-            "Adding DIRECT human-labeled errors to detected cells for UI display..."
-        )
-        human_errors_added = 0
-
-        # Extract ONLY direct human-labeled errors (not propagated ones)
-        labeled_cells = propagated_labels.get("labeled_cells", [])
-        for labeled_cell in labeled_cells:
-            try:
-                # Try different possible key formats
-                table_id = labeled_cell.get("table") or labeled_cell.get("table_id")
-                row_idx = labeled_cell.get("row") or labeled_cell.get("row_idx")
-                col_name = labeled_cell.get("col") or labeled_cell.get("col_name")
-                is_error = labeled_cell.get("is_error", True)
-
-                if table_id and row_idx is not None and col_name and is_error:
-                    # Look up the actual cell to get its value
-                    cell_key = (table_id, row_idx, col_name)
-                    cell_value = ""
-
-                    # Try to find the cell in all_cells to get the actual value
-                    for cell in all_cells:
-                        if (cell.table_id, cell.row_idx, cell.col_name) == cell_key:
-                            cell_value = cell.dirty_value or cell.clean_value or ""
-                            break
-
-                    # Add ONLY the direct human label to detected_cells for UI display
-                    # Use the same format as ML-detected cells: "table", "row", "col"
-                    detected_cells.append(
-                        {
-                            "table": table_id,
-                            "row": row_idx,
-                            "col": col_name,
-                            "val": cell_value,  # Now we have the actual cell value
-                            "confidence": 1.0,  # Human labels have max confidence
-                            "source": "direct_human_labeled",
-                        }
-                    )
-                    human_errors_added += 1
-                else:
-                    logging.debug(
-                        f"Skipping labeled_cell for UI due to missing fields: table={table_id}, row={row_idx}, col={col_name}, is_error={is_error}"
-                    )
-
-            except Exception as e:
-                logging.warning(
-                    f"Error adding direct human-labeled error to detected cells: {labeled_cell} - {e}"
-                )
+        # ✅ COMBINE PREDICTIONS: User predictions + ML predictions
+        all_predictions = {}
+        all_predictions.update(user_predictions)  # User labels as trusted predictions
+        all_predictions.update(ml_predictions)  # ML predictions for remaining cells
 
         logging.info(
-            f"Added {human_errors_added} DIRECT human-labeled errors to detected cells"
+            f"Final predictions: {len(user_predictions)} user + {len(ml_predictions)} ML = {len(all_predictions)} total"
         )
 
-        # Calculate metrics EXCLUDING training data
+        # ✅ ADD USER-LABELED ERRORS TO DETECTED CELLS FOR UI
+        for cell_key, is_error in user_predictions.items():
+            if is_error:
+                # Find the actual cell to get its value
+                for cell in all_cells:
+                    if (cell.table_id, cell.row_idx, cell.col_name) == cell_key:
+                        detected_cells.append(
+                            {
+                                "table": cell.table_id,
+                                "row": cell.row_idx,
+                                "col": cell.col_name,
+                                "val": cell.dirty_value,
+                                "confidence": 1.0,  # User labels have perfect confidence
+                                "source": "user_label",
+                            }
+                        )
+                        break
+
+        # ✅ Calculate metrics using ORIGINAL ground truth (NEVER modified)
+        # Human labels are used only for training, ground truth only for evaluation
         metrics = _calculate_metrics_from_predictions(
             ground_truth, all_predictions, training_data
         )
@@ -290,6 +266,9 @@ def backend_error_detection(
                 "feature_coverage": cells_with_features / len(all_cells)
                 if all_cells
                 else 0.0,
+                # Ground truth statistics
+                "n_ground_truth": len(ground_truth),
+                "n_ground_truth_errors": sum(ground_truth.values()),
             }
         )
 
@@ -719,7 +698,14 @@ def _handle_insufficient_training_data_fixed(
 def _calculate_metrics_from_predictions(
     ground_truth: Dict, predictions: Dict, training_data: Dict
 ) -> Dict[str, float]:
-    """Calculate metrics INCLUDING labeled data - we want to evaluate against all ground truth"""
+    """
+    Calculate metrics using ORIGINAL ground truth (never modified)
+
+    ✅ IMPORTANT: ground_truth contains ONLY original ground truth
+    - Ground truth is SACRED - never modified
+    - Human labels are used ONLY for training, never for evaluation
+    - This ensures proper separation of training and evaluation data
+    """
 
     # Get all training cells for reporting purposes
     training_cells = set()
@@ -754,7 +740,7 @@ def _calculate_metrics_from_predictions(
             "n_unlabeled": 0,
         }
 
-    # ✅ Evaluate on ALL data (labeled + unlabeled)
+    # ✅ Evaluate on ALL data (labeled + unlabeled) using original GT
     y_true = [ground_truth[key] for key in common_keys]
     y_pred = [predictions[key] for key in common_keys]
 
