@@ -102,20 +102,9 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     if pd.isna(val) or str(val).lower() == "nan":
         val = ""
 
-    # Handle strategies - limit to 3 strategies for display, add "show more" if needed
+    # Handle strategies - just show all strategies as pills, no truncation or extra UI
     all_strategies = cell.get("strategies", [])
-    max_display_strategies = 3
-
-    if len(all_strategies) <= max_display_strategies:
-        display_strategies = all_strategies
-        description = f"Value: {val}"
-    else:
-        display_strategies = all_strategies[:max_display_strategies]
-        remaining_count = len(all_strategies) - max_display_strategies
-        # Add the extra info to description to make it more visible
-        description = (
-            f"Value: {val} | 🔍 +{remaining_count} more strategies (see below)"
-        )
+    description = f"Value: {val}"
 
     return {
         "dataset_path": dataset_path,
@@ -127,48 +116,13 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
         "highlight_columns": [{"column": column}],
         "center_table_row": row,
         "center_table_column": column,
-        "pills": display_strategies,
-        "all_strategies": all_strategies,  # Store all strategies for popup
-        "cell_id": cell.get("id", ""),  # Add ID for popup reference
-        "table": cell.get("table", ""),  # Add table info for popup
+        "pills": all_strategies,
+        "all_strategies": all_strategies,
+        "cell_id": cell.get("id", ""),
+        "table": cell.get("table", ""),
     }
 
-
-def show_all_strategies_dialog(cell_data: Dict[str, Any]):
-    """Show a dialog with all strategies for a cell."""
-    cell_id = cell_data.get("cell_id", "unknown")
-    table = cell_data.get("table", "unknown")
-    row = cell_data.get("row_index", "unknown")
-    column = cell_data.get("center_table_column", "unknown")
-    value = cell_data.get("description", "").replace("Value: ", "")
-    all_strategies = cell_data.get("all_strategies", [])
-
-    @st.dialog("All Error Detection Strategies", width="large")
-    def _dialog():
-        st.markdown("### 📄 Cell Details")
-        st.markdown(f"**📊 Table:** `{table}`")
-        st.markdown(f"**📍 Location:** Row `{row}`, Column `{column}`")
-        st.markdown(f"**💬 Value:** `{value}`")
-
-        st.markdown("---")
-        st.markdown(
-            f"### 🔍 Error Detection Results ({len(all_strategies)} strategies)"
-        )
-
-        if all_strategies:
-            # Display strategies in a nice format
-            for i, strategy in enumerate(all_strategies, 1):
-                st.markdown(f"**{i}.** ❌ {strategy}")
-        else:
-            st.info("✅ This cell passed all error detection checks")
-
-        st.markdown("---")
-        if st.button(
-            "Close", key=f"close_strategies_{cell_id}", use_container_width=True
-        ):
-            st.rerun()
-
-    _dialog()
+    # ...existing code...
 
 
 def _compute_sampled_cells(
@@ -383,13 +337,6 @@ if SAMPLE_KEY in st.session_state:
     else:
         st.info("Swipe left to mark as error, swipe right to mark as correct.")
 
-        # Check if any cards have truncated strategies (store for later use)
-        cards_with_many_strategies = [
-            (i, card)
-            for i, card in enumerate(card_data)
-            if len(card.get("all_strategies", [])) > 3
-        ]
-
         results = streamlit_swipecards(
             cards=card_data,
             display_mode="table",
@@ -417,61 +364,10 @@ if SAMPLE_KEY in st.session_state:
                     st.session_state.labeling_results[key] = new_val
                     made_changes = True
             if made_changes:
-                # Only mark dirty if we actually recorded new swipes in this render
                 mark_pipeline_dirty()
 
-        # Show strategy details section after the swipe cards
-        if cards_with_many_strategies:
-            # Make this more prominent with a warning-style message
-            st.warning(
-                f"⚠️ {len(cards_with_many_strategies)} cards have additional error detection strategies not shown in the card details above. Expand below to view all strategies."
-            )
-
-            with st.expander(
-                "🔍 **Click here to view all strategies for cards with 4+ strategies**",
-                expanded=False,
-            ):
-                st.markdown("**Cards with truncated strategies:**")
-                st.markdown(
-                    "*Click on a card button below to see all error detection strategies for that specific cell.*"
-                )
-
-                # Create columns for strategy buttons
-                cols_per_row = 2  # Reduced to 2 for better button sizing
-                for i in range(0, len(cards_with_many_strategies), cols_per_row):
-                    button_cols = st.columns(cols_per_row)
-
-                    for j in range(cols_per_row):
-                        if i + j < len(cards_with_many_strategies):
-                            card_idx, card = cards_with_many_strategies[i + j]
-                            table = card.get("table", "unknown")
-                            row = card.get("row_index", "?")
-                            col = card.get("center_table_column", "?")
-                            total_strategies = len(card.get("all_strategies", []))
-                            # Extract just the value part from description
-                            description = card.get("description", "")
-                            value = (
-                                description.split(" | ")[0].replace("Value: ", "")
-                                if " | " in description
-                                else description.replace("Value: ", "")
-                            )
-
-                            with button_cols[j]:
-                                if st.button(
-                                    f"📋 **Card {card_idx + 1}**\n`{table}.{col}[{row}]`\nValue: `{str(value)[:20]}{'...' if len(str(value)) > 20 else ''}`\n🔍 **{total_strategies} strategies total**",
-                                    key=f"view_strategies_{card_idx}",
-                                    use_container_width=True,
-                                    type="secondary",
-                                ):
-                                    show_all_strategies_dialog(card)
-
-                st.markdown("---")
-                st.info(
-                    "💡 **Tip:** You can still swipe the cards normally. The strategy details are just additional information to help you make better decisions."
-                )
-
-    st.markdown("---")
-    nav_cols = st.columns([1, 1, 1], gap="small")
+        st.markdown("---")
+        nav_cols = st.columns([1, 1, 1], gap="small")
 
     # Restart: confirmation dialog to go to app.py
     with nav_cols[0]:

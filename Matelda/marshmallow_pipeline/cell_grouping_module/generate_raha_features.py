@@ -159,13 +159,14 @@ def _strategy_runner_process(self, args):
         "runtime": time.time() - start_time,
     }
     if self.SAVE_RESULTS:
+        # Save with algorithm name prefix for easier separation (e.g., ODH_<hash>.dictionary)
         pickle.dump(
             strategy_profile,
             open(
                 os.path.join(
                     d.results_folder,
                     "strategy-profiling",
-                    strategy_name_hash + ".dictionary",
+                    f"{algorithm}_{strategy_name_hash}.dictionary",
                 ),
                 "wb",
             ),
