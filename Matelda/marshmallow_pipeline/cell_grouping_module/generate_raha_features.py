@@ -64,7 +64,7 @@ def _strategy_runner_process(self, args):
             try:
                 if len(re.findall("[" + ch + "]", value, re.UNICODE)) > 0:
                     outputted_cells[(i, j)] = ""
-            except:
+            except Exception:
                 continue
     elif algorithm == "RVD":
         d_col_list = d.dataframe.columns.tolist()
