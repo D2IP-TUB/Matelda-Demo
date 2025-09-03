@@ -233,76 +233,320 @@ if dataset_configured:
     st.write("_(Click on column headers to sort the table.)_")
     st.dataframe(styled_same_dataset_df)
 
-# ---------------- ALL DATASETS ----------------
-all_rows = []
-for pipeline in os.listdir(pipelines_folder):
-    pipeline_dir = os.path.join(pipelines_folder, pipeline)
-    if os.path.isdir(pipeline_dir):
-        cfg = load_config(os.path.join(pipeline_dir, "configurations.json"))
-        labeling_budget = cfg.get("labeling_budget", "")
-        selected_dataset = cfg.get("selected_dataset", "")
-        results_list = cfg.get("results", [])
-        for res in results_list:
-            metrics = res.get("metrics", {})
-            row = {
-                "Time": res.get("Time", ""),
-                "Pipeline Name": pipeline,
-                "Dataset": selected_dataset,
-                "Labeling Budget": labeling_budget,
-                "Recall": metrics.get("Recall", ""),
-                "F1": metrics.get("F1", ""),
-                "Precision": metrics.get("Precision", ""),
-            }
-            all_rows.append(row)
+st.markdown("---")
 
-found_current_all = any(
-    row["Pipeline Name"] == current_pipeline_name and row["Time"] == current_time
-    for row in all_rows
-)
-# Only synthesize a current row across all datasets when there is no match AND pipeline isn't marked dirty
-if not found_current_all and results and not dirty:
-    current_cfg_all = load_config(
-        os.path.join(current_pipeline_path, "configurations.json")
-    )
-    current_labeling_budget_all = current_cfg_all.get("labeling_budget", "")
-    current_row_all = {
-        "Time": current_time,
-        "Pipeline Name": current_pipeline_name,
-        "Dataset": current_dataset,
-        "Labeling Budget": current_labeling_budget_all,
-        "Recall": recall_score,
-        "F1": f1_score,
-        "Precision": precision_score,
-    }
-    all_rows = [
-        r
-        for r in all_rows
-        if not (
-            r["Pipeline Name"] == current_pipeline_name
-            and r["Time"].split(" ")[0] == current_time.split(" ")[0]
-        )
-    ]
-    all_rows.append(current_row_all)
+# ---------------- RAHA BASELINE COMPARISON ----------------
+st.markdown("#### 📊 Baseline Comparison: Raha Requirements")
 
-all_df = pd.DataFrame(all_rows)
-for col in ["Recall", "F1", "Precision", "Labeling Budget"]:
-    if col in all_df.columns:
-        all_df[col] = pd.to_numeric(all_df[col], errors="coerce").round(2)
-all_df = all_df.sort_values(by="Time", ascending=False)
+# Count the number of tables in the current dataset
+if current_dataset:
+    datasets_path = os.path.join(os.path.dirname(__file__), "..", "datasets")
+    dataset_path = os.path.join(datasets_path, current_dataset)
 
-styled_all_df = all_df.style.apply(highlight_current, axis=1).format(
-    {
-        "Recall": "{:.2f}",
-        "F1": "{:.2f}",
-        "Precision": "{:.2f}",
-        "Labeling Budget": "{:}",
-    }
-)
+    if os.path.exists(dataset_path):
+        subdirs = [
+            f
+            for f in os.listdir(dataset_path)
+            if os.path.isdir(os.path.join(dataset_path, f))
+        ]
+        table_count = len(subdirs)
+
+        st.markdown("""
+        **One-table error detection with Raha doesn’t work unless each table has at least two labeled tuples. For this dataset, that means a minimum of 94 labeled cells (2 × 47 tables). If you randomly distribute labeling budgets across tables, Raha gives the following results:**
+        """)
+
+        # Load Raha baseline results
+        try:
+            raha_results_path = os.path.join(
+                os.path.dirname(__file__), "..", "raha_baseline_results.csv"
+            )
+            raha_df = pd.read_csv(raha_results_path)
+
+            # Find the closest budget match or interpolate
+            current_budget_int = (
+                int(current_labeling_budget)
+                if str(current_labeling_budget).isdigit()
+                else 0
+            )
+
+            if current_budget_int > 0:
+                # Find exact match or closest budget
+                closest_row = raha_df.iloc[
+                    (raha_df["labeling_budget"] - current_budget_int)
+                    .abs()
+                    .argsort()[:1]
+                ]
+
+                if not closest_row.empty:
+                    closest_budget = closest_row["labeling_budget"].iloc[0]
+                    raha_precision = closest_row["precision"].iloc[0]
+                    raha_recall = closest_row["recall"].iloc[0]
+                    raha_f1 = closest_row["f_score"].iloc[0]
+
+                    st.markdown(f"""
+                    **Raha Baseline Results** (closest budget: {closest_budget} labels):
+                    """)
+
+                    # Display Raha baseline metrics
+                    col1, col2, col3, col4 = st.columns(4)
+
+                    with col1:
+                        st.metric(
+                            "Raha Precision",
+                            f"{raha_precision:.3f}",
+                            help="Raha baseline precision",
+                        )
+                    with col2:
+                        st.metric(
+                            "Raha Recall",
+                            f"{raha_recall:.3f}",
+                            help="Raha baseline recall",
+                        )
+                    with col3:
+                        st.metric(
+                            "Raha F1-Score",
+                            f"{raha_f1:.3f}",
+                            help="Raha baseline F1-score",
+                        )
+                    with col4:
+                        # Calculate improvement over Raha baseline
+                        if f1_score > 0:
+                            improvement = (
+                                ((f1_score - raha_f1) / raha_f1) * 100
+                                if raha_f1 > 0
+                                else 0
+                            )
+                            st.metric(
+                                "Your Improvement",
+                                f"{improvement:+.1f}%",
+                                help="Your F1-score improvement over Raha baseline",
+                            )
+                        else:
+                            st.metric(
+                                "Your F1-Score",
+                                f"{f1_score:.3f}",
+                                help="Your current F1-score",
+                            )
+
+                    # Show detailed comparison table
+                    with st.expander("📊 View Complete Raha Baseline Results"):
+                        st.dataframe(raha_df, use_container_width=True)
+
+                    st.info(
+                        f"💡 **Budget Comparison**: Raha baseline requires {2 * table_count} labels vs. your current budget of {current_labeling_budget}"
+                    )
+                else:
+                    st.warning("⚠️ Could not find matching Raha baseline results")
+            else:
+                st.warning("⚠️ Invalid labeling budget for Raha comparison")
+
+        except Exception as e:
+            st.error(f"❌ Could not load Raha baseline results: {e}")
+            # Fallback to showing the requirement only
+            st.info(
+                f"💡 **Budget Requirement**: Raha baseline requires {2 * table_count} labels vs. your current budget of {current_labeling_budget}"
+            )
+    else:
+        st.warning("⚠️ Could not analyze dataset structure for Raha comparison")
+else:
+    st.warning("⚠️ No dataset selected for Raha comparison")
 
 st.markdown("---")
-st.markdown("#### Result Comparison (All Pipelines/Datasets)")
-st.write("_(Click on column headers to sort the table.)_")
-st.dataframe(styled_all_df)
+
+
+def show_ground_truth_table():
+    """Display a table comparing user labels with ground truth - show how well the user did!"""
+    try:
+        # Load user labels from saved CSV file
+        if "pipeline_path" not in st.session_state:
+            st.error(
+                "❌ No pipeline path found. Please complete the labeling step first."
+            )
+            return
+
+        labels_file = os.path.join(st.session_state.pipeline_path, "user_labels.csv")
+
+        if not os.path.exists(labels_file):
+            st.error(
+                "❌ No saved user labels found. Please complete the labeling step first."
+            )
+            st.info(
+                "💡 Labels are automatically saved when you click 'Next' in the Labeling page."
+            )
+            return
+
+        # Read user labels from CSV
+        user_labels_df = pd.read_csv(labels_file)
+
+        # Load ground truth data from CSV files
+        ground_truth_lookup = {}
+
+        if current_dataset:
+            datasets_path = os.path.join(os.path.dirname(__file__), "..", "datasets")
+            dataset_path = os.path.join(datasets_path, current_dataset)
+
+            if os.path.exists(dataset_path):
+                subdirs = [
+                    f
+                    for f in os.listdir(dataset_path)
+                    if os.path.isdir(os.path.join(dataset_path, f))
+                ]
+
+                for subdir in subdirs:
+                    subdir_path = os.path.join(dataset_path, subdir)
+                    subdir_files = os.listdir(subdir_path)
+
+                    if "dirty.csv" in subdir_files and "clean.csv" in subdir_files:
+                        try:
+                            dirty_df = pd.read_csv(
+                                os.path.join(subdir_path, "dirty.csv")
+                            )
+                            clean_df = pd.read_csv(
+                                os.path.join(subdir_path, "clean.csv")
+                            )
+
+                            if len(dirty_df.columns) == len(clean_df.columns):
+                                dirty_df.columns = clean_df.columns
+                                table_id = subdir
+
+                                for col_idx, col_name in enumerate(dirty_df.columns):
+                                    for row_idx in range(
+                                        min(len(dirty_df), len(clean_df))
+                                    ):
+                                        dirty_val = (
+                                            str(dirty_df.iloc[row_idx, col_idx])
+                                            if pd.notna(dirty_df.iloc[row_idx, col_idx])
+                                            else ""
+                                        )
+                                        clean_val = (
+                                            str(clean_df.iloc[row_idx, col_idx])
+                                            if pd.notna(clean_df.iloc[row_idx, col_idx])
+                                            else ""
+                                        )
+
+                                        key = (table_id, row_idx, col_name)
+                                        ground_truth_lookup[key] = {
+                                            "is_error": dirty_val != clean_val,
+                                            "clean_value": clean_val,
+                                        }
+                        except Exception as e:
+                            st.warning(f"⚠️ Could not load CSV files from {subdir}: {e}")
+
+        if not ground_truth_lookup:
+            st.error("❌ Could not load ground truth data. Cannot perform comparison.")
+            return
+
+        # Compare user labels with ground truth
+        comparison_data = []
+        matched_count = 0
+
+        for _, row in user_labels_df.iterrows():
+            table_id = row.get("table")
+            row_idx = row.get("row")
+            col_name = row.get("col")
+            user_label = row.get("is_error", False)
+            cell_value = row.get("val", "")
+
+            if table_id and row_idx is not None and col_name:
+                key = (table_id, row_idx, col_name)
+
+                if key in ground_truth_lookup:
+                    matched_count += 1
+                    ground_truth_is_error = ground_truth_lookup[key]["is_error"]
+                    clean_value = ground_truth_lookup[key]["clean_value"]
+
+                    is_correct = user_label == ground_truth_is_error
+
+                    comparison_data.append(
+                        {
+                            "Table": table_id,
+                            "Row": row_idx,
+                            "Column": col_name,
+                            "Cell Value": cell_value,
+                            "Clean Value": clean_value,
+                            "Ground Truth": "Error"
+                            if ground_truth_is_error
+                            else "Correct",
+                            "Your Label": "Error" if user_label else "Correct",
+                            "Result": "✅ Correct" if is_correct else "❌ Incorrect",
+                            "Correct": is_correct,
+                        }
+                    )
+
+        if not comparison_data:
+            st.error("❌ No matching ground truth found for your labeled cells.")
+            return
+
+        # Convert to DataFrame and show results
+        df = pd.DataFrame(comparison_data)
+        correct_count = sum(df["Correct"])
+        total_count = len(df)
+        accuracy = correct_count / total_count if total_count > 0 else 0
+
+        # Performance summary
+        st.markdown("### 🎯 Your Labeling Performance")
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Total Cells Labeled", total_count)
+        with col2:
+            st.metric("Correct Labels", correct_count)
+        with col3:
+            st.metric("Your Accuracy", f"{accuracy:.1%}")
+
+        st.markdown("---")
+
+        # Style the dataframe
+        def style_results(row):
+            row_idx = row.name
+            is_correct = df.iloc[row_idx]["Correct"]
+            if is_correct:
+                return ["background-color: #d4edda"] * len(row)
+            else:
+                return ["background-color: #f8d7da"] * len(row)
+
+        # Display the comparison table
+        st.markdown("#### 📊 Detailed Comparison: Your Labels vs Ground Truth")
+        st.markdown("*Green rows = You got it right! Red rows = You got it wrong.*")
+
+        display_cols = [
+            "Table",
+            "Row",
+            "Column",
+            "Cell Value",
+            "Clean Value",
+            "Ground Truth",
+            "Your Label",
+            "Result",
+        ]
+        display_df = df[display_cols].copy()
+
+        try:
+            styled_df = display_df.style.apply(style_results, axis=1)
+            st.dataframe(styled_df, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error styling table: {e}")
+            st.dataframe(display_df, use_container_width=True)
+
+        # Export option
+        if st.button("📥 Export Your Results"):
+            csv = df.to_csv(index=False)
+            timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"user_labeling_results_{current_dataset}_{timestamp}.csv"
+            st.download_button("Download Results as CSV", csv, filename, "text/csv")
+
+    except Exception as e:
+        st.error(f"Error generating comparison: {str(e)}")
+
+
+if dataset_configured and "propagation_results" in st.session_state:
+    st.markdown("### 🔍 Label Analysis")
+
+    if st.button(
+        "Check My Labeling Accuracy",
+        help="See how well your manual labels match the ground truth data",
+    ):
+        show_ground_truth_table()
 
 st.markdown("---")
 

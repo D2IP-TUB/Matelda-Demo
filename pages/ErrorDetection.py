@@ -211,7 +211,7 @@ if (
 
     # Display metrics
     st.markdown("### 📈 Detection Metrics")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.metric("Precision", f"{metrics.get('precision', 0):.3f}")
@@ -219,8 +219,6 @@ if (
         st.metric("Recall", f"{metrics.get('recall', 0):.3f}")
     with col3:
         st.metric("F1 Score", f"{metrics.get('f1', 0):.3f}")
-    with col4:
-        st.metric("Fold Influence", f"{metrics.get('fold_label_influence', 0):.3f}")
 
     # Display detected errors in tables
     st.markdown("### 🔍 Detected Errors")

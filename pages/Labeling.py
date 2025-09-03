@@ -393,6 +393,19 @@ if SAMPLE_KEY in st.session_state:
             }
             labeled_cells.append(cell_info)
 
+        # Save user labels to disk for easy retrieval in Results page
+        try:
+            import pandas as pd
+
+            if "pipeline_path" in st.session_state:
+                labels_df = pd.DataFrame(labeled_cells)
+                labels_file = os.path.join(
+                    st.session_state.pipeline_path, "user_labels.csv"
+                )
+                labels_df.to_csv(labels_file, index=False)
+        except Exception as e:
+            st.warning(f"Could not save user labels to disk: {e}")
+
         propagation_results = backend_label_propagation(dataset, labeled_cells)
         logging.info(
             f"Label propagation completed with {len(propagation_results['labeled_cells'])} labeled cells."
