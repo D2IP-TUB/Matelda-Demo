@@ -21,7 +21,6 @@ apply_base_styles()
 render_sidebar()
 
 st.title("Results")
-# st.write("### Model Performance Metrics")
 
 
 def load_config(path):
@@ -124,8 +123,6 @@ if not current_dataset and "pipeline_path" in st.session_state:
 dataset_configured = current_dataset is not None
 
 dirty = is_pipeline_dirty()
-# if dirty:
-# st.info("Pipeline changed earlier in this session. Showing last saved results; rerun steps to refresh metrics.")
 
 if dataset_configured:
     with col1:

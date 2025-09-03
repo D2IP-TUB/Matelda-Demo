@@ -513,11 +513,6 @@ for dom, folds in st.session_state.cell_folds.items():
                         fold_visibility = cfg.get("fold_visibility", {})
                         saved_state = fold_visibility.get(fname, False)
                         st.session_state[show_fold_key] = saved_state
-                        # Debug: Show if we loaded state
-                        if saved_state:
-                            st.sidebar.success(
-                                f"Loaded fold state for {fname}: {saved_state}"
-                            )
                     except Exception as e:
                         st.session_state[show_fold_key] = False
                         st.sidebar.error(f"Failed to load fold state: {str(e)}")

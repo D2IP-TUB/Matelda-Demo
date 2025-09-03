@@ -15,10 +15,6 @@ from components import (
 st.set_page_config(page_title="Error Detection", layout="wide")
 st.title("Error Detection")
 
-# If pipeline has been modified, inform that shown errors may be from a previous run
-# if is_pipeline_dirty():
-#     st.info("Pipeline changed earlier in this session. Showing the last saved detected errors until you re-run labeling/propagation.")
-
 # Apply base styles
 apply_base_styles()
 
