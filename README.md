@@ -18,20 +18,6 @@ We present Matelda, an interactive system for multi-table error detection that c
 
 Link to the Video: [Matelda Demo](videos/Matelda-Demo.mp4)
 
-## 🎯 Supported Datasets
-
-### 📊 Demo Datasets
-- **Chess.com** - Chess game data analysis
-- **Lichess** - Online chess platform data
-- **Pokemon** - Pokemon statistics and attributes
-
-### 🏢 Quintet Collection
-- **Beers** - Beer ratings and characteristics
-- **Flights** - Flight data and schedules
-- **Hospital** - Medical data analysis
-- **Movies** - Movie ratings and metadata
-- **Rayyan** - Research paper screening data
-
 ## 📦 Installation
 
 ```bash
