@@ -242,16 +242,25 @@ else:
         # This will hold the most recently uploaded folder-name
         st.session_state["uploaded_dataset_name"] = None
 
-    # 3) File uploader (always visible)
+    # 3) File uploader (disabled for university server)
     st.markdown("##### Add Dataset (optional)")
+    st.info(
+        "📚 **Note**: File upload is disabled on the university server. Please contact the administrator to add new datasets."
+    )
     uploaded_file = st.file_uploader(
         "Upload a zip file containing the dataset:",
         type=["zip"],
         key="dataset_zip_uploader",
+        disabled=True,
+        help="File upload is disabled on university servers for security reasons.",
     )
 
-    # 4) If the user has picked a new ZIP, extract it once per unique file upload
+    # 4) Upload functionality is disabled - show message if user somehow bypasses the disabled state
     if uploaded_file is not None:
+        st.error(
+            "🚫 **Upload Disabled**: File uploads are not allowed on this university server. Please contact the system administrator to add new datasets."
+        )
+        st.stop()
         file_id = getattr(uploaded_file, "id", None)
         if file_id is None:
             file_id = getattr(uploaded_file, "file_id", None)
@@ -317,9 +326,9 @@ else:
             # notifications can be cleared on subsequent uploads
             st.session_state["uploaded_dataset_name"] = dataset_name
 
-    # 5) Show a persistent notification for the most recently uploaded dataset
-    if st.session_state.get("uploaded_dataset_name"):
-        st.success(f"Added new dataset: {st.session_state['uploaded_dataset_name']}")
+    # Upload success notification disabled (upload functionality disabled)
+    # if st.session_state.get("uploaded_dataset_name"):
+    #     st.success(f"Added new dataset: {st.session_state['uploaded_dataset_name']}")
 
     # 6) Now list all folders under "../datasets" (including ones you uploaded previously,
     #    plus any that already existed on disk before you ran this app).
