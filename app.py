@@ -17,7 +17,7 @@ st.title("Matelda")
 st.write("Welcome to Matelda!")
 st.markdown("""
 The underlying paper is available on [OpenProceedings](https://www.openproceedings.org/2025/conf/edbt/paper-98.pdf).
-The Repository of the Demo is available on [GitHub](https://github.com/julianpaulussen/Matelda-Demo).
+The Repository of the Demo is available on [GitHub](https://github.com/D2IP-TUB/Matelda-Demo).
 Click the button below to start the demo.
 """)
 
