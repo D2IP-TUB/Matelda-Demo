@@ -21,8 +21,8 @@ Link to the Video: [Matelda Demo](videos/Matelda-Demo.mp4)
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/lejuliennn/data-tinder.git
-cd data-tinder
+git clone https://github.com/D2IP-TUB/Matelda-Demo.git
+cd Matelda-Demo
 ```
 
 ## 🚀 Quick Start
@@ -35,8 +35,8 @@ Ensure you have Python 3.10+ installed on your system.
 
 1. **Create a virtual environment** (recommended)
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On MacOS/Linux
+   python3 -m venv venv
+   source venv/bin/activate  # On Linux/macOS
    venv\Scripts\activate     # On Windows
    ```
 
@@ -45,12 +45,17 @@ Ensure you have Python 3.10+ installed on your system.
    pip install -r requirements.txt
    ```
 
-3. **Run the application**
+3. **Download NLTK data** (required for the backend)
+   ```bash
+   python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('punkt_tab')"
+   ```
+
+4. **Run the application**
    ```bash
    streamlit run app.py
    ```
 
-4. **Open your browser** to `http://localhost:8501`
+5. **Open your browser** to `http://localhost:8501`
 
 ## 🛠️ Architecture
 
@@ -67,11 +72,14 @@ Ensure you have Python 3.10+ installed on your system.
 
 ```bash
 # Clone the repository
-git clone https://github.com/lejuliennn/data-tinder.git
-cd data-tinder
+git clone https://github.com/D2IP-TUB/Matelda-Demo.git
+cd Matelda-Demo
 
 # Install development dependencies
 pip install -r requirements.txt
+
+# Download NLTK data (if not already done)
+python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt'); nltk.download('punkt_tab')"
 
 # Run in development mode
 streamlit run app.py --server.runOnSave true
@@ -93,7 +101,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 📞 Support
 
-- 🐛 **Issues**: [GitHub Issues](https://github.com/lejuliennn/data-tinder/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/lejuliennn/data-tinder/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/D2IP-TUB/Matelda-Demo/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/D2IP-TUB/Matelda-Demo/discussions)
 
 Thank you for choosing *Matelda for efficient data lake cleaning. We believe that this approach will significantly improve the quality of your data while saving you time and resources. Happy data cleaning!
