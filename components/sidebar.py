@@ -6,6 +6,10 @@ import os
 from .session_persistence import init_session_persistence, persist_session
 from .theme_switcher import render_theme_switcher
 
+# Paths relative to project root (parent of components/)
+def _project_root():
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 def render_sidebar():
     """Render the common sidebar navigation with minimal flicker"""
     # Restore any previous session snapshot for this browser tab
@@ -13,18 +17,19 @@ def render_sidebar():
     # Get current page path
     try:
         current_script = os.path.basename(st._get_script_run_ctx().info.script_path)
-    except:
+    except Exception:
         current_script = "app.py"
-    
+
     # Store current page in session state for persistence
     if "current_page" not in st.session_state:
         st.session_state.current_page = current_script
     else:
         st.session_state.current_page = current_script
-    
+
     # Define pages
     pages = [
         ("app.py", "Matelda"),
+        ("pages/InputOutput.py", "Intro"),
         ("pages/Configurations.py", "Configurations"),
         ("pages/DomainBasedFolding.py", "Domain Based Folding"),
         ("pages/QualityBasedFolding.py", "Quality Based Folding"),
@@ -33,64 +38,56 @@ def render_sidebar():
         ("pages/ErrorDetection.py", "Error Detection"),
         ("pages/Results.py", "Results")
     ]
-    
+
+    root = _project_root()
+    logo_path = os.path.join(root, "bifold_logo.png")
+    qr_path = os.path.join(root, "qrcode-2.png")
+
     with st.sidebar:
-        # Preemptive CSS injection to hide default elements immediately
+        # CSS: hide default nav only (no flex reflow)
         st.markdown("""
             <style>
-            /* Immediate hiding of default Streamlit sidebar */
             [data-testid="stSidebarNav"] {
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
             }
-            
-            /* Hide any default navigation during load */
             .css-1d391kg, .css-1vencpc, .css-1lcbmhc, .css-17eq0hr {
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
             }
-            
-            /* Fast rendering for our custom navigation */
             div[data-testid="stSidebarNav"], .sidebar-nav {
                 transition: none !important;
                 animation: none !important;
             }
-            
-            /* Immediate visibility for our sidebar */
             .sidebar-nav {
                 display: block !important;
                 visibility: visible !important;
                 opacity: 1 !important;
             }
-            
-            /* Prevent loading artifacts */
-            .element-container {
-                transition: none !important;
-            }
-            
-            /* Hide sidebar content loading states */
-            .stSpinner {
-                display: none !important;
-            }
+            .element-container { transition: none !important; }
+            .stSpinner { display: none !important; }
             </style>
         """, unsafe_allow_html=True)
-        
-        # Immediately render navigation with custom container
+
+        # Top: BIFOLD logo (as requested)
+        if os.path.isfile(logo_path):
+            st.image(logo_path, use_container_width=True)
         st.markdown('<div class="sidebar-nav">', unsafe_allow_html=True)
-        
-        # Render all navigation items at once
+
+        # Navigation links (unchanged order)
         for path, label in pages:
-            # Don't add arrow to the main Matelda page
-            if path != "app.py" and (path.endswith(current_script) or (path == current_script)):
+            if path != "app.py" and (path.endswith(current_script) or path == current_script):
                 label = f"**→ {label}**"
             st.page_link(path, label=label)
-            
+
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Add theme switcher
+
+        # Bottom: QR then theme switcher (theme switcher stays at very bottom like before)
+        if os.path.isfile(qr_path):
+            st.markdown("**Try on your phone**")
+            st.image(qr_path, use_container_width=True)
         render_theme_switcher()
 
-    # Persist a snapshot of important session keys for reload survival
     persist_session()

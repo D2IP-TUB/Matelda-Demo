@@ -329,9 +329,9 @@ if current_dataset:
                     with st.expander("📊 View Complete Raha Baseline Results"):
                         st.dataframe(raha_df, use_container_width=True)
 
-                    st.info(
-                        f"💡 **Budget Comparison**: Raha baseline requires {2 * table_count} labels vs. your current budget of {current_labeling_budget}"
-                    )
+                    # st.info(
+                    #     f"💡 **Budget Comparison**: Raha baseline requires at least {2 * table_count} labels vs. your current budget of {current_labeling_budget}"
+                    # )
                 else:
                     st.warning("⚠️ Could not find matching Raha baseline results")
             else:
@@ -556,8 +556,8 @@ if dataset_configured:
     share_text = (
         f"🎯 Just achieved some great results with Matelda! "
         f"📊 Recall: {recall_score:.2f} | F1: {f1_score:.2f} | Precision: {precision_score:.2f} "
-        f"� Budget: {current_labeling_budget} | "
-        f"�📈 Dataset: {current_dataset} | Pipeline: {current_pipeline_name} "
+        f"💰 Budget: {current_labeling_budget} | "
+        f"📈 Dataset: {current_dataset} | Pipeline: {current_pipeline_name} "
         f"#ErrorDetection #DataCleaning #D2IP #TUB #VLDB"
     )
 

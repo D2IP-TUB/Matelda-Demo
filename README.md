@@ -55,7 +55,25 @@ Ensure you have Python 3.10+ installed on your system.
    streamlit run app.py
    ```
 
-5. **Open your browser** to `http://localhost:8501`
+5. **Open your browser** to `http://localhost:8501` (or `https://...` if you run with HTTPS; see below).
+
+### Running with HTTPS
+
+You can serve the app over HTTPS in two ways:
+
+**Option A: Reverse proxy (recommended for production)**  
+Run Streamlit as usual on HTTP and put a reverse proxy (e.g. nginx, Caddy, Traefik) in front that terminates TLS. Point the proxy at `http://127.0.0.1:8501` and set `X-Forwarded-Proto: https` (and optionally `X-Forwarded-For`) so Streamlit sees the correct scheme.
+
+**Option B: Direct SSL**  
+Provide PEM certificate and key when starting Streamlit:
+
+```bash
+streamlit run app.py \
+  --server.sslCertFile=/path/to/fullchain.pem \
+  --server.sslKeyFile=/path/to/privkey.pem
+```
+
+Or in `.streamlit/config.toml` under `[server]` set `sslCertFile` and `sslKeyFile` to the paths of your certificate and private key, then run `streamlit run app.py`. The app will listen on HTTPS (e.g. `https://localhost:8501`).
 
 ## 🛠️ Architecture
 
