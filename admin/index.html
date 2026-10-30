@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Matelda Live</title>
+<title>Matelda</title>
 <style>
   /* Demo palette (.streamlit/config.toml): navy #002f67, amber #f4b11c, grey #e6e6e6 */
   :root {
@@ -23,7 +23,8 @@
   header { display: flex; align-items: center; justify-content: space-between; gap: 24px;
            padding: 24px 40px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
-  h1 span { color: var(--accent); }
+  .brand { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .logo { height: 44px; width: auto; background: #fff; border-radius: 10px; padding: 8px 14px; }
   .join { color: var(--muted); font-size: 18px; }
   .join b { color: var(--text); font-size: 22px; }
   .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
@@ -65,6 +66,7 @@
   @media (max-width: 600px) {
     header { padding: 16px; gap: 12px; }
     h1 { font-size: 22px; }
+    .logo { height: 32px; padding: 6px 10px; }
     .join, .join b { font-size: 16px; }
     .totals { padding: 12px 16px 0; gap: 8px; }
     .tile { flex: 1 1 80px; min-width: 0; padding: 6px 10px; }
@@ -80,7 +82,7 @@
 </head>
 <body>
 <header>
-  <h1>Matelda <span>Live</span></h1>
+  <div class="brand"><img class="logo" src="bifold_logo.png" alt="BIFOLD"><h1>Matelda</h1></div>
   <div class="join" id="join"></div>
   <div class="status"><button class="theme-btn" id="theme" type="button"></button>
     <span class="dot" id="dot"></span><span id="state">connecting…</span></div>
