@@ -14,6 +14,13 @@ from components import (
     render_inline_restart_button,
     render_sidebar,
 )
+from components import room_store
+from components.room_labeling import (
+    cell_key,
+    current_room_player,
+    label_is_correct,
+    merge_with_pool,
+)
 from components.utils import mark_pipeline_dirty
 from streamlit_swipecards import streamlit_swipecards
 
@@ -57,6 +64,23 @@ if "dataset_select" not in st.session_state:
     st.stop()
 
 dataset = st.session_state.dataset_select
+
+# Multiplayer: resolve room membership (room is None when playing solo)
+try:
+    room, player = current_room_player()
+except Exception as e:
+    st.error(f"Could not reach the room server ({e}). Is PocketBase running?")
+    st.stop()
+if room and room["phase"] == "lobby":
+    st.warning("Your room has not started yet.")
+    st.page_link("pages/Lobby.py", label="Back to the lobby")
+    st.stop()
+if room:
+    st.info(
+        f"👥 Room **{room['name']}** — you are **{player['name']}**. "
+        "You label your own suggestions. Everyone's labels are shared when you "
+        "continue; cells where players disagree 50/50 are left out."
+    )
 
 # Session-state keys
 SAMPLE_KEY = "labeling.sampled_cells"
@@ -123,6 +147,37 @@ def make_card(cell: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # ...existing code...
+
+
+def queue_swipe_for_room(card: Dict[str, Any], said_correct: bool) -> None:
+    """Remember a verdict locally; it reaches the room (and the leaderboard) on Next.
+
+    Re-swiping the same card overwrites the queued verdict."""
+    now = time.time()
+    latency_ms = int((now - st.session_state.get("room_last_swipe_ts", now)) * 1000)
+    st.session_state["room_last_swipe_ts"] = now
+    pending = st.session_state.setdefault("room_pending_labels", {})
+    pending[cell_key(card["table"], card["row"], card["col"])] = (card, said_correct, latency_ms)
+
+
+def flush_swipes_to_room() -> None:
+    """Write all queued verdicts to the room's shared label pool in one batch."""
+    pending = st.session_state.get("room_pending_labels", {})
+    for key, (card, said_correct, latency_ms) in list(pending.items()):
+        try:
+            room_store.save_label(
+                room["name"],
+                player["id"],
+                key,
+                said_correct,
+                label_is_correct(
+                    dataset, card["table"], int(card["row"]), card["col"], said_correct
+                ),
+                latency_ms,
+            )
+            del pending[key]
+        except Exception as e:
+            st.warning(f"Could not save your label to the room: {e}")
 
 
 def _compute_sampled_cells(
@@ -360,14 +415,16 @@ if SAMPLE_KEY in st.session_state:
                     key = str(card_id)
                     new_val = action == "right"
                     prev_val = st.session_state.labeling_results.get(key)
-                if prev_val is None or prev_val != new_val:
-                    st.session_state.labeling_results[key] = new_val
-                    made_changes = True
+                    if prev_val is None or prev_val != new_val:
+                        st.session_state.labeling_results[key] = new_val
+                        if room:
+                            queue_swipe_for_room(cards[idx], new_val)
+                        made_changes = True
             if made_changes:
                 mark_pipeline_dirty()
 
-        st.markdown("---")
-        nav_cols = st.columns([1, 1, 1], gap="small")
+    st.markdown("---")
+    nav_cols = st.columns([1, 1, 1], gap="small")
 
     # Restart: confirmation dialog to go to app.py
     with nav_cols[0]:
@@ -392,6 +449,14 @@ if SAMPLE_KEY in st.session_state:
                 "cell_fold": cell.get("cell_fold", ""),
             }
             labeled_cells.append(cell_info)
+
+        if room:
+            flush_swipes_to_room()
+            # One verdict per cell from all players; 50/50 cells are left out
+            labeled_cells, disputed = merge_with_pool(
+                room, player, st.session_state.get("cell_folds", {}), labeled_cells
+            )
+            st.session_state["room_disputed_cells"] = disputed
 
         # Save user labels to disk for easy retrieval in Results page
         try:

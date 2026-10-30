@@ -17,11 +17,22 @@ def get_datasets_path(selected_dataset: str) -> str:
     return os.path.join(root_dir, "datasets", selected_dataset)
 
 
+@st.cache_data(show_spinner=False, max_entries=64)
+def _read_csv_cached(path: str, mtime: float, kwargs_items: tuple) -> pd.DataFrame:
+    # mtime is part of the cache key so edited files are re-read
+    return pd.read_csv(path, **dict(kwargs_items))
+
+
+def read_csv_cached(path: str, **kwargs: Any) -> pd.DataFrame:
+    """pd.read_csv cached across reruns, invalidated when the file changes."""
+    return _read_csv_cached(path, os.path.getmtime(path), tuple(sorted(kwargs.items())))
+
+
 def load_clean_table(table_name: str, datasets_path: str) -> pd.DataFrame:
     """Load clean.csv file for a given table"""
     file_path = os.path.join(datasets_path, table_name, "clean.csv")
     try:
-        return pd.read_csv(file_path, dtype=str)
+        return read_csv_cached(file_path, dtype=str)
     except Exception as e:
         return pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
 
@@ -30,7 +41,7 @@ def load_dirty_table(table_name: str, datasets_path: str) -> pd.DataFrame:
     """Load dirty.csv file for a given table"""
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
     try:
-        return pd.read_csv(file_path, dtype=str)
+        return read_csv_cached(file_path, dtype=str)
     except Exception as e:
         return pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
 

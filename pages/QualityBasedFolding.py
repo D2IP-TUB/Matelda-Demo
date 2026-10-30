@@ -162,14 +162,13 @@ primary_color = current_theme.get("primaryColor", "#f4b11c").strip()
 
 def highlight_cell(row_idx, col_name):
     def apply(df):
-        return df.style.apply(
-            lambda _: [
-                f"background-color: {primary_color}" if i == row_idx else ""
-                for i in range(len(df))
-            ],
-            axis=0,
-            subset=pd.IndexSlice[:, [col_name]],
-        )
+        # Style a single cell only; avoids a per-column Python callback
+        styles = pd.DataFrame("", index=df.index, columns=df.columns)
+        if col_name in styles.columns and 0 <= row_idx < len(styles):
+            styles.iloc[row_idx, styles.columns.get_loc(col_name)] = (
+                f"background-color: {primary_color}"
+            )
+        return df.style.apply(lambda _: styles, axis=None)
 
     return apply
 

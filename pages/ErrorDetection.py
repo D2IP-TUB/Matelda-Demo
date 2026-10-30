@@ -1,9 +1,11 @@
 import json
 import os
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from backend import backend_pull_errors
+from components.utils import read_csv_cached
 from components import (
     apply_base_styles,
     get_current_theme,
@@ -76,29 +78,28 @@ primary_rgb = hex_to_rgb(primary_color)
 def display_table_with_errors(table_name, error_cells):
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
     try:
-        df = pd.read_csv(file_path, dtype=str)
+        df = read_csv_cached(file_path, dtype=str)
     except Exception as e:
         st.error(f"Could not load {file_path}: {e}")
         return
 
-    # Define a style function to highlight the error cells with confidence
-    def highlight_errors(data):
-        df_styles = pd.DataFrame("", index=data.index, columns=data.columns)
-        for error in error_cells:
-            try:
-                confidence = error["confidence"]
-                # Convert confidence to opacity (higher confidence = more opaque)
-                opacity = confidence
-                r, g, b = primary_rgb
-                df_styles.iloc[error["row"], data.columns.get_loc(error["col"])] = (
-                    f"background-color: rgba({r}, {g}, {b}, {opacity}); color: white"
-                )
-            except Exception:
-                continue
-        return df_styles
+    # Build the style frame once, writing only the error cells (no per-cell Styler work)
+    r, g, b = primary_rgb
+    cols = list(df.columns)
+    col_pos = {c: i for i, c in enumerate(cols)}
+    styles = np.full(df.shape, "", dtype=object)
+    for error in error_cells:
+        ci = col_pos.get(error["col"])
+        ri = error["row"]
+        if ci is None or not (0 <= ri < len(df)):
+            continue
+        styles[ri, ci] = (
+            f"background-color: rgba({r}, {g}, {b}, {error['confidence']}); color: white"
+        )
+    df_styles = pd.DataFrame(styles, index=df.index, columns=df.columns)
 
     # Apply styling and display
-    styled_df = df.style.apply(highlight_errors, axis=None)
+    styled_df = df.style.apply(lambda _: df_styles, axis=None)
     return styled_df
 
 

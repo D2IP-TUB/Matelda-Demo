@@ -1,7 +1,9 @@
 import os
 
+import numpy as np
 import pandas as pd
 import streamlit as st
+from components.utils import read_csv_cached
 from components import (
     apply_base_styles,
     get_current_theme,
@@ -18,27 +20,13 @@ render_sidebar()
 
 st.title("Intro")
 
-# ── Dataset selector (independent of pipeline) ──────────────────────────
+# ── Dataset locked by the room (chosen in the Lobby) ────────────────────
 datasets_root = os.path.join(os.path.dirname(__file__), "../datasets")
-available_datasets = sorted(
-    d
-    for d in os.listdir(datasets_root)
-    if os.path.isdir(os.path.join(datasets_root, d))
-)
-
-# Pre-select the dataset already chosen in Configuration (if any)
-default_idx = 0
-if "dataset_select" in st.session_state:
-    ds = st.session_state.dataset_select
-    if ds in available_datasets:
-        default_idx = available_datasets.index(ds)
-
-selected_dataset = st.selectbox(
-    "Select dataset to preview",
-    available_datasets,
-    index=default_idx,
-    key="io_preview_dataset",
-)
+selected_dataset = st.session_state.get("dataset_select")
+if not selected_dataset or not os.path.isdir(os.path.join(datasets_root, selected_dataset)):
+    st.warning("No dataset yet. Create or join a room and start it in the Lobby first.")
+    st.page_link("pages/Lobby.py", label="Go to the Lobby →")
+    st.stop()
 
 datasets_path = os.path.join(datasets_root, selected_dataset)
 
@@ -117,17 +105,25 @@ with tab_input:
     st.subheader("Input Tables (Dirty)")
     st.caption("Preview of all dirty input tables in the selected dataset.")
 
-    for table_name in tables:
-        with st.expander(f"📄 {table_name}", expanded=False):
-            dirty_path = os.path.join(datasets_path, table_name, "dirty.csv")
-            try:
-                df_dirty = pd.read_csv(dirty_path, dtype=str, keep_default_na=False)
-                st.markdown(
-                    f"**Rows:** {len(df_dirty)} · **Columns:** {len(df_dirty.columns)}"
-                )
-                st.dataframe(df_dirty, use_container_width=True, height=300)
-            except Exception as e:
-                st.error(f"Could not load {dirty_path}: {e}")
+    # Expanders run their body even when collapsed, so only load the table the
+    # user explicitly asks to preview.
+    preview_table = st.selectbox(
+        "Preview table", ["—"] + list(tables), key="io_preview_table"
+    )
+    if preview_table != "—":
+        dirty_path = os.path.join(datasets_path, preview_table, "dirty.csv")
+        try:
+            df_dirty = read_csv_cached(dirty_path, dtype=str, keep_default_na=False)
+            st.markdown(
+                f"**Rows:** {len(df_dirty)} · **Columns:** {len(df_dirty.columns)}"
+            )
+            st.dataframe(df_dirty, use_container_width=True, height=300)
+        except Exception as e:
+            st.error(f"Could not load {dirty_path}: {e}")
+    else:
+        st.caption(
+            "Tables: " + ", ".join(f"`{t}`" for t in tables) if tables else "No tables."
+        )
 
 # ── TAB 2 — Side-by-side Dirty vs Clean ────────────────────────────────
 with tab_compare:
@@ -145,8 +141,8 @@ with tab_compare:
     if not os.path.isfile(clean_path):
         st.warning(f"No clean.csv found for **{selected_table}**.")
     else:
-        df_dirty = pd.read_csv(dirty_path, dtype=str, keep_default_na=False)
-        df_clean = pd.read_csv(clean_path, dtype=str, keep_default_na=False)
+        df_dirty = read_csv_cached(dirty_path, dtype=str, keep_default_na=False)
+        df_clean = read_csv_cached(clean_path, dtype=str, keep_default_na=False)
 
         # Compute cell-level differences
         diff_mask = df_dirty.ne(df_clean)
@@ -161,28 +157,19 @@ with tab_compare:
 
         col_left, col_right = st.columns(2)
 
-        def highlight_dirty_diffs(row):
-            """Red-tinted background for dirty cells that differ from clean."""
-            styles = [""] * len(row)
-            for j, col in enumerate(row.index):
-                if row.name < len(df_clean) and diff_mask.at[row.name, col]:
-                    styles[j] = "background-color: rgba(231, 76, 60, 0.30);"
-            return styles
+        def _diff_styles(color):
+            css = np.where(diff_mask.to_numpy(), f"background-color: {color};", "")
+            return pd.DataFrame(css, index=diff_mask.index, columns=diff_mask.columns)
 
-        def highlight_clean_diffs(row):
-            """Green-tinted background for the corrected cells in the clean table."""
-            styles = [""] * len(row)
-            for j, col in enumerate(row.index):
-                if row.name < len(df_dirty) and diff_mask.at[row.name, col]:
-                    styles[j] = "background-color: rgba(46, 204, 113, 0.30);"
-            return styles
+        dirty_styles = _diff_styles("rgba(231, 76, 60, 0.30)")
+        clean_styles = _diff_styles("rgba(46, 204, 113, 0.30)")
 
         with col_left:
             st.markdown(
                 '<div class="dirty-panel"><div class="dirty-panel-header">🔴 Dirty Table</div></div>',
                 unsafe_allow_html=True,
             )
-            styled_dirty = df_dirty.style.apply(highlight_dirty_diffs, axis=1)
+            styled_dirty = df_dirty.style.apply(lambda _: dirty_styles, axis=None)
             st.dataframe(styled_dirty, use_container_width=True, height=400)
 
         with col_right:
@@ -190,7 +177,7 @@ with tab_compare:
                 '<div class="clean-panel"><div class="clean-panel-header">🟢 Clean Table</div></div>',
                 unsafe_allow_html=True,
             )
-            styled_clean = df_clean.style.apply(highlight_clean_diffs, axis=1)
+            styled_clean = df_clean.style.apply(lambda _: clean_styles, axis=None)
             st.dataframe(styled_clean, use_container_width=True, height=400)
 
 # ── Next button → Configurations ────────────────────────────────────────

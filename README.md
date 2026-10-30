@@ -123,3 +123,13 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/D2IP-TUB/Matelda-Demo/discussions)
 
 Thank you for choosing *Matelda for efficient data lake cleaning. We believe that this approach will significantly improve the quality of your data while saving you time and resources. Happy data cleaning!
+
+## Multiplayer rooms
+
+Several people can label together: each creates or joins a room (link, room name or QR code), votes for a dataset in the lobby, and labels their own cells. Labels are pooled per room; each player then continues with their own configuration.
+
+1. Download PocketBase (v0.23+) into `pocketbase/` and verify its checksum from the official release page, then create an admin: `pocketbase/pocketbase superuser upsert <email> <password>`.
+2. Put `MATELDA_BASE_URL=http://<LAN_IP>:8501` in a `.env` file, then run `scripts/run_multiplayer.sh`. It starts PocketBase, creates the collections and starts the app.
+3. Players open `http://<LAN_IP>:8501/Lobby`. The live leaderboard for the projector is `http://<LAN_IP>:8090/`.
+
+The PocketBase collections have public API rules (demo setup); only run this on a trusted network.

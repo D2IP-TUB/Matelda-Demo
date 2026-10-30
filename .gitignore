@@ -80,3 +80,9 @@ datasets/Demo*/
 datasets/Quintet*/
 
 .streamlit/*
+# PocketBase binary and data
+pocketbase/
+
+# Local multiplayer settings
+.env
+!.env.example

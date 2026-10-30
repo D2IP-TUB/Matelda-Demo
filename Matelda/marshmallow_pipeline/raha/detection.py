@@ -21,6 +21,7 @@ import random
 import re
 import sys
 import tempfile
+import uuid
 import time
 
 import numpy
@@ -79,8 +80,9 @@ class Detection:
         outputted_cells = {}
         if algorithm == "OD":
             dataset_path = os.path.join(
-                tempfile.gettempdir(), d.name + "-" + strategy_name_hash + ".csv"
-            )
+                tempfile.gettempdir(),
+                d.name + "-" + strategy_name_hash + "-" + uuid.uuid4().hex + ".csv",
+            )  # unique per call: concurrent runs must not share/delete each other's file
             d.write_csv_dataset(dataset_path, d.dataframe)
             params = (
                 ["-F", ",", "--statistical", "0.5"]

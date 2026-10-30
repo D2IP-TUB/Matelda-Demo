@@ -6,7 +6,7 @@ back to the main `app.py` page.
 """
 from typing import Optional
 import streamlit as st
-from .session_persistence import clear_persisted_session
+from .session_persistence import clear_persisted_session, clear_session_keep_room
 
 
 def render_restart_expander(page_id: Optional[str] = None) -> None:
@@ -34,8 +34,7 @@ def render_restart_expander(page_id: Optional[str] = None) -> None:
                     suppress_balloons = suffix == "results"
                     # Clear all session state to start from scratch
                     clear_persisted_session()
-                    for key in list(st.session_state.keys()):
-                        del st.session_state[key]
+                    clear_session_keep_room()
                     if suppress_balloons:
                         st.session_state["suppress_balloons_after_restart"] = True
                     st.switch_page("app.py")
@@ -73,8 +72,7 @@ def render_inline_restart_button(page_id: Optional[str] = None, use_container_wi
                     suppress_balloons = suffix == "results"
                     # Clear all session state to start from scratch
                     clear_persisted_session()
-                    for key in list(st.session_state.keys()):
-                        del st.session_state[key]
+                    clear_session_keep_room()
                     if suppress_balloons:
                         st.session_state["suppress_balloons_after_restart"] = True
                     st.switch_page("app.py")

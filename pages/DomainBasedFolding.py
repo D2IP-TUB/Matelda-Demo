@@ -12,7 +12,7 @@ from components import (
     render_sidebar,
     update_domain_folds_in_config,
 )
-from components.utils import mark_pipeline_dirty
+from components.utils import mark_pipeline_dirty, read_csv_cached
 
 # Set the page title and layout
 st.set_page_config(page_title="Domain Based Folding", layout="wide")
@@ -79,7 +79,7 @@ if "selected_split_tables" not in st.session_state:
 def load_table(table_name):
     file_path = os.path.join(datasets_path, table_name, "dirty.csv")
     try:
-        df = pd.read_csv(file_path, dtype=str)
+        df = read_csv_cached(file_path, dtype=str)
     except Exception as e:
         df = pd.DataFrame({"Error": [f"Could not load {file_path}: {e}"]})
     return df

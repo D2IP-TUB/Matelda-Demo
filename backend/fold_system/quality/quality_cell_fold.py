@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Dict, List
 
 import numpy as np
@@ -12,6 +13,9 @@ from sklearn.cluster import MiniBatchKMeans
 
 # Global cache for RAHA features (avoids regenerating for same tables)
 _raha_features_cache = {}
+# RAHA writes strategy-profiling results into the shared dataset folders, so
+# concurrent runs (several players) must not generate features at the same time.
+_features_lock = threading.Lock()
 
 
 class QualityCellFold(BaseCellFold):
@@ -29,6 +33,10 @@ class QualityCellFold(BaseCellFold):
 
     def _generate_features_for_all_tables(self, table_ids: set):
         """Generate RAHA features for all unique tables once (with caching)"""
+        with _features_lock:
+            return self._generate_features_locked(table_ids)
+
+    def _generate_features_locked(self, table_ids: set):
         all_features = {}
 
         for table_id in table_ids:

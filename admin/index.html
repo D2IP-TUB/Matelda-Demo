@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matelda Live</title>
+<style>
+  /* Demo palette (.streamlit/config.toml): navy #002f67, amber #f4b11c, grey #e6e6e6 */
+  :root {
+    --bg: #00162f; --panel: #002350; --line: #0d4286; --text: #e6e6e6; --muted: #8fa9cc;
+    --accent: #f4b11c; --accent2: #f4b11c; --good: #3ddc97; --name-mix: 0%;
+  }
+  :root[data-theme="light"] {
+    --bg: #e6e6e6; --panel: #ffffff; --line: #d3d8e0; --text: #002f67; --muted: #5d7799;
+    --accent: #f4b11c; --accent2: #002f67; --good: #1f9d63; --name-mix: 35%;
+  }
+  .theme-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line);
+               border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+  .theme-btn:hover { border-color: var(--accent); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 24px;
+           padding: 24px 40px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .join { color: var(--muted); font-size: 18px; }
+  .join b { color: var(--text); font-size: 22px; }
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #e5484d; }
+  .dot.live { background: var(--good); box-shadow: 0 0 0 0 rgba(61,220,151,.6); animation: pulse 2s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(61,220,151,0); } 100% { box-shadow: 0 0 0 0 rgba(61,220,151,0); } }
+  .totals { display: flex; gap: 12px; padding: 16px 40px 0; flex-wrap: wrap; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: 8px 16px; min-width: 110px; }
+  .tile .n { font-size: 26px; line-height: 1.15; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tile .l { color: var(--muted); font-size: 12px; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 24px; padding: 24px 40px 40px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; }
+  h2 { margin: 0 0 4px; font-size: 20px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  .board { position: relative; }
+  .row { position: absolute; left: 0; right: 0; display: grid; padding: 3px 0;
+         grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px;
+         transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .rank { font-size: 17px; font-weight: 700; color: var(--muted); text-align: center; }
+  .row:nth-child(1) .rank { color: var(--accent); }
+  .name { color: color-mix(in srgb, var(--team, var(--text)), #000 var(--name-mix)); font-size: 16px; line-height: 1.2; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { color: var(--muted); font-size: 11px; line-height: 1.2; }
+  .bar { height: 4px; border-radius: 2px; background: var(--line); margin-top: 3px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--team, var(--accent2));
+             transition: width .6s cubic-bezier(.2,.8,.2,1); }
+  .score { font-size: 21px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .score small { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
+  section.wide { grid-column: 1 / -1; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-size: 13px; font-weight: 400; }
+  td.num { text-align: right; }
+  th:nth-child(n+4) { text-align: right; }
+  td.f1 { font-weight: 700; }
+  .name, .meta { min-width: 0; }
+  .meta { overflow-wrap: anywhere; }
+  @media (max-width: 600px) {
+    header { padding: 16px; gap: 12px; }
+    h1 { font-size: 22px; }
+    .join, .join b { font-size: 16px; }
+    .totals { padding: 12px 16px 0; gap: 8px; }
+    .tile { flex: 1 1 80px; min-width: 0; padding: 6px 10px; }
+    .tile .n { font-size: 22px; }
+    main { padding: 16px; gap: 16px; }
+    section { padding: 16px; }
+    .row { grid-template-columns: 24px 1fr auto; gap: 8px; }
+    .name { font-size: 15px; }
+    .score { font-size: 18px; }
+  }
+  .empty { color: var(--muted); padding: 24px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Matelda <span>Live</span></h1>
+  <div class="join" id="join"></div>
+  <div class="status"><button class="theme-btn" id="theme" type="button"></button>
+    <span class="dot" id="dot"></span><span id="state">connecting…</span></div>
+</header>
+<div class="totals">
+  <div class="tile"><div class="n" id="t-rooms">0</div><div class="l">rooms</div></div>
+  <div class="tile"><div class="n" id="t-players">0</div><div class="l">players</div></div>
+  <div class="tile"><div class="n" id="t-labels">0</div><div class="l">labels</div></div>
+</div>
+<main>
+  <section>
+    <h2>Top rooms</h2>
+    <div class="sub">Ranked by correct labels (labels × accuracy)</div>
+    <div class="board" id="rooms"></div>
+  </section>
+  <section>
+    <h2>Top players</h2>
+    <div class="sub">Ranked by correct labels (labels × accuracy)</div>
+    <div class="board" id="players"></div>
+  </section>
+  <section class="wide">
+    <h2>Latest results</h2>
+    <div class="sub">Precision, recall and F1 of the most recent pipeline runs</div>
+    <div class="table-wrap"><table id="runs">
+      <thead><tr><th>Time</th><th>Room</th><th>Player</th><th>Budget</th>
+        <th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+</main>
+<script>
+const PB = location.origin;
+
+// Theme: ?theme=light|dark wins, then the saved choice, default dark
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById("theme").textContent = t === "light" ? "🌙 Dark mode" : "☀️ Light mode";
+}
+{
+  let t = new URLSearchParams(location.search).get("theme");
+  try { t = t || localStorage.getItem("theme"); } catch (e) {}
+  applyTheme(t === "light" ? "light" : "dark");
+  document.getElementById("theme").onclick = () => {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    applyTheme(next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+  };
+}
+const MAX_ROWS = 8;
+const TEAM_COLORS = ["#f4b11c", "#4cc9f0", "#3ddc97", "#ff6b6b", "#b388ff", "#ff8fab", "#7bd88f", "#ff9f43", "#5aa9ff", "#e6e65a"];
+// Same hash/palette as room_color() in components/room_store.py
+function teamColor(room) {
+  let h = 0;
+  for (const ch of room) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TEAM_COLORS[h % TEAM_COLORS.length];
+}
+const COLLECTIONS = ["rooms", "players", "labels", "runs"];
+
+// Optional: ?join=http://192.168.1.10:8501/Lobby shows how to join
+const joinUrl = new URLSearchParams(location.search).get("join");
+if (joinUrl) {
+  const el = document.getElementById("join");
+  el.append("Join at ");
+  const b = document.createElement("b");
+  b.textContent = joinUrl;
+  el.append(b);
+}
+
+async function fetchAll(collection, fields) {
+  const out = [];
+  for (let page = 1; ; page++) {
+    const r = await fetch(`${PB}/api/collections/${collection}/records?perPage=500&page=${page}&fields=${fields}`);
+    if (!r.ok) throw new Error(collection + " " + r.status);
+    const d = await r.json();
+    out.push(...d.items);
+    if (page >= d.totalPages) return out;
+  }
+}
+
+function compute(rooms, players, labels) {
+  const byPlayer = new Map(), byRoom = new Map();
+  for (const l of labels) {
+    const p = byPlayer.get(l.player) || { n: 0, ok: 0 };
+    p.n++; if (l.is_correct) p.ok++;
+    byPlayer.set(l.player, p);
+    const r = byRoom.get(l.room) || { n: 0, ok: 0 };
+    r.n++; if (l.is_correct) r.ok++;
+    byRoom.set(l.room, r);
+  }
+  const playersPerRoom = new Map();
+  for (const p of players) playersPerRoom.set(p.room, (playersPerRoom.get(p.room) || 0) + 1);
+
+  const roomRows = rooms.map(r => {
+    const s = byRoom.get(r.name) || { n: 0, ok: 0 };
+    const acc = s.n ? Math.round(100 * s.ok / s.n) : 0;
+    return { key: r.name, title: r.name, score: s.ok, color: teamColor(r.name),
+             meta: `${playersPerRoom.get(r.name) || 0} players${r.dataset ? " · " + r.dataset : ""} · ${s.n} labels · ${acc}% accurate`,
+             unit: "correct" };
+  }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+
+  const playerRows = players.map(p => {
+    const s = byPlayer.get(p.id) || { n: 0, ok: 0 };
+    const acc = s.n ? Math.round(100 * s.ok / s.n) : 0;
+    return { key: p.id, title: p.name, score: s.ok, color: teamColor(p.room),
+             meta: `${p.room} · ${s.n} labels · ${acc}% accurate`, unit: "correct" };
+  }).filter(p => p.meta.indexOf(" 0 labels") < 0).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+
+  return { roomRows, playerRows, totals: { rooms: rooms.length, players: players.length, labels: labels.length } };
+}
+
+// Latest pipeline runs (collection may not exist yet on an older setup)
+async function fetchRuns() {
+  try {
+    const r = await fetch(`${PB}/api/collections/runs/records?perPage=10&sort=-created`);
+    return r.ok ? (await r.json()).items : [];
+  } catch (e) { return []; }
+}
+function renderRuns(runs) {
+  const body = document.querySelector("#runs tbody");
+  body.textContent = "";
+  if (!runs.length) {
+    const td = document.createElement("td");
+    td.colSpan = 7; td.className = "empty"; td.textContent = "No finished runs yet…";
+    const tr = document.createElement("tr");
+    tr.append(td);
+    body.append(tr);
+    return;
+  }
+  for (const r of runs) {
+    const tr = document.createElement("tr");
+    const cells = [
+      [(r.created || "").slice(11, 19), ""],
+      ["● " + r.room, ""], [r.player_name, ""], [r.budget, "num"],
+      [Number(r.precision).toFixed(2), "num"], [Number(r.recall).toFixed(2), "num"],
+      [Number(r.f1).toFixed(2), "num f1"],
+    ];
+    cells.forEach(([text, cls], i) => {
+      const td = document.createElement("td");
+      td.textContent = text; td.className = cls;
+      if (i === 1) td.style.color = teamColor(r.room);
+      tr.append(td);
+    });
+    body.append(tr);
+  }
+}
+
+// --- animated leaderboard: keyed rows move with CSS transforms ---
+const boards = {};
+function render(boardId, rows) {
+  const root = document.getElementById(boardId);
+  const state = boards[boardId] || (boards[boardId] = { els: new Map() });
+  const shown = rows.slice(0, MAX_ROWS);
+  const max = Math.max(1, ...shown.map(r => r.score));
+  if (!shown.length && !root.querySelector(".empty")) {
+    root.innerHTML = '<div class="empty">Waiting for the first labels…</div>';
+  }
+  if (shown.length) root.querySelector(".empty")?.remove();
+
+  const keep = new Set();
+  shown.forEach((r, i) => {
+    keep.add(r.key);
+    let el = state.els.get(r.key);
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "row";
+      el.innerHTML = '<div class="rank"></div><div><div class="name"></div><div class="meta"></div>' +
+                     '<div class="bar"><i></i></div></div><div class="score"><span></span><small></small></div>';
+      el.style.transform = "translateY(2000px)"; // enter from below
+      root.append(el);
+      state.els.set(r.key, el);
+      place(el, r, i, max);
+      requestAnimationFrame(() => requestAnimationFrame(() => layout(boardId)));
+    } else {
+      place(el, r, i, max);
+    }
+  });
+  state.order = shown.map(r => r.key);
+  for (const [key, el] of state.els) {
+    if (!keep.has(key)) { el.remove(); state.els.delete(key); }
+  }
+  layout(boardId);
+}
+// Stack rows by their measured height (text wraps on narrow cards)
+function layout(boardId) {
+  const root = document.getElementById(boardId), state = boards[boardId];
+  if (!state || !state.order) return;
+  let y = 0;
+  for (const key of state.order) {
+    const el = state.els.get(key);
+    if (!el) continue;
+    el.style.transform = `translateY(${y}px)`;
+    y += el.offsetHeight + 2;
+  }
+  root.style.height = Math.max(y, 1) + "px";
+}
+window.addEventListener("resize", () => Object.keys(boards).forEach(layout));
+function place(el, r, i, max) {
+  el.style.setProperty("--team", r.color);
+  el.querySelector(".rank").textContent = i + 1;
+  el.querySelector(".name").textContent = r.title;
+  el.querySelector(".meta").textContent = r.meta;
+  el.querySelector(".bar > i").style.width = (100 * r.score / max) + "%";
+  countTo(el.querySelector(".score span"), r.score, r.suffix || "");
+  el.querySelector(".score small").textContent = r.unit;
+}
+
+// --- count-up numbers ---
+function countTo(el, target, suffix = "") {
+  const from = Number(el.dataset.v ?? 0);
+  el.dataset.v = target;
+  if (from === target) { el.textContent = target + suffix; return; }
+  const t0 = performance.now();
+  (function step(t) {
+    const k = Math.min(1, (t - t0) / 500);
+    el.textContent = Math.round(from + (target - from) * k) + suffix;
+    if (k < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+let refreshing = false, again = false;
+async function refresh() {
+  if (refreshing) { again = true; return; }
+  refreshing = true;
+  try {
+    const [rooms, players, labels, runs] = await Promise.all([
+      fetchAll("rooms", "name,dataset"),
+      fetchAll("players", "id,room,name"),
+      fetchAll("labels", "room,player,is_correct"),
+      fetchRuns(),
+    ]);
+    const d = compute(rooms, players, labels);
+    render("rooms", d.roomRows);
+    render("players", d.playerRows);
+    renderRuns(runs);
+    countTo(document.getElementById("t-rooms"), d.totals.rooms);
+    countTo(document.getElementById("t-players"), d.totals.players);
+    countTo(document.getElementById("t-labels"), d.totals.labels);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    refreshing = false;
+    if (again) { again = false; refresh(); }
+  }
+}
+let timer = null;
+function scheduleRefresh() { clearTimeout(timer); timer = setTimeout(refresh, 150); }
+
+// --- PocketBase realtime (SSE); reconnects automatically ---
+function setLive(on) {
+  document.getElementById("dot").classList.toggle("live", on);
+  document.getElementById("state").textContent = on ? "live" : "reconnecting…";
+}
+function connect() {
+  const es = new EventSource(`${PB}/api/realtime`);
+  es.addEventListener("PB_CONNECT", async e => {
+    const { clientId } = JSON.parse(e.data);
+    await fetch(`${PB}/api/realtime`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId, subscriptions: COLLECTIONS }),
+    });
+    setLive(true);
+    refresh();
+  });
+  COLLECTIONS.forEach(c => es.addEventListener(c, scheduleRefresh));
+  es.onerror = () => setLive(false);
+}
+connect();
+setInterval(refresh, 15000); // safety net if an event is ever missed
+</script>
+</body>
+</html>

@@ -699,7 +699,10 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
             )
             # Reset session to ensure a fresh start when creating a brand-new pipeline
             # Preserve only the newly created pipeline path so downstream pages can load config
-            from components.session_persistence import clear_persisted_session
+            from components.session_persistence import (
+                clear_persisted_session,
+                clear_session_keep_room,
+            )
 
             _new_pipeline_path = pipeline_folder
             # Clear persisted snapshot so fresh pipeline starts clean
@@ -707,11 +710,7 @@ if nav_cols[2].button("Next", key="config_next", use_container_width=True):
                 clear_persisted_session()
             except Exception:
                 pass
-            for key in list(st.session_state.keys()):
-                try:
-                    del st.session_state[key]
-                except Exception:
-                    pass
+            clear_session_keep_room()
             st.session_state["pipeline_path"] = _new_pipeline_path
             mark_pipeline_clean()
             st.switch_page("pages/DomainBasedFolding.py")

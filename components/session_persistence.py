@@ -86,6 +86,9 @@ DEFAULT_INCLUDE_PREFIXES: tuple[str, ...] = (
     "pipeline_",
     "selected_pipeline",
     "dataset_select",
+    # Multiplayer room membership
+    "room_name",
+    "player_token",
     # Budgets and strategies
     "budget_",
     "labeling_budget",
@@ -161,6 +164,20 @@ def clear_persisted_session() -> None:
     finally:
         # Remove sid from URL to force a clean session on next run
         _clear_sid_param()
+
+
+ROOM_KEYS: tuple[str, ...] = ("room_name", "player_token")
+
+
+def clear_session_keep_room() -> None:
+    """Wipe session_state but stay in the multiplayer room (restart, new pipeline)."""
+    keep = {k: st.session_state[k] for k in ROOM_KEYS if k in st.session_state}
+    for key in list(st.session_state.keys()):
+        try:
+            del st.session_state[key]
+        except Exception:
+            pass
+    st.session_state.update(keep)
 
 
 def get_session_hash(length: int = 6) -> str:

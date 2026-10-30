@@ -8,6 +8,7 @@ import pickle
 import random
 import re
 import subprocess
+import uuid
 import sys
 import tempfile
 import time
@@ -32,8 +33,9 @@ def _strategy_runner_process(self, args):
     outputted_cells = {}
     if algorithm == "OD":
         dataset_path = os.path.join(
-            tempfile.gettempdir(), d.name + "-" + strategy_name_hash + ".csv"
-        )
+            tempfile.gettempdir(),
+            d.name + "-" + strategy_name_hash + "-" + uuid.uuid4().hex + ".csv",
+        )  # unique per call so concurrent runs don't delete each other's file
         d.write_csv_dataset(dataset_path, d.dataframe)
         params = (
             ["-F", ",", "--statistical", "0.5"]

@@ -29,6 +29,7 @@ def render_sidebar():
     # Define pages
     pages = [
         ("app.py", "Matelda"),
+        ("pages/Lobby.py", "Lobby"),
         ("pages/InputOutput.py", "Intro"),
         ("pages/Configurations.py", "Configurations"),
         ("pages/DomainBasedFolding.py", "Domain Based Folding"),

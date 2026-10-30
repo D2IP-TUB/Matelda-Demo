@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 from components import (
@@ -10,7 +11,7 @@ from components import (
     render_inline_restart_button,
     render_sidebar,
 )
-from components.utils import is_pipeline_dirty
+from components.utils import is_pipeline_dirty, read_csv_cached
 from streamlit_social_share import streamlit_social_share
 
 # Set page config and apply base styles
@@ -104,6 +105,24 @@ else:
     if st.button("Go back to Configurations"):
         st.switch_page("pages/Configurations.py")
     st.stop()
+
+# Share fresh metrics with the room (once per pipeline run) for the live dashboard
+_fresh = st.session_state.get("error_detection_results")
+if _fresh is not None and st.session_state.get("run_saved_for") != id(_fresh):
+    try:
+        from components.room_labeling import current_room_player
+        from components import room_store
+
+        _room, _player = current_room_player()
+        if _room:
+            room_store.save_run(
+                _room, _player,
+                int(current_labeling_budget) if str(current_labeling_budget).isdigit() else 0,
+                float(precision_score), float(recall_score), float(f1_score),
+            )
+        st.session_state["run_saved_for"] = id(_fresh)
+    except Exception as e:
+        st.caption(f"Could not share metrics with the room ({e}).")
 
 st.write("### Model Performance Metrics")
 col1, col2, col3, col4 = st.columns(4)
@@ -257,7 +276,7 @@ if current_dataset:
             raha_results_path = os.path.join(
                 os.path.dirname(__file__), "..", "raha_baseline_results.csv"
             )
-            raha_df = pd.read_csv(raha_results_path)
+            raha_df = read_csv_cached(raha_results_path)
 
             # Find the closest budget match or interpolate
             current_budget_int = (
@@ -395,10 +414,10 @@ def show_ground_truth_table():
 
                     if "dirty.csv" in subdir_files and "clean.csv" in subdir_files:
                         try:
-                            dirty_df = pd.read_csv(
+                            dirty_df = read_csv_cached(
                                 os.path.join(subdir_path, "dirty.csv")
                             )
-                            clean_df = pd.read_csv(
+                            clean_df = read_csv_cached(
                                 os.path.join(subdir_path, "clean.csv")
                             )
 
@@ -494,13 +513,17 @@ def show_ground_truth_table():
         st.markdown("---")
 
         # Style the dataframe
-        def style_results(row):
-            row_idx = row.name
-            is_correct = df.iloc[row_idx]["Correct"]
-            if is_correct:
-                return ["background-color: #d4edda"] * len(row)
-            else:
-                return ["background-color: #f8d7da"] * len(row)
+        def style_results(data):
+            colors = np.where(
+                df.loc[data.index, "Correct"].to_numpy(dtype=bool),
+                "background-color: #d4edda",
+                "background-color: #f8d7da",
+            )
+            return pd.DataFrame(
+                np.repeat(colors[:, None], data.shape[1], axis=1),
+                index=data.index,
+                columns=data.columns,
+            )
 
         # Display the comparison table
         st.markdown("#### 📊 Detailed Comparison: Your Labels vs Ground Truth")
@@ -519,7 +542,7 @@ def show_ground_truth_table():
         display_df = df[display_cols].copy()
 
         try:
-            styled_df = display_df.style.apply(style_results, axis=1)
+            styled_df = display_df.style.apply(style_results, axis=None)
             st.dataframe(styled_df, use_container_width=True)
         except Exception as e:
             st.error(f"Error styling table: {e}")
@@ -546,6 +569,18 @@ if dataset_configured and "propagation_results" in st.session_state:
         show_ground_truth_table()
 
 st.markdown("---")
+
+# Room labeling summary (only when playing in a multiplayer room)
+try:
+    from components.room_labeling import current_room_player
+    from components.room_ui import render_room_results
+
+    _room, _player = current_room_player()
+    if _room:
+        render_room_results(_room, _player)
+        st.markdown("---")
+except Exception as e:
+    st.caption(f"Room summary unavailable ({e}).")
 
 # Social Share Section (only if dataset is configured)
 if dataset_configured:

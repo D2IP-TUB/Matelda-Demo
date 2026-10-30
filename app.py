@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from components import apply_base_styles, get_current_theme, render_sidebar
-from components.session_persistence import clear_persisted_session
+from components.session_persistence import clear_persisted_session, clear_session_keep_room
 import os
 import base64
 
@@ -222,7 +222,7 @@ if start_clicked:
                     key="continue_current",
                     use_container_width=True,
                 ):
-                    st.switch_page("pages/InputOutput.py")
+                    st.switch_page("pages/Lobby.py")
 
             with col_b:
                 if st.button(
@@ -232,9 +232,8 @@ if start_clicked:
                 ):
                     # Clear all session state to start from scratch (similar to restart functionality)
                     clear_persisted_session()
-                    for key in list(st.session_state.keys()):
-                        del st.session_state[key]
-                    st.switch_page("pages/InputOutput.py")
+                    clear_session_keep_room()
+                    st.switch_page("pages/Lobby.py")
 
             st.markdown("---")
             st.info(
@@ -247,4 +246,4 @@ if start_clicked:
         _confirm_start_dialog()
     else:
         # No existing pipeline, proceed normally
-        st.switch_page("pages/InputOutput.py")
+        st.switch_page("pages/Lobby.py")
