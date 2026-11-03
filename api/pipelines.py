@@ -1,8 +1,11 @@
 import json
 import re
 import shutil
+import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+import numpy as np
 
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
 CONFIG_KEYS = ("selected_dataset", "labeling_budget", "selected_strategies")
@@ -33,8 +36,30 @@ def load_config(pipeline_dir: Path) -> dict[str, Any]:
     return json.loads(path.read_text())
 
 
+def _json_default(obj: Any) -> Any:
+    """Make numpy scalars/arrays (returned by the ML code) JSON serialisable."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.generic):
+        return obj.item()
+    raise TypeError(f"Type {obj.__class__.__name__} not serializable")
+
+
 def save_config(pipeline_dir: Path, config: dict[str, Any]) -> None:
-    (pipeline_dir / "configurations.json").write_text(json.dumps(config, indent=4))
+    (pipeline_dir / "configurations.json").write_text(
+        json.dumps(config, indent=4, default=_json_default)
+    )
+
+
+_config_lock = threading.Lock()
+
+
+def update_config(pipeline_dir: Path, fn: Callable[[dict[str, Any]], dict[str, Any]]) -> dict[str, Any]:
+    """Read-modify-write the pipeline config; requests cannot interleave."""
+    with _config_lock:
+        config = fn(load_config(pipeline_dir))
+        save_config(pipeline_dir, config)
+        return config
 
 
 def suggest_name(root: Path, dataset: str, suffix: str) -> str:
