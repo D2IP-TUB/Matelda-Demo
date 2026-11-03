@@ -56,13 +56,19 @@ const sessionData = (pb: FakePocketBase) => pb.data.sessions[0].data
 const answer = async (name: 'Correct' | 'Error') =>
   fireEvent.click(await screen.findByRole('button', { name }))
 
-function seedRoom(phase = 'labeling', budget = 2) {
+const POOL = [0, 1, 2, 3, 4].map((i) => `t1|${i}|a`)
+function seedRoom(phase = 'labeling', budget = 2, room: Record<string, unknown> = {}) {
   const pb = new FakePocketBase()
-  pb.data.rooms = [{ id: 'rm1', name: 'r1', phase, dataset: 'demo' }]
+  pb.data.rooms = [{ id: 'rm1', name: 'r1', phase, dataset: 'demo', host: 'pl1', ...room }]
   pb.data.players = [
     { id: 'pl1', room: 'r1', token: 'tok', name: 'Blue Otter', budget, vote: 'demo', created: '1' },
     { id: 'pl2', room: 'r1', token: 'tok2', name: 'Red Yeti', budget, vote: 'demo', created: '2' },
   ]
+  return pb
+}
+function seedLabeling() {
+  const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+  pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|0|a', player: 'pl1', created: '1' }]
   return pb
 }
 const ROOM_SESSION = { pipeline_path: 'p1', room_name: 'r1', player_token: 'tok' }
@@ -150,29 +156,110 @@ describe('Labeling in a room', () => {
     expect(m.fetchCandidates).not.toHaveBeenCalled()
   })
 
-  it('claims exactly the player budget in candidate order, and keeps the claims on reload', async () => {
+  it('the host publishes the pool once, and only the host calls fetchCandidates', async () => {
     const pb = seedRoom()
-    const first = renderPage(ROOM_SESSION, pb)
-    expect(await screen.findByText('v0')).toBeInTheDocument()
-    expect(pb.data.claims.map((c: any) => c.cell_id)).toEqual(['t1|0|a', 't1|1|a'])
-    expect(m.fetchCards).toHaveBeenCalledWith('p1', ['t1|0|a', 't1|1|a'])
-    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument()
-    first.unmount()
     renderPage(ROOM_SESSION, pb)
-    expect(await screen.findByText('v0')).toBeInTheDocument()
-    expect(pb.data.claims).toHaveLength(2)
+    await waitFor(() => expect(pb.data.rooms[0].pool).toEqual(POOL))
+    expect(pb.data.rooms[0]).toMatchObject({ pipeline: 'p1', host: 'pl1' })
+    expect(m.fetchCandidates).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
+    expect(m.fetchCandidates).toHaveBeenCalledTimes(1)
   })
 
-  it('another player\'s claims are skipped', async () => {
+  it('a helper without a pool waits and touches no pipeline endpoint', async () => {
     const pb = seedRoom()
-    pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|0|a', player: 'pl2' }]
+    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+    expect(await screen.findByText(/Waiting for the host to start labeling/)).toBeInTheDocument()
+    expect(m.fetchCandidates).not.toHaveBeenCalled()
+    expect(m.fetchPipeline).not.toHaveBeenCalled()
+    expect(m.fetchCards).not.toHaveBeenCalled()
+    expect(m.startPropagation).not.toHaveBeenCalled()
+  })
+
+  it('a helper starts when the pool appears, using the room pipeline', async () => {
+    const pb = seedRoom()
+    renderPage({ room_name: 'r1', player_token: 'tok2' }, pb)
+    await screen.findByText(/Waiting for the host/)
+    pb.data.rooms[0] = { ...pb.data.rooms[0], pipeline: 'hostp', pool: POOL }
+    pb.notify('rooms')
+    expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
+    expect(m.fetchCards).toHaveBeenCalledWith('hostp', [expect.stringMatching(/^t1\|\d\|a$/)])
+    expect(m.fetchCandidates).not.toHaveBeenCalled()
+  })
+
+  it('claims one cell at a time and fetches only that card after each answer', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
     renderPage(ROOM_SESSION, pb)
-    expect(await screen.findByText('v1')).toBeInTheDocument()
-    expect(m.fetchCards).toHaveBeenCalledWith('p1', ['t1|1|a', 't1|2|a'])
+    const first = await screen.findByText(/^v\d$/)
+    expect(pb.data.claims).toHaveLength(1)
+    expect(m.fetchCards).toHaveBeenCalledTimes(1)
+    expect(m.fetchCards.mock.calls[0][1]).toHaveLength(1)
+    const firstText = first.textContent
+    await answer('Correct')
+    await waitFor(() => expect(pb.data.claims).toHaveLength(2))
+    await waitFor(() => expect(m.fetchCards).toHaveBeenCalledTimes(2))
+    expect(m.fetchCards.mock.calls[1][1]).toHaveLength(1)
+    expect(await screen.findByText('Card 2')).toBeInTheDocument()
+    expect(screen.queryByText(firstText as string)).toBeNull()
+  })
+
+  it('reload resumes the own unlabeled claim', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|3|a', player: 'pl1', created: '1' }]
+    renderPage(ROOM_SESSION, pb)
+    expect(await screen.findByText('v3')).toBeInTheDocument()
+    expect(pb.data.claims).toHaveLength(1)
+    expect(m.fetchCards).toHaveBeenCalledWith('p1', ['t1|3|a'])
+  })
+
+  it('reload positions past already answered cards', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|3|a', player: 'pl1', created: '1' }]
+    pb.data.labels = [{ id: 'l0', room: 'r1', cell_id: 't1|3|a', player: 'pl1', value: true, is_correct: true, latency_ms: 1 }]
+    renderPage({ ...ROOM_SESSION, labeling_results: { 't1|3|a': true } }, pb)
+    await waitFor(() => expect(pb.data.claims).toHaveLength(2))
+    expect(m.fetchCards).toHaveBeenCalledWith('p1', ['t1|3|a'])
+    const other = pb.data.claims[1].cell_id as string
+    expect(await screen.findByText(`v${other.split('|')[1]}`)).toBeInTheDocument()
+    expect(screen.getByText('Card 2')).toBeInTheDocument()
+  })
+
+  it('an exhausted pool shows the claimed notice and Next stays enabled', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
+    renderPage(ROOM_SESSION, pb)
+    await answer('Correct')
+    expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  })
+
+  it('release button: hidden for helpers', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+    await screen.findByText(/^v\d$/)
+    expect(screen.queryByRole('button', { name: 'Release unlabeled claims' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+  })
+
+  it('release button: the host releases and sees the count', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    pb.data.claims = [{ id: 'c9', room: 'r1', cell_id: 't1|4|a', player: 'pl2', created: '0' }]
+    renderPage(ROOM_SESSION, pb)
+    await screen.findByText(/^v\d$/)
+    fireEvent.click(screen.getByRole('button', { name: 'Release unlabeled claims' }))
+    expect(await screen.findByText(/Released 2 unlabeled claims/)).toBeInTheDocument()
+    expect(pb.data.claims).toHaveLength(0)
+  })
+
+  it('a helper who is done gets a notice instead of Next', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
+    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+    await answer('Correct')
+    expect(await screen.findByText(/You're done — the host will continue with the results/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
   })
 
   it('saves each verdict to the room with its ground-truth check, one record per cell', async () => {
-    const pb = seedRoom()
+    const pb = seedLabeling()
     renderPage(ROOM_SESSION, pb)
     await answer('Correct')
     await waitFor(() => expect(pb.data.labels).toHaveLength(1))
@@ -187,7 +274,7 @@ describe('Labeling in a room', () => {
 
   it('keeps the verdict and warns when the room check fails', async () => {
     m.judgeVerdicts.mockRejectedValue(new Error('judge down'))
-    const pb = seedRoom()
+    const pb = seedLabeling()
     renderPage(ROOM_SESSION, pb)
     await answer('Correct')
     expect(await screen.findByText(/Could not share your verdict with the room/)).toBeInTheDocument()
@@ -195,7 +282,7 @@ describe('Labeling in a room', () => {
   })
 
   it('Next passes the room labels and player id, and stores the disputed cells', async () => {
-    const pb = seedRoom()
+    const pb = seedLabeling()
     pb.data.labels = [{ id: 'l1', room: 'r1', cell_id: 't1|0|a', player: 'pl2', value: true, is_correct: true, latency_ms: 5 }]
     renderPage(ROOM_SESSION, pb)
     await answer('Error')
