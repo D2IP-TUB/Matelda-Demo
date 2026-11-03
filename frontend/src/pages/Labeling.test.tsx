@@ -236,7 +236,7 @@ describe('Labeling in a room', () => {
     const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
     renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
     await screen.findByText(/^v\d$/)
-    expect(screen.queryByRole('button', { name: 'Release unlabeled claims' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Release unlabeled claims/ })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
   })
 
@@ -245,9 +245,76 @@ describe('Labeling in a room', () => {
     pb.data.claims = [{ id: 'c9', room: 'r1', cell_id: 't1|4|a', player: 'pl2', created: '0' }]
     renderPage(ROOM_SESSION, pb)
     await screen.findByText(/^v\d$/)
-    fireEvent.click(screen.getByRole('button', { name: 'Release unlabeled claims' }))
-    expect(await screen.findByText(/Released 2 unlabeled claims/)).toBeInTheDocument()
-    expect(pb.data.claims).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: /Release unlabeled claims/ }))
+    expect(await screen.findByText(/Released 1 unlabeled claim\./)).toBeInTheDocument()
+    expect(pb.data.claims.map((c: any) => c.player)).toEqual(['pl1'])
+  })
+
+  it('Check again picks up a freed cell after the pool was exhausted', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
+    pb.data.claims = [{ id: 'c1', room: 'r1', cell_id: 't1|0|a', player: 'pl1', created: new Date().toISOString() }]
+    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+    expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
+    pb.data.claims = []
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+    expect(screen.queryByText(/All cells are claimed/)).toBeNull()
+  })
+
+  it('the host releasing stale claims picks up the freed cell when it has no card', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
+    pb.data.claims = [{ id: 'c1', room: 'r1', cell_id: 't1|0|a', player: 'pl2', created: new Date(Date.now() - 600_000).toISOString() }]
+    renderPage(ROOM_SESSION, pb)
+    expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Release unlabeled claims/ }))
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+    expect(pb.data.claims.map((c: any) => c.player)).toEqual(['pl1'])
+  })
+
+  it('a fresh claim of another player is not released by the host', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    pb.data.claims = [{ id: 'c1', room: 'r1', cell_id: 't1|0|a', player: 'pl2', created: new Date().toISOString() }]
+    renderPage(ROOM_SESSION, pb)
+    await screen.findByText(/^v\d$/)
+    fireEvent.click(screen.getByRole('button', { name: /Release unlabeled claims/ }))
+    expect(await screen.findByText(/Released 0 unlabeled claims/)).toBeInTheDocument()
+    expect(pb.data.claims.some((c: any) => c.id === 'c1')).toBe(true)
+  })
+
+  it('Check again retries after the next card failed to load', async () => {
+    const pb = seedLabeling()
+    renderPage(ROOM_SESSION, pb)
+    await screen.findByText('v0')
+    m.fetchCards.mockRejectedValueOnce(new Error('cards down'))
+    await answer('Correct')
+    expect(await screen.findByText(/cards down/)).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Check again' }))
+    expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
+    expect(screen.queryByText(/cards down/)).toBeNull()
+  })
+
+  it('shows an error and does not publish when there are no candidate cells', async () => {
+    m.fetchCandidates.mockResolvedValue({ keys: [], sample_size: 0 })
+    const pb = seedRoom()
+    renderPage(ROOM_SESSION, pb)
+    expect(await screen.findByText(/No cells to label — go back to Quality Folding\./)).toBeInTheDocument()
+    expect(pb.data.rooms[0].pool).toBeUndefined()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    expect(screen.getByRole('link', { name: 'Back' })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['judgeVerdicts', () => m.judgeVerdicts.mockRejectedValue(new Error('judge down'))],
+    ['saveLabel', () => vi.spyOn(RoomService.prototype, 'saveLabel').mockRejectedValue(new Error('save down'))],
+  ])('still loads the next card when %s fails', async (_n, fail) => {
+    const pb = seedLabeling()
+    renderPage(ROOM_SESSION, pb)
+    await screen.findByText('v0')
+    fail()
+    await answer('Correct')
+    expect(await screen.findByText('Card 2')).toBeInTheDocument()
+    expect(pb.data.claims).toHaveLength(2)
+    vi.restoreAllMocks()
   })
 
   it('a helper who is done gets a notice instead of Next', async () => {

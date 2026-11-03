@@ -227,24 +227,37 @@ export class RoomService {
     return this.deleteClaims(stale)
   }
 
-  async releaseUnlabeledClaims(roomName: string): Promise<number> {
+  /** Deletes unlabeled claims; with `olderThanMs` only those created longer ago than that. */
+  async releaseUnlabeledClaims(roomName: string, olderThanMs = 0): Promise<number> {
     const claims = this.pb.collection('claims')
     const [all, done] = await Promise.all([
       claims.getFullList({ filter: eq('room', roomName) }),
       this.labeledCells(roomName),
     ])
-    const stale = all.filter((c) => !done.has(`${c.cell_id}\u0000${c.player}`))
+    const cutoff = Date.now() - olderThanMs
+    const stale = all.filter(
+      (c) =>
+        !done.has(`${c.cell_id}\u0000${c.player}`) &&
+        (olderThanMs <= 0 || !(Date.parse(String(c.created)) > cutoff)),
+    )
     return this.deleteClaims(stale)
   }
 
-  /** Oldest own unlabeled claim, else claim the first free pool key from a per-player offset. */
-  async claimNext(roomName: string, playerId: string, pool: string[]): Promise<string | null> {
+  /** Oldest own unlabeled claim (except `skip`, cards the caller already has), else claim the first free pool key from a per-player offset. */
+  async claimNext(
+    roomName: string,
+    playerId: string,
+    pool: string[],
+    skip: ReadonlySet<string> = new Set(),
+  ): Promise<string | null> {
     const claims = this.pb.collection('claims')
     const [all, done] = await Promise.all([
       claims.getFullList({ filter: eq('room', roomName), sort: 'created' }),
       this.labeledCells(roomName),
     ])
-    const own = all.find((c) => c.player === playerId && !done.has(`${c.cell_id}\u0000${playerId}`))
+    const own = all.find(
+      (c) => c.player === playerId && !skip.has(c.cell_id as string) && !done.has(`${c.cell_id}\u0000${playerId}`),
+    )
     if (own) return own.cell_id as string
     if (pool.length === 0) return null
     const taken = new Set(all.map((c) => c.cell_id as string))

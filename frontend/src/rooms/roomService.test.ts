@@ -157,6 +157,14 @@ describe('RoomService shared pool', () => {
     await expect(service.publishPool(room, b.id, 'p', KEYS)).rejects.toThrow(RoomError)
   })
 
+  it('claimNext skips own claims the caller already has', async () => {
+    const { service, room, a } = await pooled()
+    const first = await service.claimNext(room.name, a.id, KEYS)
+    const second = await service.claimNext(room.name, a.id, KEYS, new Set([first as string]))
+    expect(second).not.toBe(first)
+    expect(second).not.toBeNull()
+  })
+
   it('claimNext returns own unlabeled claim before taking a new one', async () => {
     const { service, room, a } = await pooled()
     const first = await service.claimNext(room.name, a.id, KEYS)
@@ -210,6 +218,15 @@ describe('RoomService shared pool', () => {
     await service.claimNext(room.name, b.id, ['k2'])
     await service.saveLabel(room.name, a.id, 'k1', true, true, 1)
     expect(await service.releaseUnlabeledClaims(room.name)).toBe(1)
+    expect(pb.data.claims.map((c) => c.cell_id)).toEqual(['k1'])
+  })
+
+  it('releaseUnlabeledClaims(room, ms) keeps fresh claims and releases old ones', async () => {
+    const { pb, service, room, a, b } = await pooled()
+    await service.claimNext(room.name, a.id, ['k1'])
+    await service.claimNext(room.name, b.id, ['k2'])
+    pb.data.claims.find((c) => c.cell_id === 'k2')!.created = new Date(Date.now() - 300_000).toISOString()
+    expect(await service.releaseUnlabeledClaims(room.name, 120_000)).toBe(1)
     expect(pb.data.claims.map((c) => c.cell_id)).toEqual(['k1'])
   })
 

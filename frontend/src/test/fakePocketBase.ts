@@ -42,7 +42,7 @@ export class FakeCollection {
         throw Object.assign(new Error('unique'), { status: 400 })
       }
     }
-    const rec = { id: `id${this.pb.counter++}`, created: String(this.pb.counter), ...body }
+    const rec = { id: `id${this.pb.counter++}`, created: new Date().toISOString(), ...body }
     this.rows.push(rec)
     this.pb.notify(this.name)
     return { ...rec }
