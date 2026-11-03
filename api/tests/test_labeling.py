@@ -2,11 +2,11 @@ import pytest
 
 from api.labeling import (
     Verdict,
-    candidate_keys,
     cards_for_keys,
     cell_key,
     judge,
     parse_cell_key,
+    sampled_keys,
     sampled_to_cards,
 )
 
@@ -44,15 +44,13 @@ def test_sampled_to_cards():
     assert card.strategies == ["Typo"] and card.val == "x"
 
 
-def test_candidates_start_with_sample_then_round_robin():
-    assert candidate_keys(SAMPLED, CELL_FOLDS, set()) == [
-        "t1|0|a", "t1|1|a", "t2|0|b", "t3|0|c", "t1|2|a", "t3|1|c",
+def test_sampled_keys_keeps_order_and_dedupes():
+    cells = [
+        {"table": "t2", "row": 1, "col": "b"},
+        {"table": "t1", "row": 0, "col": "a"},
+        {"table": "t2", "row": 1, "col": "b"},
     ]
-
-
-def test_candidates_skip_folds_and_have_no_duplicates():
-    keys = candidate_keys(SAMPLED, CELL_FOLDS, {"F1"})
-    assert "t2|0|b" not in keys and len(keys) == len(set(keys)) == 5
+    assert sampled_keys(cells) == ["t2|1|b", "t1|0|a"]
 
 
 def test_cards_for_keys_keep_order_and_skip_unknown():

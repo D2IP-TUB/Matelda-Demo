@@ -50,34 +50,9 @@ def sampled_to_cards(sampled: list[dict[str, Any]]) -> list[Card]:
     return [_card(c, c.get("domain_fold", ""), c.get("cell_fold", "")) for c in sampled]
 
 
-def candidate_keys(
-    sampled: list[dict[str, Any]], cell_folds: dict[str, Any], skip_folds: set[str]
-) -> list[str]:
-    """The sampler's cells first, then the rest round-robin across the folds.
-
-    Same ordering as `extend_candidates` in components/room_labeling.py: with several
-    players the sampler alone has too few cells, so every fold keeps contributing."""
-    keys = [cell_key(c["table"], c["row"], c["col"]) for c in sampled]
-    seen = set(keys)
-    queues = [
-        iter(cells)
-        for folds in cell_folds.values()
-        for fold, cells in folds.items()
-        if fold not in skip_folds
-    ]
-    while queues:
-        alive = []
-        for it in queues:
-            for cell in it:
-                key = cell_key(cell["table"], cell["row"], cell["col"])
-                if key in seen:
-                    continue
-                seen.add(key)
-                keys.append(key)
-                alive.append(it)
-                break
-        queues = alive
-    return keys
+def sampled_keys(sampled: list[dict[str, Any]]) -> list[str]:
+    """Keys of the sampler's cells, in sampler order, without duplicates."""
+    return list(dict.fromkeys(cell_key(c["table"], c["row"], c["col"]) for c in sampled))
 
 
 def cards_for_keys(cell_folds: dict[str, Any], keys: list[str]) -> list[Card]:

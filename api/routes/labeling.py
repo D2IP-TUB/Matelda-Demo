@@ -15,7 +15,7 @@ from api.labeling import (
     LabeledCell,
     RoomLabel,
     Verdict,
-    candidate_keys,
+    sampled_keys,
     cards_for_keys,
     judge,
     merge_with_pool,
@@ -82,10 +82,8 @@ def labeling_sample(name: str, settings: Settings = Depends(get_settings)) -> Sa
 def labeling_candidates(name: str, settings: Settings = Depends(get_settings)) -> CandidatesResponse:
     path, config = _load(settings, name)
     sampled = _sample(path, config)
-    skip = set(config.get("cell_fold_labels", {}))
-    return CandidatesResponse(
-        keys=candidate_keys(sampled, config["cell_folds"], skip), sample_size=len(sampled)
-    )
+    keys = sampled_keys(sampled)
+    return CandidatesResponse(keys=keys, sample_size=len(keys))
 
 
 @router.post("/pipelines/{name}/labeling/cards", response_model=list[Card])

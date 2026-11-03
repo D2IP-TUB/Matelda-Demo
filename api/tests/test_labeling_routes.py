@@ -57,12 +57,15 @@ def test_labeling_requires_cell_folds_and_pipeline(env):
     assert client.get("/api/pipelines/nope/labeling/sample").status_code == 404
 
 
-def test_candidates_start_with_sample_and_skip_bulk_folds(env, monkeypatch):
+def test_candidates_are_only_sampler_cells(env, monkeypatch):
     client, _ = env
-    monkeypatch.setattr(services, "sample_labeling", lambda *a: SAMPLED)
+    two = [
+        {"table": "t1", "row": 0, "col": "a", "val": "x", "domain_fold": "D0", "cell_fold": "F0", "strategies": []},
+        {"table": "t3", "row": 1, "col": "c", "val": "y", "domain_fold": "D1", "cell_fold": "F2", "strategies": []},
+    ]
+    monkeypatch.setattr(services, "sample_labeling", lambda *a: two)
     body = client.get("/api/pipelines/p1/labeling/candidates").json()
-    assert body["sample_size"] == 1 and body["keys"][0] == "t1|0|a"
-    assert "t2|0|b" not in body["keys"]  # F1 is bulk annotated
+    assert body["keys"] == ["t1|0|a", "t3|1|c"] and body["sample_size"] == 2
 
 
 def test_cards_endpoint(env):
