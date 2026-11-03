@@ -1,3 +1,4 @@
+import copy
 import json
 import re
 import shutil
@@ -29,11 +30,25 @@ def resolve_pipeline(root: Path, name: str) -> Path | None:
     return path if path.is_dir() else None
 
 
+_config_cache: dict[tuple[str, int, int], dict[str, Any]] = {}
+_cache_lock = threading.Lock()
+
+
 def load_config(pipeline_dir: Path) -> dict[str, Any]:
     path = pipeline_dir / "configurations.json"
     if not path.is_file():
         return {}
-    return json.loads(path.read_text())
+    st = path.stat()
+    key = (str(path), st.st_mtime_ns, st.st_size)
+    with _cache_lock:
+        hit = _config_cache.get(key)
+    if hit is None:
+        hit = json.loads(path.read_text())
+        with _cache_lock:
+            for stale in [k for k in _config_cache if k[0] == key[0]]:
+                del _config_cache[stale]
+            _config_cache[key] = hit
+    return copy.deepcopy(hit)
 
 
 def _json_default(obj: Any) -> Any:
@@ -49,6 +64,10 @@ def save_config(pipeline_dir: Path, config: dict[str, Any]) -> None:
     (pipeline_dir / "configurations.json").write_text(
         json.dumps(config, indent=4, default=_json_default)
     )
+    with _cache_lock:
+        path = str(pipeline_dir / "configurations.json")
+        for stale in [k for k in _config_cache if k[0] == path]:
+            del _config_cache[stale]
 
 
 _config_lock = threading.Lock()

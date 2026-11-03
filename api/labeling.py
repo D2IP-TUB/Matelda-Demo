@@ -1,4 +1,5 @@
 """Pure labeling logic: cards, candidate ordering, judging against ground truth."""
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +75,32 @@ class Verdict(BaseModel):
     said_correct: bool
 
 
+_TRUTH_CACHE_MAX = 64
+_truth_cache: dict[tuple, tuple[pd.DataFrame, pd.DataFrame]] = {}
+_truth_lock = threading.Lock()
+
+
+def _truth_frames(table_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame] | None:
+    """(dirty, clean) for a table, cached until either file changes. Callers must not mutate."""
+    try:
+        sts = [(table_dir / n).stat() for n in ("dirty.csv", "clean.csv")]
+        key = (str(table_dir), *[(s.st_mtime_ns, s.st_size) for s in sts])
+        with _truth_lock:
+            hit = _truth_cache.get(key)
+        if hit is None:
+            read = lambda name: pd.read_csv(table_dir / name, dtype=str, keep_default_na=False)  # noqa: E731
+            hit = (read("dirty.csv"), read("clean.csv"))
+            with _truth_lock:
+                for stale in [k for k in _truth_cache if k[0] == key[0]]:
+                    del _truth_cache[stale]
+                while len(_truth_cache) >= _TRUTH_CACHE_MAX:
+                    del _truth_cache[next(iter(_truth_cache))]
+                _truth_cache[key] = hit
+        return hit
+    except Exception:
+        return None
+
+
 def judge(dataset_dir: Path, verdicts: list[Verdict]) -> list[bool | None]:
     """Was each verdict right according to ground truth? None when it cannot be told."""
     frames: dict[str, tuple[pd.DataFrame, pd.DataFrame] | None] = {}
@@ -81,11 +108,7 @@ def judge(dataset_dir: Path, verdicts: list[Verdict]) -> list[bool | None]:
     def pair(table: str):
         if table not in frames:
             table_dir = resolve_table(dataset_dir, table)
-            try:
-                read = lambda name: pd.read_csv(table_dir / name, dtype=str, keep_default_na=False)  # noqa: E731
-                frames[table] = (read("dirty.csv"), read("clean.csv")) if table_dir else None
-            except Exception:
-                frames[table] = None
+            frames[table] = _truth_frames(table_dir) if table_dir else None
         return frames[table]
 
     out: list[bool | None] = []

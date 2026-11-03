@@ -150,3 +150,26 @@ def test_merge_builds_cells_from_other_players_labels_using_these_folds():
 def test_merge_counts_own_earlier_room_label_when_not_swiped_now():
     merged, _ = merge_with_pool([], [room_label("t1|1|a", "me", True)], "me", CELL_FOLDS)
     assert by_key(merged) == {"t1|1|a": False}
+
+
+def test_judge_reads_each_csv_once_across_calls(dataset, monkeypatch):
+    import os
+    import pandas as pd
+
+    real = pd.read_csv
+    calls = []
+
+    def counting(*a, **k):
+        calls.append(a[0])
+        return real(*a, **k)
+
+    monkeypatch.setattr(pd, "read_csv", counting)
+    v = [Verdict(table="t1", row=0, col="a", said_correct=True)]
+    judge(dataset, v)
+    judge(dataset, v)
+    assert len(calls) == 2  # dirty + clean, once
+    dirty = dataset / "t1" / "dirty.csv"
+    st = dirty.stat()
+    os.utime(dirty, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))
+    judge(dataset, v)
+    assert len(calls) == 4
