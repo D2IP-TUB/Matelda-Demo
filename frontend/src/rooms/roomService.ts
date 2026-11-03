@@ -4,7 +4,7 @@ import { generatePlayerName, generateRoomName, pickWinningDataset } from './name
 export interface Room {
   id: string
   name: string
-  phase: 'lobby' | 'labeling'
+  phase: 'lobby' | 'labeling' | 'ended'
   dataset: string
   pipeline?: string
   pool?: string[]
@@ -45,6 +45,7 @@ interface CollectionLike {
   getFullList(options?: { filter?: string; sort?: string }): Promise<any[]>
   create(body: Record<string, unknown>): Promise<any>
   update(id: string, body: Record<string, unknown>): Promise<any>
+  delete(id: string): Promise<unknown>
   subscribe(topic: string, callback: (event?: any) => void): Promise<() => Promise<void>>
 }
 export interface PbLike {
@@ -53,6 +54,8 @@ export interface PbLike {
 
 const eq = (field: string, value: string) => `${field}="${value.replace(/"/g, '\\"')}"`
 const isConflict = (e: unknown) => (e as { status?: number })?.status === 400
+
+const hashString = (s: string) => [...s].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
 
 export class RoomService {
   private pb: PbLike
@@ -161,6 +164,90 @@ export class RoomService {
       }
     }
     return got
+  }
+
+  async claimHost(room: Room, player: Player): Promise<Room> {
+    const current = (await this.getRoom(room.name)) ?? room
+    if (current.host) return current
+    return this.pb.collection('rooms').update(room.id, { host: player.id })
+  }
+
+  async publishPool(room: Room, hostPlayerId: string, pipeline: string, keys: string[]): Promise<Room> {
+    if (room.host !== hostPlayerId) throw new RoomError('Only the host can publish the pool')
+    if (room.pool && room.pool.length > 0) return room
+    return this.pb.collection('rooms').update(room.id, { pipeline, pool: keys, host: hostPlayerId })
+  }
+
+  async endRoom(room: Room, hostId: string): Promise<Room> {
+    if (room.host !== hostId) throw new RoomError('Only the host can end the room')
+    return this.pb.collection('rooms').update(room.id, { phase: 'ended' })
+  }
+
+  async leaveRoom(room: Room, player: Player): Promise<void> {
+    await this.releasePlayerClaims(room.name, player.id)
+    await this.pb.collection('players').delete(player.id)
+    if (player.id === room.host) {
+      const rest = (await this.listPlayers(room.name)).filter((p) => p.id !== player.id)
+      await this.pb.collection('rooms').update(room.id, { host: rest[0]?.id ?? '' })
+    }
+  }
+
+  async kickPlayer(room: Room, hostId: string, target: Player): Promise<void> {
+    if (room.host !== hostId) throw new RoomError('Only the host can remove players')
+    if (target.id === hostId) throw new RoomError('The host cannot be removed')
+    await this.leaveRoom(room, target)
+  }
+
+  private async labeledCells(roomName: string): Promise<Set<string>> {
+    const labels = await this.pb.collection('labels').getFullList({ filter: eq('room', roomName) })
+    return new Set(labels.map((l) => `${l.cell_id}\u0000${l.player}`))
+  }
+
+  private async releasePlayerClaims(roomName: string, playerId: string): Promise<number> {
+    const claims = this.pb.collection('claims')
+    const [mine, done] = await Promise.all([
+      claims.getFullList({ filter: `${eq('room', roomName)} && ${eq('player', playerId)}` }),
+      this.labeledCells(roomName),
+    ])
+    const stale = mine.filter((c) => !done.has(`${c.cell_id}\u0000${playerId}`))
+    for (const c of stale) await claims.delete(c.id)
+    return stale.length
+  }
+
+  async releaseUnlabeledClaims(roomName: string): Promise<number> {
+    const claims = this.pb.collection('claims')
+    const [all, done] = await Promise.all([
+      claims.getFullList({ filter: eq('room', roomName) }),
+      this.labeledCells(roomName),
+    ])
+    const stale = all.filter((c) => !done.has(`${c.cell_id}\u0000${c.player}`))
+    for (const c of stale) await claims.delete(c.id)
+    return stale.length
+  }
+
+  /** Oldest own unlabeled claim, else claim the first free pool key from a per-player offset. */
+  async claimNext(roomName: string, playerId: string, pool: string[]): Promise<string | null> {
+    const claims = this.pb.collection('claims')
+    const [all, done] = await Promise.all([
+      claims.getFullList({ filter: eq('room', roomName), sort: 'created' }),
+      this.labeledCells(roomName),
+    ])
+    const own = all.find((c) => c.player === playerId && !done.has(`${c.cell_id}\u0000${playerId}`))
+    if (own) return own.cell_id as string
+    if (pool.length === 0) return null
+    const taken = new Set(all.map((c) => c.cell_id as string))
+    const start = hashString(playerId) % pool.length
+    for (let i = 0; i < pool.length; i++) {
+      const key = pool[(start + i) % pool.length]
+      if (taken.has(key)) continue
+      try {
+        await claims.create({ room: roomName, cell_id: key, player: playerId })
+        return key
+      } catch (e) {
+        if (!isConflict(e)) throw e
+      }
+    }
+    return null
   }
 
   async saveLabel(

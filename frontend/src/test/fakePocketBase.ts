@@ -54,6 +54,13 @@ export class FakeCollection {
     this.pb.notify(this.name)
     return { ...rec }
   }
+  async delete(id: string): Promise<boolean> {
+    const i = this.rows.findIndex((r) => r.id === id)
+    if (i < 0) throw Object.assign(new Error('not found'), { status: 404 })
+    this.rows.splice(i, 1)
+    this.pb.notify(this.name)
+    return true
+  }
   async subscribe(_topic: string, cb: () => void): Promise<() => Promise<void>> {
     this.listeners.push(cb)
     return async () => {
