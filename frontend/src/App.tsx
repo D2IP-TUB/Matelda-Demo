@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
+import { Lobby } from './pages/Lobby'
 import { Placeholder } from './pages/Placeholder'
 import { SessionProvider } from './session/SessionProvider'
 import { PAGES } from './routes'
@@ -18,7 +19,8 @@ export function AppRoutes() {
       </nav>
       <Routes>
         <Route path="/" element={<Navigate to="/lobby" replace />} />
-        {PAGES.map((p) => (
+        <Route path="/lobby" element={<Lobby />} />
+        {PAGES.filter((p) => p.path !== '/lobby').map((p) => (
           <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
         ))}
       </Routes>
