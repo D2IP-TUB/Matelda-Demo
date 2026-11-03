@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { Configurations } from './pages/Configurations'
 import { DevPlayground } from './pages/DevPlayground'
+import { DomainFolding } from './pages/DomainFolding'
 import { Intro } from './pages/Intro'
 import { Lobby } from './pages/Lobby'
 import { Placeholder } from './pages/Placeholder'
@@ -20,7 +21,8 @@ export function AppRoutes() {
         <Route path="/dev" element={<DevPlayground />} />
         <Route path="/intro" element={<Intro />} />
         <Route path="/configuration" element={<Configurations />} />
-        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration'].includes(p.path)).map((p) => (
+        <Route path="/domain-folding" element={<DomainFolding />} />
+        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding'].includes(p.path)).map((p) => (
           <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
         ))}
       </Route>
