@@ -80,7 +80,8 @@ describe('DomainFolding', () => {
       .mockResolvedValue(config({ N0: ['t1'], N1: ['t2', 't3', 't4'] }) as any)
     m.fetchJob.mockResolvedValueOnce({ id: 'job1', state: 'running' }).mockResolvedValue({ id: 'job1', state: 'done' })
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Run domain based folding' }))
+    await screen.findByText('t1') // the Run button is disabled until the pipeline has loaded
+    fireEvent.click(screen.getByRole('button', { name: 'Run domain based folding' }))
     expect(m.startDomainFolding).toHaveBeenCalledWith('p1')
     await waitFor(() => expect(folds()).toEqual(['N0', 'N1']))
   })
@@ -88,7 +89,8 @@ describe('DomainFolding', () => {
   it('shows the error of a failed job', async () => {
     m.fetchJob.mockResolvedValue({ id: 'job1', state: 'failed', error: 'no folds' })
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Run domain based folding' }))
+    await screen.findByText('t1')
+    fireEvent.click(screen.getByRole('button', { name: 'Run domain based folding' }))
     expect(await screen.findByText(/no folds/)).toBeInTheDocument()
   })
 
