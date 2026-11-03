@@ -1,16 +1,35 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useSession } from '../session/SessionProvider'
+import type { RoomService } from '../rooms/roomService'
+import { useRoomInfo } from '../rooms/useRoomInfo'
 import { StepTracker } from './StepTracker'
 import { TopBar } from './TopBar'
+import { WaitingForLabeling } from './WaitingForLabeling'
 
-export function Layout() {
+/** Pipeline steps only the host runs; helpers label from the shared pool instead. */
+const HOST_ONLY_PATHS = ['/intro', '/configuration', '/domain-folding', '/quality-folding']
+
+export function Layout({ roomService }: { roomService?: RoomService }) {
   const { pathname } = useLocation()
+  const { roomName, room, me, isHost, players } = useRoomInfo(roomService)
+  const { ready } = useSession()
+  const hostOnly = HOST_ONLY_PATHS.includes(pathname)
+
+  let content = <Outlet />
+  if (hostOnly && !ready) content = <></>
+  else if (hostOnly && roomName) {
+    if (!room || !me) content = <></> // role unknown yet: neither flash the page nor redirect
+    else if (!isHost && room.phase !== 'lobby') {
+      content = room.pool && room.pool.length > 0
+        ? <Navigate replace to="/labeling" />
+        : <WaitingForLabeling players={players} />
+    }
+  }
   return (
     <>
-      <TopBar />
+      <TopBar roomService={roomService} />
       <StepTracker currentPath={pathname} />
-      <main className="page">
-        <Outlet />
-      </main>
+      <main className="page">{content}</main>
     </>
   )
 }

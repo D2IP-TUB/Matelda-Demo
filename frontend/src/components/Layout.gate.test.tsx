@@ -1,0 +1,96 @@
+import { act, render, screen } from '@testing-library/react'
+import { useEffect } from 'react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { RoomService } from '../rooms/roomService'
+import { SessionProvider } from '../session/SessionProvider'
+import { SessionService } from '../session/sessionService'
+import { FakePocketBase } from '../test/fakePocketBase'
+import { seedSession } from '../test/helpers'
+import { Layout } from './Layout'
+import { WaitingForLabeling } from './WaitingForLabeling'
+
+const mounted = vi.fn()
+function Page({ name }: { name: string }) {
+  useEffect(() => mounted(name), [name])
+  return <button type="button">{`Run ${name}`}</button>
+}
+
+function setup(path: string, role: 'helper' | 'host' | 'solo', opts: { phase?: string; pool?: string[] } = {}) {
+  const pb = new FakePocketBase()
+  let data: Record<string, unknown> = {}
+  if (role !== 'solo') {
+    pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: opts.phase ?? 'started', dataset: '', host: 'p1', pool: opts.pool }]
+    pb.data.players = [
+      { id: 'p1', room: 'blue-otter-42', name: 'Hannah', token: 't1', created: '1' },
+      { id: 'p2', room: 'blue-otter-42', name: 'Hugo', token: 't2', created: '2' },
+    ]
+    data = { room_name: 'blue-otter-42', player_token: role === 'host' ? 't1' : 't2' }
+  }
+  const sessions = new SessionService(pb as any, seedSession(pb, data))
+  render(
+    <SessionProvider service={sessions}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<Layout roomService={new RoomService(pb as any)} />}>
+            <Route path="/lobby" element={<Page name="lobby" />} />
+            <Route path="/configuration" element={<Page name="configuration" />} />
+            <Route path="/quality-folding" element={<Page name="quality" />} />
+            <Route path="/labeling" element={<p>LABELING PAGE</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </SessionProvider>,
+  )
+  return pb
+}
+
+beforeEach(() => mounted.mockClear())
+
+describe('Layout helper gate', () => {
+  it.each(['/configuration', '/quality-folding'])('shows the waiting screen to a helper on %s', async (path) => {
+    setup(path, 'helper')
+    expect(await screen.findByText(/Waiting for labeling/)).toBeInTheDocument()
+    expect(screen.getByText('Hannah')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Run/ })).not.toBeInTheDocument()
+    expect(mounted).not.toHaveBeenCalled()
+  })
+
+  it('navigates the helper to Labeling once the pool is published', async () => {
+    const pb = setup('/configuration', 'helper')
+    await screen.findByText(/Waiting for labeling/)
+    await act(async () => {
+      await pb.collection('rooms').update('r', { pool: ['a', 'b'] })
+    })
+    expect(await screen.findByText('LABELING PAGE')).toBeInTheDocument()
+    expect(mounted).not.toHaveBeenCalled()
+  })
+
+  it('shows the page to the host', async () => {
+    setup('/configuration', 'host')
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+    expect(screen.queryByText(/Waiting for labeling/)).not.toBeInTheDocument()
+  })
+
+  it('shows the page to a solo user', async () => {
+    setup('/quality-folding', 'solo')
+    expect(await screen.findByRole('button', { name: 'Run quality' })).toBeInTheDocument()
+  })
+
+  it('does not gate a helper in the lobby phase', async () => {
+    setup('/configuration', 'helper', { phase: 'lobby' })
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+  })
+
+  it('does not gate non-pipeline routes', async () => {
+    setup('/lobby', 'helper')
+    expect(await screen.findByRole('button', { name: 'Run lobby' })).toBeInTheDocument()
+  })
+})
+
+describe('WaitingForLabeling', () => {
+  it('lists the players', () => {
+    render(<WaitingForLabeling players={[{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }] as any} />)
+    expect(screen.getByText(/the host is preparing the cells/)).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').map((l) => l.textContent)).toEqual(['Ann', 'Bob'])
+  })
+})

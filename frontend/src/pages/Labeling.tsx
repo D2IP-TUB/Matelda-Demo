@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DataTable } from '../components/DataTable'
+import { WaitingForLabeling } from '../components/WaitingForLabeling'
 import { SwipeDeck } from '../components/SwipeDeck'
 import type { SwipeDeckHandle } from '../components/SwipeDeck'
 import { Button, JobStatus, Notice } from '../components/ui'
@@ -66,16 +67,6 @@ function CardFace({ card, dataset, depth }: { card: CardData; dataset: string; d
         </>
       )}
     </div>
-  )
-}
-
-/** Shown to helpers until the host has published the shared pool. Task 7 swaps this for WaitingForLabeling. */
-function WaitingForHost() {
-  return (
-    <>
-      <h1>Labeling</h1>
-      <Notice kind="info">Waiting for the host to start labeling…</Notice>
-    </>
   )
 }
 
@@ -237,7 +228,7 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
       </>
     )
   }
-  if (inRoom && !isHost && !poolReady) return <WaitingForHost />
+  if (inRoom && !isHost && !poolReady) return <WaitingForLabeling players={info.players} />
   if (!pipeline) {
     return (
       <>

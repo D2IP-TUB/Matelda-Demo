@@ -183,7 +183,7 @@ describe('Labeling in a room', () => {
   it('a helper without a pool waits and touches no pipeline endpoint', async () => {
     const pb = seedRoom()
     renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
-    expect(await screen.findByText(/Waiting for the host to start labeling/)).toBeInTheDocument()
+    expect(await screen.findByText(/Waiting for labeling/)).toBeInTheDocument()
     expect(m.fetchCandidates).not.toHaveBeenCalled()
     expect(m.fetchPipeline).not.toHaveBeenCalled()
     expect(m.fetchCards).not.toHaveBeenCalled()
@@ -193,7 +193,7 @@ describe('Labeling in a room', () => {
   it('a helper starts when the pool appears, using the room pipeline', async () => {
     const pb = seedRoom()
     renderPage({ room_name: 'r1', player_token: 'tok2' }, pb)
-    await screen.findByText(/Waiting for the host/)
+    await screen.findByText(/Waiting for labeling/)
     pb.data.rooms[0] = { ...pb.data.rooms[0], pipeline: 'hostp', pool: POOL }
     pb.notify('rooms')
     expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
