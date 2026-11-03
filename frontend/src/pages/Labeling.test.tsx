@@ -166,6 +166,16 @@ describe('Labeling', () => {
     expect(screen.getByRole('button', { name: 'Go back' })).toBeInTheDocument()
   })
 
+  it('the swipe hint is not shown below the cards, only in the info panel', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    const hint = 'Drag the card right if the value is correct, left if it is wrong'
+    expect(screen.queryByText(new RegExp(hint))).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Info' }))
+    expect(screen.getAllByText(new RegExp(hint))).toHaveLength(1)
+    expect(screen.getByTestId('labeling-info')).toHaveTextContent(hint)
+  })
+
   it('the info button toggles a panel with the swipe hint (solo: no room text)', async () => {
     renderPage()
     await screen.findByText('v0')

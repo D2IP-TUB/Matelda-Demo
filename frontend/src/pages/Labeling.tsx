@@ -412,7 +412,6 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
             onSwipe={(direction) => void answer(direction === 'right')}
             renderCard={(c, depth) => <CardFace card={c} dataset={dataset} depth={depth} />}
           />
-          <p className="deck-hint">Drag the card right if the value is correct, left if it is wrong — or use the buttons or the ← → keys.</p>
           <div className="verdict-buttons">
             <button type="button" className="round round-error" aria-label="Error" disabled={!card} onClick={() => deck.current?.swipe('left')}>
               <CrossIcon />
