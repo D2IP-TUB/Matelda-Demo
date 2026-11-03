@@ -93,3 +93,62 @@ def test_judge_returns_none_without_ground_truth_or_cell(dataset):
         Verdict(table="missing", row=0, col="a", said_correct=True),
     ]
     assert judge(dataset, verdicts) == [None] * 5
+
+
+# ---------------------------------------------------------------- room merge
+from api.labeling import merge_with_pool
+
+
+def own_cell(table, row, col, is_error):
+    return {"table": table, "row": row, "col": col, "val": "v", "is_error": is_error,
+            "domain_fold": "D0", "cell_fold": "F0"}
+
+
+def room_label(key, player, said_correct):
+    return {"cell_id": key, "player": player, "value": said_correct}
+
+
+def by_key(cells):
+    return {cell_key(c["table"], c["row"], c["col"]): c["is_error"] for c in cells}
+
+
+def test_merge_own_only_is_unchanged():
+    own = [own_cell("t1", 0, "a", True), own_cell("t1", 1, "a", False)]
+    merged, disputed = merge_with_pool(own, [], "me", CELL_FOLDS)
+    assert by_key(merged) == {"t1|0|a": True, "t1|1|a": False} and disputed == []
+
+
+def test_merge_majority_across_players():
+    own = [own_cell("t1", 0, "a", True)]
+    labels = [room_label("t1|0|a", "p2", True), room_label("t1|0|a", "p3", True)]  # two say correct
+    merged, disputed = merge_with_pool(own, labels, "me", CELL_FOLDS)
+    assert by_key(merged) == {"t1|0|a": False} and disputed == []
+
+
+def test_merge_tie_is_disputed_and_left_out():
+    own = [own_cell("t1", 0, "a", True)]
+    merged, disputed = merge_with_pool(own, [room_label("t1|0|a", "p2", True)], "me", CELL_FOLDS)
+    assert merged == [] and disputed == ["t1|0|a"]
+
+
+def test_merge_drops_other_players_cells_missing_from_these_folds():
+    merged, _ = merge_with_pool([], [room_label("t9|0|z", "p2", False)], "me", CELL_FOLDS)
+    assert merged == []
+
+
+def test_merge_ignores_own_room_label_for_a_cell_already_in_own():
+    own = [own_cell("t1", 0, "a", True)]
+    merged, disputed = merge_with_pool(own, [room_label("t1|0|a", "me", True)], "me", CELL_FOLDS)
+    assert by_key(merged) == {"t1|0|a": True} and disputed == []
+
+
+def test_merge_builds_cells_from_other_players_labels_using_these_folds():
+    merged, _ = merge_with_pool([], [room_label("t3|1|c", "p2", False)], "me", CELL_FOLDS)
+    [cell] = merged
+    assert cell["is_error"] is True and cell["domain_fold"] == "D1" and cell["cell_fold"] == "F2"
+    assert cell["val"] == "v" and (cell["table"], cell["row"], cell["col"]) == ("t3", 1, "c")
+
+
+def test_merge_counts_own_earlier_room_label_when_not_swiped_now():
+    merged, _ = merge_with_pool([], [room_label("t1|1|a", "me", True)], "me", CELL_FOLDS)
+    assert by_key(merged) == {"t1|1|a": False}

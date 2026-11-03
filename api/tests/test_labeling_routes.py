@@ -85,3 +85,120 @@ def test_judge_endpoint(env):
     assert r.status_code == 200 and r.json() == {"correct": [True, False, None, None]}
     assert client.post("/api/datasets/nope/judge", json={"verdicts": []}).status_code == 404
     assert client.post("/api/datasets/d/judge", json={"verdicts": body["verdicts"][:1] * 501}).status_code == 422
+
+
+# ---------------------------------------------------------------- propagation
+import time
+
+from api.jobs import JobStore, get_job_store
+
+
+def poll(client, job_id, timeout=5.0):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        body = client.get(f"/api/jobs/{job_id}").json()
+        if body["state"] != "running":
+            return body
+        time.sleep(0.01)
+    raise AssertionError("job did not finish")
+
+
+def with_jobs(client):
+    store = JobStore()
+    client.app.dependency_overrides[get_job_store] = lambda: store
+    return client
+
+
+def stored(pipelines, name="p1"):
+    return json.loads((pipelines / name / "configurations.json").read_text())
+
+
+OWN = [
+    {"table": "t1", "row": 0, "col": "a", "val": "x", "is_error": True, "domain_fold": "D0", "cell_fold": "F0"},
+    {"table": "t1", "row": 1, "col": "a", "val": "y", "is_error": False, "domain_fold": "D0", "cell_fold": "F0"},
+]
+RESULT = {"labeled_cells": [
+    {**OWN[0], "propagated_cells": [{"table": "t1", "row": 2, "col": "a", "confidence": 0.9, "reason": "r"}]},
+    {**OWN[1], "propagated_cells": []},
+]}
+
+
+def test_propagation_job_saves_results_and_user_labels(env, monkeypatch):
+    client, pipelines = env
+    with_jobs(client)
+    cfg = stored(pipelines)
+    cfg["error_detection"] = {"old": 1}
+    (pipelines / "p1" / "configurations.json").write_text(json.dumps(cfg))
+    seen = {}
+
+    def fake(dataset, labeled, cell_folds, pipeline_dir):
+        seen["labeled"], seen["dir"] = labeled, pipeline_dir
+        return RESULT
+
+    monkeypatch.setattr(services, "label_propagation", fake)
+    job = client.post("/api/pipelines/p1/labeling/propagate", json={"own": OWN}).json()["job_id"]
+    body = poll(client, job)
+    assert body["state"] == "done"
+    assert body["result"] == {"labeled_count": 2, "propagated_count": 1, "disputed": []}
+    assert [c["is_error"] for c in seen["labeled"]] == [True, False]
+    assert all("cell_fold_label" not in c for c in seen["labeled"])  # would override the player's labels
+    cfg = stored(pipelines)
+    assert cfg["propagation_results"] == RESULT and "error_detection" not in cfg
+    csv = (pipelines / "p1" / "user_labels.csv").read_text().splitlines()
+    assert csv[0] == "table,is_error,row,col,val,domain_fold,cell_fold" and len(csv) == 3
+
+
+def test_propagation_merges_room_labels_when_player_given(env, monkeypatch):
+    client, _ = env
+    with_jobs(client)
+    seen = {}
+    monkeypatch.setattr(services, "label_propagation", lambda d, labeled, cf, p: seen.setdefault("l", labeled) and RESULT)
+    body = {
+        "own": [OWN[0]],
+        "room_labels": [{"cell_id": "t1|0|a", "player": "p2", "value": True}],  # tie with own error
+        "player_id": "me",
+    }
+    # a second, uncontested label keeps the result non-empty
+    body["room_labels"].append({"cell_id": "t1|1|a", "player": "p2", "value": True})
+    job = client.post("/api/pipelines/p1/labeling/propagate", json=body).json()["job_id"]
+    out = poll(client, job)
+    assert out["result"]["disputed"] == ["t1|0|a"]
+    assert [(c["row"], c["is_error"]) for c in seen["l"]] == [(1, False)]
+
+
+def test_propagation_empty_result_fails_and_keeps_old_results(env, monkeypatch):
+    client, pipelines = env
+    with_jobs(client)
+    cfg = stored(pipelines)
+    cfg["propagation_results"] = {"labeled_cells": [{"old": True}]}
+    (pipelines / "p1" / "configurations.json").write_text(json.dumps(cfg))
+    monkeypatch.setattr(services, "label_propagation", lambda *a: {"labeled_cells": []})
+    out = poll(client, client.post("/api/pipelines/p1/labeling/propagate", json={"own": OWN}).json()["job_id"])
+    assert out["state"] == "failed" and "no labeled cells" in out["error"]
+    assert stored(pipelines)["propagation_results"] == {"labeled_cells": [{"old": True}]}
+
+
+def test_propagation_requires_cell_folds_and_pipeline(env):
+    client, _ = env
+    assert client.post("/api/pipelines/p2/labeling/propagate", json={"own": []}).status_code == 409
+    assert client.post("/api/pipelines/nope/labeling/propagate", json={"own": []}).status_code == 404
+
+
+def test_propagation_results_are_paged(env):
+    client, pipelines = env
+    cfg = stored(pipelines)
+    cfg["propagation_results"] = {"labeled_cells": [
+        {"table": "t", "row": i, "col": "a", "propagated_cells": [{"row": 0}] * (i % 3)} for i in range(5)
+    ]}
+    (pipelines / "p1" / "configurations.json").write_text(json.dumps(cfg))
+    body = client.get("/api/pipelines/p1/propagation", params={"offset": 3, "limit": 2}).json()
+    assert body["total"] == 5 and [c["row"] for c in body["labeled_cells"]] == [3, 4]
+    assert body["propagated_total"] == 0 + 1 + 2 + 0 + 1
+    assert client.get("/api/pipelines/p1/propagation", params={"limit": 201}).status_code == 422
+
+
+def test_propagation_results_409_when_missing(env):
+    client, _ = env
+    r = client.get("/api/pipelines/p1/propagation")
+    assert r.status_code == 409 and "propagation" in r.json()["detail"].lower()
+    assert client.get("/api/pipelines/nope/propagation").status_code == 404
