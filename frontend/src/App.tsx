@@ -8,6 +8,7 @@ import { Intro } from './pages/Intro'
 import { Labeling } from './pages/Labeling'
 import { Lobby } from './pages/Lobby'
 import { Placeholder } from './pages/Placeholder'
+import { PropagatedErrors } from './pages/PropagatedErrors'
 import { QualityFolding } from './pages/QualityFolding'
 import { SessionProvider } from './session/SessionProvider'
 import { PAGES } from './routes'
@@ -26,7 +27,8 @@ export function AppRoutes() {
         <Route path="/domain-folding" element={<DomainFolding />} />
         <Route path="/quality-folding" element={<QualityFolding />} />
         <Route path="/labeling" element={<Labeling />} />
-        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding', '/quality-folding', '/labeling'].includes(p.path)).map((p) => (
+        <Route path="/propagated-errors" element={<PropagatedErrors />} />
+        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding', '/quality-folding', '/labeling', '/propagated-errors'].includes(p.path)).map((p) => (
           <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
         ))}
       </Route>
