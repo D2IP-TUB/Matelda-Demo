@@ -6,7 +6,7 @@ import { fetchDatasets } from '../lib/api'
 import { pb } from '../lib/pb'
 import { RoomService } from '../rooms/roomService'
 import type { Player } from '../rooms/roomService'
-import { NOTICE_KEY, useRoomInfo } from '../rooms/useRoomInfo'
+import { NOTICE_KEY, ROOM_KEYS, useRoomInfo } from '../rooms/useRoomInfo'
 import { useSession } from '../session/SessionProvider'
 
 interface LobbyProps {
@@ -25,7 +25,7 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
   const [joinInput, setJoinInput] = useState('')
   const entered = useRef<string | null>(null)
   const info = useRoomInfo(service)
-  const { room, me, players, isHost } = info
+  const { room, me, players, isHost, leave: leaveOldRoom } = info
 
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: loadDatasets })
 
@@ -34,6 +34,8 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
     if (!roomName) entered.current = null
     if (!session.ready || !roomName || entered.current === roomName) return
     entered.current = roomName
+    const stored = session.data.room_name as string | undefined
+    const token = stored === roomName ? (session.data.player_token as string | undefined) : undefined
     setStatus('loading')
     setMessage('')
     ;(async () => {
@@ -47,9 +49,15 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
           setStatus('ended')
           return
         }
-        const stored = session.data.room_name as string | undefined
-        const token = stored === roomName ? (session.data.player_token as string) : undefined
-        if (stored && stored !== roomName) await info.leave()
+        if (stored && stored !== roomName) await leaveOldRoom()
+        if (token && !(await service.getPlayer(roomName, token))) {
+          // Kicked while away: the stored token no longer has a player. Never re-admit.
+          await session.update({ [NOTICE_KEY]: 'removed' })
+          await session.remove(ROOM_KEYS)
+          setStatus('idle')
+          if (params.get('room')) setParams({})
+          return
+        }
         const player = await service.joinRoom(roomName, token)
         await service.claimHost(found, player)
         await session.update({ room_name: roomName, player_token: player.token })
@@ -61,7 +69,7 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
         setMessage(e instanceof Error ? e.message : 'Could not join the room')
       }
     })()
-  }, [session, roomName, service, info])
+  }, [session, roomName, service, leaveOldRoom, params, setParams])
 
   // Left, kicked or the session ended: back to the create/join view.
   useEffect(() => {
@@ -127,7 +135,7 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
           {info.notice === 'removed' ? 'You were removed by the host' : 'The host ended the session'}
         </p>
       )}
-      {!(status === 'ready' && room) && (
+      {status !== 'loading' && status !== 'ready' && (
         <section>
           <button onClick={create}>Create room</button>
           <form
@@ -145,6 +153,7 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
           </form>
         </section>
       )}
+      {status === 'loading' || (status === 'ready' && !room) ? <p>Joining…</p> : null}
       {status === 'ready' && room && (
         <section>
           <h2>Room {room.name}</h2>

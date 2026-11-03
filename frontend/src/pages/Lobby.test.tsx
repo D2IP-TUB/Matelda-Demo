@@ -248,4 +248,59 @@ describe('Lobby', () => {
       expect(pb.data.labels).toHaveLength(1)
     })
   })
+
+  describe('stale token (kicked while offline)', () => {
+    const setup = (delayMs: number) => {
+      const pb = new FakePocketBase()
+      pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: 'lobby', dataset: '', host: 'h' }]
+      pb.data.players = [{ id: 'h', room: 'blue-otter-42', name: 'Host', token: 'th', created: '1' }]
+      if (delayMs) {
+        const col = pb.collection('players')
+        const orig = col.getFullList.bind(col)
+        col.getFullList = async (o) => {
+          await new Promise((r) => setTimeout(r, delayMs))
+          return orig(o)
+        }
+      }
+      return pb
+    }
+
+    it.each([0, 40])('Lobby does not re-admit a removed player (delay %i ms)', async (delay) => {
+      const pb = setup(delay)
+      renderLobby('/lobby?room=blue-otter-42', pb, {
+        room_name: 'blue-otter-42', player_token: 'gone', labeling_results: { a: 1 },
+      })
+      expect(await screen.findByText('You were removed by the host')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
+      await waitFor(() => expect(pb.data.sessions[0].data.room_name).toBeUndefined())
+      await new Promise((r) => setTimeout(r, 100))
+      expect(pb.data.players).toHaveLength(1)
+      expect(pb.data.sessions[0].data.player_token).toBeUndefined()
+      expect(pb.data.sessions[0].data.labeling_results).toEqual({ a: 1 })
+    })
+
+    it('TopBar alone clears the keys and creates no player', async () => {
+      const pb = setup(0)
+      const sessions = new SessionService(pb as any, seedSession(pb, { room_name: 'blue-otter-42', player_token: 'gone' }))
+      render(
+        <SessionProvider service={sessions}>
+          <MemoryRouter>
+            <TopBar roomService={new RoomService(pb as any)} />
+          </MemoryRouter>
+        </SessionProvider>,
+      )
+      await waitFor(() => expect(pb.data.sessions[0].data.room_name).toBeUndefined())
+      expect(pb.data.sessions[0].data.room_notice).toBe('removed')
+      expect(pb.data.players).toHaveLength(1)
+    })
+
+    it('a valid token reload keeps the same player', async () => {
+      const pb = setup(0)
+      pb.data.players.push({ id: 'm', room: 'blue-otter-42', name: 'Me', token: 'tm', created: '2' })
+      renderLobby('/lobby', pb, { room_name: 'blue-otter-42', player_token: 'tm' })
+      await waitFor(() => expect(screen.getAllByTestId('player')).toHaveLength(2))
+      expect(pb.data.players).toHaveLength(2)
+      expect(pb.data.sessions[0].data.player_token).toBe('tm')
+    })
+  })
 })
