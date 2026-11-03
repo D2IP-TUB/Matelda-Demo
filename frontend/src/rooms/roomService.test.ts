@@ -230,6 +230,27 @@ describe('RoomService shared pool', () => {
     expect(pb.data.claims.map((c) => c.cell_id)).toEqual(['k1'])
   })
 
+  it('releaseUnlabeledClaims handles PocketBase timestamps and treats unparseable ones as fresh', async () => {
+    const { pb, service, room, a, b } = await pooled()
+    await service.claimNext(room.name, a.id, ['k1'])
+    await service.claimNext(room.name, b.id, ['k2'])
+    const pbTime = (ms: number) => new Date(ms).toISOString().replace('T', ' ')
+    pb.data.claims.find((c) => c.cell_id === 'k1')!.created = 'garbage'
+    pb.data.claims.find((c) => c.cell_id === 'k2')!.created = pbTime(Date.now() - 300_000)
+    expect(await service.releaseUnlabeledClaims(room.name, 120_000)).toBe(1)
+    expect(pb.data.claims.map((c) => c.cell_id)).toEqual(['k1'])
+  })
+
+  it('escapes backslashes before quotes in filters', async () => {
+    const pb = new FakePocketBase()
+    const seen: string[] = []
+    const col = pb.collection('rooms')
+    const orig = col.getFullList.bind(col)
+    col.getFullList = async (o: any = {}) => (seen.push(o.filter), orig(o))
+    await new RoomService(pb as any).getRoom('a\\"b')
+    expect(seen).toEqual(['name="a\\\\\\"b"'])
+  })
+
   it('leaveRoom removes player and unlabeled claims, keeps labels, hands over host', async () => {
     const { pb, service, room, a, b } = await pooled()
     await service.claimNext(room.name, a.id, ['k1'])

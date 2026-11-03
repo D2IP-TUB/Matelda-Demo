@@ -11,48 +11,6 @@ async function setup() {
   return { pb, service, room, a, b }
 }
 
-const KEYS = ['k1', 'k2', 'k3', 'k4']
-
-describe('claimCells', () => {
-  it('claims the first free candidates in order', async () => {
-    const { service, room, a } = await setup()
-    expect(await service.claimCells(room.name, a.id, KEYS, 2)).toEqual(['k1', 'k2'])
-  })
-
-  it('returns the player\'s own earlier claims first', async () => {
-    const { service, room, a } = await setup()
-    await service.claimCells(room.name, a.id, ['k3'], 1)
-    expect(await service.claimCells(room.name, a.id, KEYS, 2)).toEqual(['k3', 'k1'])
-  })
-
-  it('a second call (reload) does not claim more', async () => {
-    const { pb, service, room, a } = await setup()
-    await service.claimCells(room.name, a.id, KEYS, 2)
-    await service.claimCells(room.name, a.id, KEYS, 2)
-    expect(pb.data.claims).toHaveLength(2)
-  })
-
-  it('skips cells claimed by another player', async () => {
-    const { service, room, a, b } = await setup()
-    await service.claimCells(room.name, b.id, ['k1'], 1)
-    expect(await service.claimCells(room.name, a.id, KEYS, 2)).toEqual(['k2', 'k3'])
-  })
-
-  it('two players never hold the same cell', async () => {
-    const { service, room, a, b } = await setup()
-    const first = await service.claimCells(room.name, a.id, KEYS, 3)
-    const second = await service.claimCells(room.name, b.id, KEYS, 3)
-    expect(first).toEqual(['k1', 'k2', 'k3'])
-    expect(second).toEqual(['k4'])
-    expect(first.filter((k) => second.includes(k))).toEqual([])
-  })
-
-  it('returns what exists when there are fewer candidates than the budget', async () => {
-    const { service, room, a } = await setup()
-    expect(await service.claimCells(room.name, a.id, ['k1'], 5)).toEqual(['k1'])
-  })
-})
-
 describe('labels, runs and stats', () => {
   it('saveLabel creates and then overwrites a single record per player and cell', async () => {
     const { pb, service, room, a } = await setup()

@@ -52,7 +52,7 @@ export interface PbLike {
   collection(name: string): CollectionLike
 }
 
-const eq = (field: string, value: string) => `${field}="${value.replace(/"/g, '\\"')}"`
+const eq = (field: string, value: string) => `${field}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 const isConflict = (e: unknown) => (e as { status?: number })?.status === 400
 
 const hashString = (s: string) => [...s].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
@@ -140,32 +140,6 @@ export class RoomService {
     return found[0] ?? null
   }
 
-  /**
-   * Claim up to n of the candidates for this player. Own earlier claims come first (so a reload
-   * keeps the same cells), then further candidates in order; the unique (room, cell_id) index
-   * decides races between players.
-   */
-  async claimCells(roomName: string, playerId: string, candidates: string[], n: number): Promise<string[]> {
-    const claims = this.pb.collection('claims')
-    const mine = new Set(
-      (await claims.getFullList({ filter: `${eq('room', roomName)} && ${eq('player', playerId)}` })).map(
-        (c) => c.cell_id as string,
-      ),
-    )
-    const got = candidates.filter((c) => mine.has(c)).slice(0, n)
-    for (const cellId of candidates) {
-      if (got.length >= n) break
-      if (mine.has(cellId)) continue
-      try {
-        await claims.create({ room: roomName, cell_id: cellId, player: playerId })
-        got.push(cellId)
-      } catch (e) {
-        if (!isConflict(e)) throw e
-      }
-    }
-    return got
-  }
-
   async claimHost(room: Room, player: Player): Promise<Room> {
     const current = (await this.getRoom(room.name)) ?? room
     if (current.host) return current
@@ -238,7 +212,7 @@ export class RoomService {
     const stale = all.filter(
       (c) =>
         !done.has(`${c.cell_id}\u0000${c.player}`) &&
-        (olderThanMs <= 0 || !(Date.parse(String(c.created)) > cutoff)),
+        (olderThanMs <= 0 || Date.parse(String(c.created).replace(' ', 'T')) <= cutoff),
     )
     return this.deleteClaims(stale)
   }
