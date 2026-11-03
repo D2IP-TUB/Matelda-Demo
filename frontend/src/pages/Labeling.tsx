@@ -43,6 +43,14 @@ const CheckIcon = () => (
     <path d="M4 12.5l5 5L20 6.5" />
   </svg>
 )
+/** Circled "i". */
+const InfoIcon = () => (
+  <svg {...iconProps} strokeWidth={2.2}>
+    <circle cx="12" cy="12" r="9.5" />
+    <path d="M12 11v6" />
+    <circle cx="12" cy="7.5" r="0.6" fill="currentColor" />
+  </svg>
+)
 /** Circular arrow turning back (counter-clockwise). */
 const BackIcon = () => (
   <svg {...iconProps} strokeWidth={2.6}>
@@ -231,6 +239,7 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
   }, [index])
 
   const deck = useRef<SwipeDeckHandle>(null)
+  const [showInfo, setShowInfo] = useState(false)
   const [warning, setWarning] = useState('')
   const [error, setError] = useState('')
   const [jobId, setJobId] = useState<string | null>(null)
@@ -352,13 +361,30 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
 
   return (
     <>
-      <h1>Labeling</h1>
-      {inRoom && (
-        <Notice kind="info">
-          Room <b>{room.name}</b> — you are <b>{me.name}</b>. Cells are shared out first-come-first-served from one
-          shared budget: you get the next free cell each time you answer, and everyone&apos;s labels are shared when
-          the host continues.
-        </Notice>
+      <div className="labeling-head">
+        <h1>Labeling</h1>
+        <button
+          type="button"
+          className={`info-btn${showInfo ? ' on' : ''}`}
+          aria-label="Info"
+          aria-expanded={showInfo}
+          aria-controls="labeling-info"
+          onClick={() => setShowInfo(!showInfo)}
+        >
+          <InfoIcon />
+        </button>
+      </div>
+      {showInfo && (
+        <div id="labeling-info" className="labeling-info" data-testid="labeling-info">
+          {inRoom && (
+            <p>
+              Room <b>{room.name}</b> — you are <b>{me.name}</b>. Cells are shared out first-come-first-served from
+              one shared budget: you get the next free cell each time you answer, and everyone&apos;s labels are
+              shared when the host continues.
+            </p>
+          )}
+          <p>Drag the card right if the value is correct, left if it is wrong — or use the buttons or the ← → keys.</p>
+        </div>
       )}
       {poolError && <Notice kind="error">{poolError}</Notice>}
       {loadError && <Notice kind="error">{loadError}</Notice>}
@@ -420,9 +446,6 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
           Back
         </Link>
         <div className="row">
-          <Button variant="ghost" disabled={index === 0 || list.length === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
-            Previous
-          </Button>
           {(!inRoom || isHost) && (
             <Button disabled={job.state === 'running' || !loaded} onClick={() => void next()}>
               Next

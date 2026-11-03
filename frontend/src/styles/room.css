@@ -9,3 +9,11 @@
 .verdict-buttons .round svg { width: 2.4rem; height: 2.4rem; display: block; }
 .verdict-buttons .round-back { color: inherit; border-color: currentColor; opacity: 0.8; }
 .verdict-buttons .round-back:disabled { opacity: 0.35; }
+/* Labeling: heading row with an info button that opens the room details and the swipe hint. */
+.labeling-head { display: flex; align-items: center; gap: 0.6rem; }
+.labeling-head h1 { margin: 0; }
+.info-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.2rem; height: 2.2rem; padding: 0; border-radius: 50%; border: 1.5px solid currentColor; background: transparent; color: inherit; opacity: 0.7; cursor: pointer; }
+.info-btn:hover, .info-btn.on { opacity: 1; }
+.info-btn svg { width: 1.4rem; height: 1.4rem; display: block; }
+.labeling-info { margin: 0.6rem 0 1rem; padding: 0.75rem 1rem; border-radius: 10px; background: rgba(10, 132, 255, 0.08); border: 1px solid rgba(10, 132, 255, 0.25); }
+.labeling-info p { margin: 0.25rem 0; }

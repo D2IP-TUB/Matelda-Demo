@@ -122,10 +122,10 @@ describe('Labeling', () => {
     expect(screen.getByText('Card 3 of 3')).toHaveClass('deck-progress')
   })
 
-  it('Previous lets the player overwrite a verdict', async () => {
+  it('Go back lets the player overwrite a verdict', async () => {
     const { pb } = renderPage()
     await answer('Correct')
-    fireEvent.click(await screen.findByRole('button', { name: 'Previous' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Go back' }))
     expect(await screen.findByText('v0')).toBeInTheDocument()
     await answer('Error')
     await waitFor(() => expect(sessionData(pb).labeling_results).toEqual({ 't1|0|a': false }))
@@ -157,6 +157,29 @@ describe('Labeling', () => {
     expect(await screen.findByText('v0')).toBeInTheDocument()
     const top = document.querySelector('[data-testid="deck-card"][data-depth="0"]')
     expect(top).toHaveAttribute('data-enter-from', side)
+  })
+
+  it('has no Previous button; the round go-back arrow does that job', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    expect(screen.queryByRole('button', { name: 'Previous' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Go back' })).toBeInTheDocument()
+  })
+
+  it('the info button toggles a panel with the swipe hint (solo: no room text)', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    const info = screen.getByRole('button', { name: 'Info' })
+    expect(info).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByTestId('labeling-info')).toBeNull()
+    fireEvent.click(info)
+    expect(info).toHaveAttribute('aria-expanded', 'true')
+    const panel = screen.getByTestId('labeling-info')
+    expect(panel).toHaveTextContent('Drag the card right if the value is correct, left if it is wrong')
+    expect(panel).toHaveTextContent('← → keys')
+    expect(panel).not.toHaveTextContent(/first-come-first-served/)
+    fireEvent.click(info)
+    expect(screen.queryByTestId('labeling-info')).toBeNull()
   })
 
   it('with no cards (all folds bulk annotated) Next still starts propagation', async () => {
@@ -192,6 +215,20 @@ describe('Labeling', () => {
 })
 
 describe('Labeling in a room', () => {
+  it('the info button holds the room details and the swipe hint; they are not on the page by default', async () => {
+    const pb = seedLabeling()
+    renderPage(ROOM_SESSION, pb)
+    await screen.findByText('v0')
+    expect(screen.queryByText(/first-come-first-served/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Info' }))
+    const panel = screen.getByTestId('labeling-info')
+    expect(panel).toHaveTextContent('Room r1')
+    expect(panel).toHaveTextContent('you are Blue Otter')
+    expect(panel).toHaveTextContent('Cells are shared out first-come-first-served from one shared budget')
+    expect(panel).toHaveTextContent("everyone's labels are shared when the host continues")
+    expect(panel).toHaveTextContent('Drag the card right if the value is correct')
+  })
+
   it('warns when the room has not started', async () => {
     renderPage(ROOM_SESSION, seedRoom('lobby'))
     expect(await screen.findByText(/Your room has not started yet/)).toBeInTheDocument()
@@ -377,7 +414,7 @@ describe('Labeling in a room', () => {
     await waitFor(() => expect(pb.data.labels).toHaveLength(1))
     expect(m.judgeVerdicts).toHaveBeenCalledWith('demo', [{ table: 't1', row: 0, col: 'a', said_correct: true }])
     expect(pb.data.labels[0]).toMatchObject({ cell_id: 't1|0|a', player: 'pl1', value: true, is_correct: true })
-    fireEvent.click(await screen.findByRole('button', { name: 'Previous' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Go back' }))
     m.judgeVerdicts.mockResolvedValue([false])
     await answer('Error')
     await waitFor(() => expect(pb.data.labels[0]).toMatchObject({ value: false, is_correct: false }))
