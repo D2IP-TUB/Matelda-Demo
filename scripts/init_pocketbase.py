@@ -20,6 +20,11 @@ def number(name):
     return {"name": name, "type": "number"}
 
 
+def json_field(name):
+    # maxSize raised from the 1 MB default: fold results can be large.
+    return {"name": name, "type": "json", "maxSize": 5 * 1024 * 1024}
+
+
 CREATED = {"name": "created", "type": "autodate", "onCreate": True}
 
 
@@ -56,6 +61,11 @@ COLLECTIONS = [
                    text("dataset"), number("budget"), number("precision"), number("recall"),
                    number("f1")],
         "indexes": ["CREATE INDEX idx_runs_room ON runs (room)"],
+    },
+    {
+        "name": "sessions",
+        "fields": [CREATED, text("sid", True), json_field("data")],
+        "indexes": ["CREATE UNIQUE INDEX idx_sessions_sid ON sessions (sid)"],
     },
 ]
 
