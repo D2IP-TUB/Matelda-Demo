@@ -114,9 +114,42 @@ describe('RoomService shared pool', () => {
     const pub = await service.publishPool(room, a.id, 'pipe1', KEYS)
     expect(pub.pipeline).toBe('pipe1')
     expect(pub.pool).toEqual(KEYS)
-    const again = await service.publishPool({ ...room, pool: KEYS }, a.id, 'pipe2', ['x'])
+    const again = await service.publishPool(room, a.id, 'pipe2', ['x'])
     expect(again.pool).toEqual(KEYS)
     expect((await service.getRoom(room.name))!.pipeline).toBe('pipe1')
+  })
+
+  it('publishPool does not overwrite when the passed room is stale', async () => {
+    const { service, room, a } = await pooled()
+    await service.publishPool(room, a.id, 'pipe1', KEYS)
+    const stale = { ...room, pool: [] as string[] }
+    const res = await service.publishPool(stale, a.id, 'pipe2', ['x'])
+    expect(res.pool).toEqual(KEYS)
+    expect((await service.getRoom(room.name))!.pipeline).toBe('pipe1')
+  })
+
+  it('publishPool checks host against the fresh room', async () => {
+    const { service, room, a, b } = await pooled()
+    await expect(service.publishPool({ ...room, host: b.id }, b.id, 'p', KEYS)).rejects.toThrow(RoomError)
+    expect(a.id).toBe(room.host)
+  })
+
+  it('release ignores claims that vanish before delete', async () => {
+    const { pb, service, room, a, b } = await pooled()
+    await service.claimNext(room.name, a.id, ['k1'])
+    await service.claimNext(room.name, b.id, ['k2'])
+    const col = pb.collection('claims')
+    const orig = col.delete.bind(col)
+    let first = true
+    col.delete = async (id: string) => {
+      if (first) {
+        first = false
+        await orig(id)
+      }
+      return orig(id)
+    }
+    expect(await service.releaseUnlabeledClaims(room.name)).toBe(1)
+    expect(pb.data.claims).toHaveLength(0)
   })
 
   it('publishPool rejects non-hosts', async () => {

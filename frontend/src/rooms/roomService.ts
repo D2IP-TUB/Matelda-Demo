@@ -173,8 +173,9 @@ export class RoomService {
   }
 
   async publishPool(room: Room, hostPlayerId: string, pipeline: string, keys: string[]): Promise<Room> {
-    if (room.host !== hostPlayerId) throw new RoomError('Only the host can publish the pool')
-    if (room.pool && room.pool.length > 0) return room
+    const fresh = (await this.getRoom(room.name)) ?? room
+    if (fresh.host !== hostPlayerId) throw new RoomError('Only the host can publish the pool')
+    if (fresh.pool && fresh.pool.length > 0) return fresh
     return this.pb.collection('rooms').update(room.id, { pipeline, pool: keys, host: hostPlayerId })
   }
 
@@ -203,6 +204,19 @@ export class RoomService {
     return new Set(labels.map((l) => `${l.cell_id}\u0000${l.player}`))
   }
 
+  private async deleteClaims(stale: Array<{ id: string }>): Promise<number> {
+    let n = 0
+    for (const c of stale) {
+      try {
+        await this.pb.collection('claims').delete(c.id)
+        n++
+      } catch (e) {
+        if ((e as { status?: number })?.status !== 404) throw e
+      }
+    }
+    return n
+  }
+
   private async releasePlayerClaims(roomName: string, playerId: string): Promise<number> {
     const claims = this.pb.collection('claims')
     const [mine, done] = await Promise.all([
@@ -210,8 +224,7 @@ export class RoomService {
       this.labeledCells(roomName),
     ])
     const stale = mine.filter((c) => !done.has(`${c.cell_id}\u0000${playerId}`))
-    for (const c of stale) await claims.delete(c.id)
-    return stale.length
+    return this.deleteClaims(stale)
   }
 
   async releaseUnlabeledClaims(roomName: string): Promise<number> {
@@ -221,8 +234,7 @@ export class RoomService {
       this.labeledCells(roomName),
     ])
     const stale = all.filter((c) => !done.has(`${c.cell_id}\u0000${c.player}`))
-    for (const c of stale) await claims.delete(c.id)
-    return stale.length
+    return this.deleteClaims(stale)
   }
 
   /** Oldest own unlabeled claim, else claim the first free pool key from a per-player offset. */
