@@ -226,3 +226,116 @@ export const setFoldLabel = (name: string, fold: string, label: 'correct' | 'fal
     }),
     'Could not set the label',
   )
+
+// ---------------------------------------------------------------- labeling, detection, results
+export type Card = components['schemas']['Card']
+export type LabeledCell = components['schemas']['LabeledCell']
+export type RoomLabel = components['schemas']['RoomLabel']
+export type Verdict = components['schemas']['Verdict']
+export type PropagationPage = components['schemas']['PropagationPage']
+export type DetectionSummary = components['schemas']['DetectionSummary']
+export type ErrorsPage = components['schemas']['ErrorsPage']
+export type ResultsSummary = components['schemas']['ResultsSummary']
+export type AccuracyPage = components['schemas']['AccuracyPage']
+
+export async function fetchLabelingSample(name: string) {
+  const { data, error } = await api.GET('/api/pipelines/{name}/labeling/sample', {
+    params: { path: { name } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the cells to label'))
+  return data
+}
+
+export async function fetchCandidates(name: string) {
+  const { data, error } = await api.GET('/api/pipelines/{name}/labeling/candidates', {
+    params: { path: { name } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the candidate cells'))
+  return data
+}
+
+export async function fetchCards(name: string, keys: string[]): Promise<Card[]> {
+  const { data, error } = await api.POST('/api/pipelines/{name}/labeling/cards', {
+    params: { path: { name } },
+    body: { keys },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the cards'))
+  return data
+}
+
+export async function judgeVerdicts(dataset: string, verdicts: Verdict[]): Promise<(boolean | null)[]> {
+  const { data, error } = await api.POST('/api/datasets/{dataset}/judge', {
+    params: { path: { dataset } },
+    body: { verdicts },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not check the verdicts'))
+  return data.correct
+}
+
+export async function startPropagation(
+  name: string,
+  body: { own: LabeledCell[]; room_labels?: RoomLabel[]; player_id?: string | null },
+): Promise<string> {
+  const { data, error } = await api.POST('/api/pipelines/{name}/labeling/propagate', {
+    params: { path: { name } },
+    body: { own: body.own, room_labels: body.room_labels ?? [], player_id: body.player_id ?? undefined },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not start label propagation'))
+  return data.job_id
+}
+
+export async function fetchPropagation(name: string, offset: number, limit: number): Promise<PropagationPage> {
+  const { data, error } = await api.GET('/api/pipelines/{name}/propagation', {
+    params: { path: { name }, query: { offset, limit } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the propagation results'))
+  return data
+}
+
+export async function startErrorDetection(name: string): Promise<string> {
+  const { data, error } = await api.POST('/api/pipelines/{name}/error-detection', {
+    params: { path: { name } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not start error detection'))
+  return data.job_id
+}
+
+/** Resolves to null when there is no result yet. */
+export async function fetchErrorDetection(name: string): Promise<DetectionSummary | null> {
+  const { data, response, error } = await api.GET('/api/pipelines/{name}/error-detection', {
+    params: { path: { name } },
+  })
+  if (response.status === 404) return null
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the error detection result'))
+  return data
+}
+
+export async function fetchDetectedErrors(
+  name: string,
+  table: string,
+  offset: number,
+  limit: number,
+): Promise<ErrorsPage> {
+  const { data, error } = await api.GET('/api/pipelines/{name}/error-detection/errors', {
+    params: { path: { name }, query: { table, offset, limit } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the detected errors'))
+  return data
+}
+
+export async function fetchResults(name: string): Promise<ResultsSummary> {
+  const { data, error } = await api.GET('/api/pipelines/{name}/results', { params: { path: { name } } })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the results'))
+  return data
+}
+
+export async function fetchLabelAccuracy(name: string, offset: number, limit: number): Promise<AccuracyPage> {
+  const { data, error } = await api.GET('/api/pipelines/{name}/label-accuracy', {
+    params: { path: { name }, query: { offset, limit } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the labeling accuracy'))
+  return data
+}
+
+export const labelAccuracyCsvUrl = (name: string) =>
+  `/api/pipelines/${encodeURIComponent(name)}/label-accuracy.csv`

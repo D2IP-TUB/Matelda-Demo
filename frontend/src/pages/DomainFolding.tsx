@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DataTable } from '../components/DataTable'
+import { CutButton, DragGhost, FoldBox, Modal, useDragController } from '../components/foldBoard'
 import { Button, Card, JobStatus, Notice } from '../components/ui'
 import { mergeFolds, moveTable, splitFolds } from '../folds/domainOps'
 import type { Folds } from '../folds/domainOps'
@@ -47,12 +48,10 @@ export function DomainFolding({ pollMs = 1000 }: { pollMs?: number }) {
     }
   }, [job.state, jobId, config])
 
-  const [mode, setMode] = useState<'none' | 'merge' | 'split'>('none')
-  const [pickedFolds, setPickedFolds] = useState<string[]>([])
-  const [pickedTables, setPickedTables] = useState<Record<string, string[]>>({})
-  const [previewing, setPreviewing] = useState<Record<string, boolean>>({})
+  const [previewTable, setPreviewTable] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const dnd = useDragController()
 
   if (!session.ready) return <h1>Domain Folding</h1>
   if (!pipeline) {
@@ -74,14 +73,6 @@ export function DomainFolding({ pollMs = 1000 }: { pollMs?: number }) {
     }
   }
 
-  const enter = (next: 'merge' | 'split') => {
-    setMode(next)
-    setPickedFolds([])
-    setPickedTables({})
-  }
-
-  const toggle = <T,>(list: T[], item: T) => (list.includes(item) ? list.filter((x) => x !== item) : [...list, item])
-
   const save = async (): Promise<boolean> => {
     setSaving(true)
     setError('')
@@ -96,8 +87,6 @@ export function DomainFolding({ pollMs = 1000 }: { pollMs?: number }) {
       setSaving(false)
     }
   }
-
-  const anySplitTable = Object.values(pickedTables).some((t) => t.length > 0)
 
   return (
     <>
@@ -116,102 +105,54 @@ export function DomainFolding({ pollMs = 1000 }: { pollMs?: number }) {
 
       {foldNames.length > 0 && (
         <>
-          <Card title="Options / Actions">
-            <div className="row">
-              <Button variant="ghost" onClick={() => enter('merge')}>
-                Merge folds
-              </Button>
-              <Button variant="ghost" onClick={() => enter('split')}>
-                Split folds
-              </Button>
-              {mode !== 'none' && (
-                <Button variant="ghost" onClick={() => setMode('none')}>
-                  Cancel
-                </Button>
-              )}
-            </div>
-            {mode === 'merge' && (
-              <p>Select the folds to merge; all their tables end up in the first selected fold.</p>
-            )}
-            {mode === 'split' && (
-              <p>Select tables; every fold is split immediately after its selected tables.</p>
-            )}
-            {mode === 'merge' && (
-              <Button
-                disabled={pickedFolds.length < 2}
-                onClick={() => {
-                  setLocal(mergeFolds(folds, pickedFolds))
-                  setMode('none')
-                }}
-              >
-                Confirm merge
-              </Button>
-            )}
-            {mode === 'split' && (
-              <Button
-                disabled={!anySplitTable}
-                onClick={() => {
-                  setLocal(splitFolds(folds, pickedTables))
-                  setMode('none')
-                }}
-              >
-                Confirm split
-              </Button>
-            )}
-          </Card>
-
+          <p className="hint">
+            Drag a table (touch: press and hold, then drag) onto another fold to move it, drag a fold's handle onto another fold to merge them, click ✂
+            between two tables to split, click a table to preview it.
+          </p>
           {foldNames.map((fold) => (
-            <Card key={fold}>
-              <div className="row">
-                <h3>{fold}</h3>
-                {mode === 'merge' && (
-                  <input
-                    type="checkbox"
-                    aria-label={`Select fold ${fold}`}
-                    checked={pickedFolds.includes(fold)}
-                    onChange={() => setPickedFolds(toggle(pickedFolds, fold))}
-                  />
-                )}
-              </div>
-              <ul className="tables">
-                {folds[fold].map((table) => (
+            <FoldBox<string>
+              key={fold}
+              name={fold}
+              dnd={dnd}
+              onDropItem={(table) => setLocal(moveTable(folds, table, fold))}
+              onMergeFold={(source) => setLocal(mergeFolds(folds, [fold, source]))}
+              header={<h3>{fold}</h3>}
+            >
+              <ul className="chips">
+                {folds[fold].map((table, i) => (
                   <li key={table}>
-                    <div className="row">
-                      <span>{table}</span>
-                      <Button
-                        variant="ghost"
-                        aria-label={`Preview ${table}`}
-                        onClick={() => setPreviewing({ ...previewing, [table]: !previewing[table] })}
-                      >
-                        {previewing[table] ? 'Hide' : 'Preview'}
-                      </Button>
-                      <select
-                        aria-label={`Move ${table} to`}
-                        value={fold}
-                        onChange={(e) => setLocal(moveTable(folds, table, e.target.value))}
-                      >
-                        {foldNames.map((f) => (
-                          <option key={f}>{f}</option>
-                        ))}
-                      </select>
-                      {mode === 'split' && (
-                        <input
-                          type="checkbox"
-                          aria-label={`Select table ${table}`}
-                          checked={(pickedTables[fold] ?? []).includes(table)}
-                          onChange={() =>
-                            setPickedTables({ ...pickedTables, [fold]: toggle(pickedTables[fold] ?? [], table) })
-                          }
-                        />
-                      )}
-                    </div>
-                    {previewing[table] && <TablePreview dataset={dataset} table={table} />}
+                    <button
+                      type="button"
+                      className="chip"
+                      {...dnd.source({ kind: 'item', fold, item: table }, table)}
+                      onClick={() => setPreviewTable(table)}
+                    >
+                      {table}
+                    </button>
+                    {i < folds[fold].length - 1 && (
+                      <CutButton
+                        label={`Split ${fold} after ${table}`}
+                        onCut={() => setLocal(splitFolds(folds, { [fold]: [table] }))}
+                      />
+                    )}
                   </li>
                 ))}
               </ul>
-            </Card>
+            </FoldBox>
           ))}
         </>
+      )}
+
+      <DragGhost dnd={dnd} />
+
+      {previewTable && (
+        <Modal label={`Preview ${previewTable}`} onClose={() => setPreviewTable(null)}>
+          <h2>{previewTable}</h2>
+          <TablePreview dataset={dataset} table={previewTable} />
+          <Button variant="ghost" onClick={() => setPreviewTable(null)}>
+            Close
+          </Button>
+        </Modal>
       )}
 
       {error && <Notice kind="error">{error}</Notice>}

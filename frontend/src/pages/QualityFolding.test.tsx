@@ -81,7 +81,17 @@ beforeEach(() => {
   }
 })
 
-const showFold = async (fold: string) => fireEvent.click(await screen.findByRole('button', { name: `Show ${fold}` }))
+const box = (fold: string) => document.querySelector(`[data-fold="${fold}"]`) as HTMLElement
+const drag = (source: Element, target: Element) => {
+  fireEvent.dragStart(source)
+  fireEvent.dragOver(target)
+  fireEvent.drop(target)
+  fireEvent.dragEnd(source)
+}
+const cellsOf = async (fold: string) => {
+  await screen.findByText(fold)
+  return within(box(fold)).findAllByTestId('cell')
+}
 
 describe('QualityFolding', () => {
   it('asks to configure a pipeline first', async () => {
@@ -136,18 +146,16 @@ describe('QualityFolding', () => {
 
   it('loads cells 20 at a time', async () => {
     renderPage()
-    await showFold(F0)
-    expect(await screen.findAllByTestId('cell')).toHaveLength(20)
+    expect(await cellsOf(F0)).toHaveLength(20)
     expect(m.fetchFoldCells).toHaveBeenCalledWith('p1', F0, 0, 20)
     fireEvent.click(screen.getByRole('button', { name: 'Show more' }))
-    await waitFor(() => expect(screen.getAllByTestId('cell')).toHaveLength(25))
+    await waitFor(() => expect(within(box(F0)).getAllByTestId('cell')).toHaveLength(25))
     expect(m.fetchFoldCells).toHaveBeenCalledWith('p1', F0, 20, 20)
   })
 
   it('opens a dialog with the detection results and a table excerpt', async () => {
     renderPage()
-    await showFold(F0)
-    fireEvent.click((await screen.findAllByTestId('cell'))[7])
+    fireEvent.click((await cellsOf(F0))[7])
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('Typo Detector')).toBeInTheDocument()
     await waitFor(() => expect(m.fetchDirtyPage).toHaveBeenCalledWith('demo', 't1', 2, 11))
@@ -156,40 +164,38 @@ describe('QualityFolding', () => {
 
   it('says so when a cell passed all checks, and the excerpt starts at row 0 near the top', async () => {
     renderPage()
-    await showFold(F0)
-    fireEvent.click((await screen.findAllByTestId('cell'))[0])
+    fireEvent.click((await cellsOf(F0))[0])
     expect(await screen.findByText(/passed all error detection checks/)).toBeInTheDocument()
     await waitFor(() => expect(m.fetchDirtyPage).toHaveBeenCalledWith('demo', 't1', 0, 11))
   })
 
-  it('moves a cell to another fold from the dialog', async () => {
+  it('moves a cell by dragging it onto another fold', async () => {
     renderPage()
-    await showFold(F0)
-    fireEvent.click((await screen.findAllByTestId('cell'))[0])
-    fireEvent.change(await screen.findByLabelText('Move cell to'), { target: { value: F1 } })
+    const [cell] = await cellsOf(F0)
+    drag(cell, box(F1))
     await waitFor(() =>
       expect(m.moveCell).toHaveBeenCalledWith('p1', { table: 't1', row: 0, col: 'a' }, F1),
     )
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
-  it('merges the selected folds in selection order', async () => {
+  it('does nothing when a cell is dropped on its own fold', async () => {
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Merge folds' }))
-    const confirm = screen.getByRole('button', { name: 'Confirm merge' })
-    expect(confirm).toBeDisabled()
-    fireEvent.click(screen.getByLabelText(`Select fold ${F1}`))
-    fireEvent.click(screen.getByLabelText(`Select fold ${F0}`))
-    fireEvent.click(confirm)
-    await waitFor(() => expect(m.mergeCellFolds).toHaveBeenCalledWith('p1', [F1, F0]))
+    const [cell] = await cellsOf(F0)
+    drag(cell, box(F0))
+    expect(m.moveCell).not.toHaveBeenCalled()
   })
 
-  it('splits a fold after the selected cell', async () => {
+  it('merges a fold into the one it is dropped on', async () => {
     renderPage()
-    await showFold(F0)
-    fireEvent.click(await screen.findByRole('button', { name: 'Split folds' }))
-    fireEvent.click(await screen.findByLabelText('Select cell t1 1 a'))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm split' }))
+    await screen.findByText(F0)
+    drag(screen.getByLabelText(`Drag fold ${F1}`), box(F0))
+    await waitFor(() => expect(m.mergeCellFolds).toHaveBeenCalledWith('p1', [F0, F1]))
+  })
+
+  it('splits a fold at the scissors after a cell', async () => {
+    renderPage()
+    await cellsOf(F0)
+    fireEvent.click(screen.getByRole('button', { name: `Split ${F0} after t1 1 a` }))
     await waitFor(() =>
       expect(m.splitCellFold).toHaveBeenCalledWith('p1', F0, [{ table: 't1', row: 1, col: 'a' }]),
     )
@@ -210,10 +216,8 @@ describe('QualityFolding', () => {
   it('shows the message of a rejected operation', async () => {
     m.mergeCellFolds.mockRejectedValue(new Error('Select at least two different folds to merge'))
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Merge folds' }))
-    fireEvent.click(screen.getByLabelText(`Select fold ${F0}`))
-    fireEvent.click(screen.getByLabelText(`Select fold ${F1}`))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm merge' }))
+    await screen.findByText(F0)
+    drag(screen.getByLabelText(`Drag fold ${F1}`), box(F0))
     expect(await screen.findByText(/at least two different folds/)).toBeInTheDocument()
   })
 

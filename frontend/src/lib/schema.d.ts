@@ -431,10 +431,254 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pipelines/{name}/labeling/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Labeling Sample */
+        get: operations["labeling_sample_api_pipelines__name__labeling_sample_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/labeling/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Labeling Candidates */
+        get: operations["labeling_candidates_api_pipelines__name__labeling_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/labeling/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Labeling Cards */
+        post: operations["labeling_cards_api_pipelines__name__labeling_cards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/datasets/{dataset}/judge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Judge Verdicts */
+        post: operations["judge_verdicts_api_datasets__dataset__judge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/labeling/propagate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Labeling Propagate */
+        post: operations["labeling_propagate_api_pipelines__name__labeling_propagate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/propagation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Propagation Results */
+        get: operations["propagation_results_api_pipelines__name__propagation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/error-detection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Error Detection Summary */
+        get: operations["error_detection_summary_api_pipelines__name__error_detection_get"];
+        put?: never;
+        /** Start Error Detection */
+        post: operations["start_error_detection_api_pipelines__name__error_detection_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/error-detection/errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detected Errors */
+        get: operations["detected_errors_api_pipelines__name__error_detection_errors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Results */
+        get: operations["results_api_pipelines__name__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/label-accuracy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Label Accuracy Page */
+        get: operations["label_accuracy_page_api_pipelines__name__label_accuracy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/label-accuracy.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Label Accuracy Csv */
+        get: operations["label_accuracy_csv_api_pipelines__name__label_accuracy_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccuracyPage */
+        AccuracyPage: {
+            /** Total */
+            total: number;
+            /** Correct */
+            correct: number;
+            /** Accuracy */
+            accuracy: number;
+            /** Rows */
+            rows: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** CandidatesResponse */
+        CandidatesResponse: {
+            /** Keys */
+            keys: string[];
+            /** Sample Size */
+            sample_size: number;
+        };
+        /** Card */
+        Card: {
+            /** Key */
+            key: string;
+            /** Table */
+            table: string;
+            /** Row */
+            row: number;
+            /** Col */
+            col: string;
+            /**
+             * Val
+             * @default
+             */
+            val: unknown;
+            /**
+             * Domain Fold
+             * @default
+             */
+            domain_fold: string;
+            /**
+             * Cell Fold
+             * @default
+             */
+            cell_fold: string;
+            /**
+             * Strategies
+             * @default []
+             */
+            strategies: string[];
+        };
+        /** CardsBody */
+        CardsBody: {
+            /** Keys */
+            keys: string[];
+        };
         /** CellPage */
         CellPage: {
             /** Cells */
@@ -509,6 +753,19 @@ export interface components {
             /** Dataset */
             dataset: string;
         };
+        /** DetectionSummary */
+        DetectionSummary: {
+            /** Time */
+            time: string;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            };
+            /** Tables */
+            tables: {
+                [key: string]: number;
+            };
+        };
         /** DomainFoldingRequest */
         DomainFoldingRequest: {
             /** Dataset */
@@ -522,6 +779,15 @@ export interface components {
             domain_folds: {
                 [key: string]: string[];
             };
+        };
+        /** ErrorsPage */
+        ErrorsPage: {
+            /** Errors */
+            errors: {
+                [key: string]: unknown;
+            }[];
+            /** Total */
+            total: number;
         };
         /** FoldSummary */
         FoldSummary: {
@@ -567,12 +833,48 @@ export interface components {
             /** Job Id */
             job_id: string;
         };
+        /** JudgeBody */
+        JudgeBody: {
+            /** Verdicts */
+            verdicts: components["schemas"]["Verdict"][];
+        };
+        /** JudgeResponse */
+        JudgeResponse: {
+            /** Correct */
+            correct: (boolean | null)[];
+        };
         /** LabelBody */
         LabelBody: {
             /** Fold */
             fold: string;
             /** Label */
             label: ("correct" | "false") | null;
+        };
+        /** LabeledCell */
+        LabeledCell: {
+            /** Table */
+            table: string;
+            /** Row */
+            row: number;
+            /** Col */
+            col: string;
+            /**
+             * Val
+             * @default
+             */
+            val: unknown;
+            /** Is Error */
+            is_error: boolean;
+            /**
+             * Domain Fold
+             * @default
+             */
+            domain_fold: string;
+            /**
+             * Cell Fold
+             * @default
+             */
+            cell_fold: string;
         };
         /** MergeBody */
         MergeBody: {
@@ -599,10 +901,33 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** PropagateBody */
+        PropagateBody: {
+            /** Own */
+            own: components["schemas"]["LabeledCell"][];
+            /**
+             * Room Labels
+             * @default []
+             */
+            room_labels: components["schemas"]["RoomLabel"][];
+            /** Player Id */
+            player_id?: string | null;
+        };
         /** PropagateRequest */
         PropagateRequest: {
             /** Dataset */
             dataset: string;
+            /** Labeled Cells */
+            labeled_cells: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** PropagationPage */
+        PropagationPage: {
+            /** Total */
+            total: number;
+            /** Propagated Total */
+            propagated_total: number;
             /** Labeled Cells */
             labeled_cells: {
                 [key: string]: unknown;
@@ -628,6 +953,36 @@ export interface components {
             /** Selected Strategies */
             selected_strategies: string[];
         };
+        /** ResultsSummary */
+        ResultsSummary: {
+            /** Dataset */
+            dataset: string;
+            /** Pipeline */
+            pipeline: string;
+            /** Labeling Budget */
+            labeling_budget: number | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: unknown;
+            } | null;
+            /** Comparison */
+            comparison: {
+                [key: string]: unknown;
+            }[];
+            /** Raha */
+            raha: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** RoomLabel */
+        RoomLabel: {
+            /** Cell Id */
+            cell_id: string;
+            /** Player */
+            player: string;
+            /** Value */
+            value: boolean;
+        };
         /** SampleRequest */
         SampleRequest: {
             /** Dataset */
@@ -642,6 +997,13 @@ export interface components {
             domain_folds: {
                 [key: string]: string[];
             };
+        };
+        /** SampleResponse */
+        SampleResponse: {
+            /** Cards */
+            cards: components["schemas"]["Card"][];
+            /** Bulk Annotated Folds */
+            bulk_annotated_folds: number;
         };
         /** SplitBody */
         SplitBody: {
@@ -673,6 +1035,17 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** Verdict */
+        Verdict: {
+            /** Table */
+            table: string;
+            /** Row */
+            row: number;
+            /** Col */
+            col: string;
+            /** Said Correct */
+            said_correct: boolean;
         };
     };
     responses: never;
@@ -1528,6 +1901,400 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    labeling_sample_api_pipelines__name__labeling_sample_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SampleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    labeling_candidates_api_pipelines__name__labeling_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidatesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    labeling_cards_api_pipelines__name__labeling_cards_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CardsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Card"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    judge_verdicts_api_datasets__dataset__judge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dataset: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgeBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    labeling_propagate_api_pipelines__name__labeling_propagate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropagateBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propagation_results_api_pipelines__name__propagation_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropagationPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    error_detection_summary_api_pipelines__name__error_detection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetectionSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_error_detection_api_pipelines__name__error_detection_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detected_errors_api_pipelines__name__error_detection_errors_get: {
+        parameters: {
+            query: {
+                table: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorsPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    results_api_pipelines__name__results_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultsSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    label_accuracy_page_api_pipelines__name__label_accuracy_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccuracyPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    label_accuracy_csv_api_pipelines__name__label_accuracy_csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

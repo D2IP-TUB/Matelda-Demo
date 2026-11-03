@@ -5,6 +5,8 @@ const UNIQUE: Record<string, string[][]> = {
   rooms: [['name']],
   players: [['token'], ['room', 'name']],
   sessions: [['sid']],
+  claims: [['room', 'cell_id']],
+  labels: [['room', 'cell_id', 'player']],
 }
 
 function matches(rec: Rec, filter?: string): boolean {

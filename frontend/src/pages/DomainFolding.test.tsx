@@ -43,6 +43,13 @@ function renderPage(session: Record<string, unknown> = { pipeline_path: 'p1' }) 
   )
 }
 
+const box = (fold: string) => document.querySelector(`[data-fold="${fold}"]`) as HTMLElement
+const drag = (source: Element, target: Element) => {
+  fireEvent.dragStart(source)
+  fireEvent.dragOver(target)
+  fireEvent.drop(target)
+  fireEvent.dragEnd(source)
+}
 const folds = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
 
 beforeEach(() => {
@@ -96,43 +103,54 @@ describe('DomainFolding', () => {
 
   it('moves a table and drops the emptied fold', async () => {
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Move t4 to'), { target: { value: 'F0' } })
+    drag(await screen.findByRole('button', { name: 't4' }), box('F0'))
     expect(folds()).toEqual(['F0'])
+    expect(within(box('F0')).getByText('t4')).toBeInTheDocument()
   })
 
-  it('merges two selected folds', async () => {
+  it('merges a fold into the one it is dropped on', async () => {
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Merge folds' }))
-    const confirm = screen.getByRole('button', { name: 'Confirm merge' })
-    expect(confirm).toBeDisabled()
-    fireEvent.click(screen.getByLabelText('Select fold F0'))
-    fireEvent.click(screen.getByLabelText('Select fold F1'))
-    fireEvent.click(confirm)
+    drag(await screen.findByLabelText('Drag fold F1'), box('F0'))
     expect(folds()).toEqual(['F0'])
-    expect(screen.getByText('t4')).toBeInTheDocument()
+    expect(within(box('F0')).getAllByRole('button', { name: /^t\d$/ }).map((b) => b.textContent)).toEqual([
+      't1', 't2', 't3', 't4',
+    ])
   })
 
-  it('splits a fold after the selected table', async () => {
+  it('splits a fold at the scissors between two tables', async () => {
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Split folds' }))
-    fireEvent.click(screen.getByLabelText('Select table t2'))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm split' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Split F0 after t2' }))
     expect(folds()).toEqual(['F0 - Split 1', 'F0 - Split 2', 'F1'])
+    expect(screen.queryByRole('button', { name: 'Split F1 after t4' })).toBeNull()
   })
 
-  it('loads a table preview only when asked', async () => {
+  it('opens a popup with the table when a table is clicked, and loads it only then', async () => {
     renderPage()
     await screen.findByText('t1')
     expect(m.fetchDirtyPage).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Preview t1' }))
-    expect(await screen.findByRole('columnheader', { name: 'a' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 't1' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByRole('columnheader', { name: 'a' })).toBeInTheDocument()
     expect(m.fetchDirtyPage).toHaveBeenCalledTimes(1)
     expect(m.fetchDirtyPage).toHaveBeenCalledWith('demo', 't1', 0, 20)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('closes the popup with Escape or a click on the backdrop', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 't1' }))
+    await screen.findByRole('dialog')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 't1' }))
+    fireEvent.click(await screen.findByTestId('backdrop'))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('saves the edited folds and moves on', async () => {
     renderPage()
-    fireEvent.change(await screen.findByLabelText('Move t4 to'), { target: { value: 'F0' } })
+    drag(await screen.findByRole('button', { name: 't4' }), box('F0'))
     fireEvent.click(screen.getByRole('button', { name: /Next/ }))
     await screen.findByRole('heading', { name: 'Quality Folding' })
     expect(m.saveDomainFolds).toHaveBeenCalledWith('p1', { F0: ['t1', 't2', 't3', 't4'] })

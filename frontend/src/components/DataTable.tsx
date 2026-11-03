@@ -1,6 +1,7 @@
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useMemo } from 'react'
+import type { CSSProperties } from 'react'
 
 interface DataTableProps {
   columns: string[]
@@ -8,11 +9,13 @@ interface DataTableProps {
   /** diff[r][c] is true where the cell differs between dirty and clean. */
   diff?: boolean[][]
   highlight?: 'dirty' | 'clean'
+  /** Inline style per cell, e.g. shading by confidence. */
+  cellStyle?: (row: number, col: number) => CSSProperties | undefined
 }
 
 // Built on TanStack Table (headless): sorting, column visibility or virtualization can be
 // added here later without touching the pages. Paging is done by the API.
-export function DataTable({ columns, rows, diff, highlight }: DataTableProps) {
+export function DataTable({ columns, rows, diff, highlight, cellStyle }: DataTableProps) {
   const defs = useMemo<ColumnDef<string[]>[]>(
     () => columns.map((name, i) => ({ id: String(i), header: name, accessorFn: (row) => row[i] })),
     [columns],
@@ -38,6 +41,7 @@ export function DataTable({ columns, rows, diff, highlight }: DataTableProps) {
                 <td
                   key={cell.id}
                   className={diff?.[row.index]?.[c] && highlight ? `diff-${highlight}` : undefined}
+                  style={cellStyle?.(row.index, c)}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>

@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DataTable } from '../components/DataTable'
+import { CutButton, DragGhost, FoldBox, Modal, useDragController } from '../components/foldBoard'
+import type { DragController } from '../components/foldBoard'
 import { BudgetField, StrategyChecklist } from '../components/forms'
 import { Button, Card, JobStatus, Notice } from '../components/ui'
 import { useJob } from '../jobs/useJob'
@@ -21,24 +23,20 @@ import type { CellRef, CellView, FoldSummary } from '../lib/api'
 import { useSession } from '../session/SessionProvider'
 
 const PAGE = 20
-type Mode = 'none' | 'merge' | 'split' | 'bulk'
 
 const refOf = (c: CellRef | CellView): CellRef => ({ table: c.table, row: c.row, col: c.col })
-const sameCell = (a: CellRef, b: CellRef) => a.table === b.table && a.row === b.row && a.col === b.col
 
 function FoldCells({
   pipeline,
   fold,
-  splitMode,
-  picked,
-  onPick,
+  dnd,
+  onCut,
   onOpen,
 }: {
   pipeline: string
   fold: string
-  splitMode: boolean
-  picked: CellRef[]
-  onPick: (cell: CellRef) => void
+  dnd: DragController
+  onCut: (cell: CellView) => void
   onOpen: (cell: CellView) => void
 }) {
   const [cells, setCells] = useState<CellView[]>([])
@@ -62,21 +60,24 @@ function FoldCells({
   return (
     <div>
       {error && <Notice kind="error">{error}</Notice>}
-      <ul className="cells">
-        {cells.map((cell) => (
-          <li key={`${cell.table}|${cell.row}|${cell.col}`} data-testid="cell" onClick={() => onOpen(cell)}>
-            {splitMode && (
-              <input
-                type="checkbox"
-                aria-label={`Select cell ${cell.table} ${cell.row} ${cell.col}`}
-                checked={picked.some((p) => sameCell(p, cell))}
-                onClick={(e) => e.stopPropagation()}
-                onChange={() => onPick(refOf(cell))}
-              />
-            )}
-            <button type="button" className="link">
+      <ul className="chips scroll">
+        {cells.map((cell, i) => (
+          <li key={`${cell.table}|${cell.row}|${cell.col}`}>
+            <button
+              type="button"
+              className="chip"
+              data-testid="cell"
+              {...dnd.source({ kind: 'item', fold, item: cell }, `${cell.table} · ${cell.col}: ${String(cell.val)}`)}
+              onClick={() => onOpen(cell)}
+            >
               {`${cell.table} · row ${cell.row} · ${cell.col}: ${String(cell.val)}`}
             </button>
+            {i < total - 1 && (
+              <CutButton
+                label={`Split ${fold} after ${cell.table} ${cell.row} ${cell.col}`}
+                onCut={() => onCut(cell)}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -92,16 +93,10 @@ function FoldCells({
 function CellDialog({
   dataset,
   cell,
-  fold,
-  allFolds,
-  onMove,
   onClose,
 }: {
   dataset: string
   cell: CellView
-  fold: string
-  allFolds: string[]
-  onMove: (toFold: string) => void
   onClose: () => void
 }) {
   const start = Math.max(0, cell.row - 5)
@@ -114,7 +109,7 @@ function CellDialog({
     ? data.rows.map((_, r) => data.columns.map((c) => start + r === cell.row && c === cell.col))
     : undefined
   return (
-    <dialog open role="dialog" aria-label="Cell details" className="cell-dialog">
+    <Modal label="Cell details" onClose={onClose}>
       <h2>{`Details for ${String(cell.val)}`}</h2>
       <p>
         Table <code>{cell.table}</code> · column <code>{cell.col}</code> · row {cell.row}
@@ -132,18 +127,10 @@ function CellDialog({
       <h3>Table excerpt</h3>
       {excerpt.isError && <Notice kind="error">{(excerpt.error as Error).message}</Notice>}
       {data && <DataTable columns={data.columns} rows={data.rows} diff={diff} highlight="dirty" />}
-      <div className="field">
-        <label htmlFor="move-cell">Move cell to</label>
-        <select id="move-cell" value={fold} onChange={(e) => onMove(e.target.value)}>
-          {allFolds.map((f) => (
-            <option key={f}>{f}</option>
-          ))}
-        </select>
-      </div>
       <Button variant="ghost" onClick={onClose}>
         Close
       </Button>
-    </dialog>
+    </Modal>
   )
 }
 
@@ -182,11 +169,9 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
     }
   }, [job.state, jobId, pipeline, queryClient])
 
-  const [mode, setMode] = useState<Mode>('none')
-  const [pickedFolds, setPickedFolds] = useState<string[]>([])
-  const [splitSel, setSplitSel] = useState<{ fold: string; cells: CellRef[] }>({ fold: '', cells: [] })
-  const [shown, setShown] = useState<Record<string, boolean>>({})
-  const [open, setOpen] = useState<{ cell: CellView; fold: string } | null>(null)
+  const dnd = useDragController()
+  const [bulk, setBulk] = useState(false)
+  const [open, setOpen] = useState<CellView | null>(null)
   const [version, setVersion] = useState(0)
   const [error, setError] = useState('')
 
@@ -237,24 +222,8 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
     }
   }
 
-  const enter = (next: Mode) => {
-    setMode(next)
-    setPickedFolds([])
-    setSplitSel({ fold: '', cells: [] })
-  }
-
   const folds: FoldSummary[] = cellFolds.data ?? []
   const domains = [...new Set(folds.map((f) => f.domain))]
-  const allFoldNames = folds.map((f) => f.name)
-
-  const pickCell = (fold: string, cell: CellRef) =>
-    setSplitSel((prev) => {
-      const base = prev.fold === fold ? prev.cells : []
-      return {
-        fold,
-        cells: base.some((c) => sameCell(c, cell)) ? base.filter((c) => !sameCell(c, cell)) : [...base, cell],
-      }
-    })
 
   return (
     <>
@@ -285,51 +254,16 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
 
       {folds.length > 0 && (
         <>
-          <Card title="Options / Actions">
-            <div className="row">
-              <Button variant="ghost" onClick={() => enter('merge')}>
-                Merge folds
-              </Button>
-              <Button variant="ghost" onClick={() => enter('split')}>
-                Split folds
-              </Button>
-              <Button variant="ghost" onClick={() => enter('bulk')}>
-                Bulk annotate
-              </Button>
-              {mode !== 'none' && (
-                <Button variant="ghost" onClick={() => enter('none')}>
-                  Cancel
-                </Button>
-              )}
-            </div>
-            {mode === 'merge' && (
-              <>
-                <p>Select the folds to merge; the first one you select receives all cells.</p>
-                <Button
-                  disabled={pickedFolds.length < 2}
-                  onClick={async () => {
-                    if (await edit(() => mergeCellFolds(pipeline, pickedFolds))) enter('none')
-                  }}
-                >
-                  Confirm merge
-                </Button>
-              </>
-            )}
-            {mode === 'split' && (
-              <>
-                <p>Show a fold and select the cells to split after (one fold at a time).</p>
-                <Button
-                  disabled={splitSel.cells.length === 0}
-                  onClick={async () => {
-                    if (await edit(() => splitCellFold(pipeline, splitSel.fold, splitSel.cells))) enter('none')
-                  }}
-                >
-                  Confirm split
-                </Button>
-              </>
-            )}
-            {mode === 'bulk' && <p>Mark whole folds as correct or false; labels are used for error detection.</p>}
-          </Card>
+          <div className="row">
+            <Button variant="ghost" onClick={() => setBulk(!bulk)}>
+              {bulk ? 'Done annotating' : 'Bulk annotate'}
+            </Button>
+          </div>
+          <p className="hint">
+            {bulk
+              ? 'Mark whole folds as correct or false; labels are used for error detection.'
+              : "Drag a cell (touch: press and hold, then drag) onto another fold to move it, drag a fold's handle onto another fold to merge them, click ✂ between two cells to split, click a cell for details."}
+          </p>
 
           {domains.map((domain) => (
             <section key={domain}>
@@ -337,95 +271,63 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
               {folds
                 .filter((f) => f.domain === domain)
                 .map((fold) => (
-                  <Card key={fold.name}>
-                    <div className="row">
-                      <span className={`fold-name label-${fold.label}`}>{fold.name}</span>
-                      <span>{`${fold.cell_count} cells`}</span>
-                      <Button
-                        variant="ghost"
-                        aria-label={`${shown[fold.name] ? 'Hide' : 'Show'} ${fold.name}`}
-                        onClick={() => setShown({ ...shown, [fold.name]: !shown[fold.name] })}
-                      >
-                        {shown[fold.name] ? 'Hide' : 'Show'}
-                      </Button>
-                      {mode === 'merge' && (
-                        <input
-                          type="checkbox"
-                          aria-label={`Select fold ${fold.name}`}
-                          checked={pickedFolds.includes(fold.name)}
-                          onChange={() =>
-                            setPickedFolds(
-                              pickedFolds.includes(fold.name)
-                                ? pickedFolds.filter((f) => f !== fold.name)
-                                : [...pickedFolds, fold.name],
-                            )
-                          }
-                        />
-                      )}
-                      {mode === 'bulk' && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            aria-label={`Mark ${fold.name} correct`}
-                            onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, 'correct'))}
-                          >
-                            ✓
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            aria-label={`Mark ${fold.name} false`}
-                            onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, 'false'))}
-                          >
-                            ✗
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            aria-label={`Clear label of ${fold.name}`}
-                            onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, null))}
-                          >
-                            Clear
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                    {shown[fold.name] && (
+                  <FoldBox<CellView>
+                    key={fold.name}
+                    name={fold.name}
+                    dnd={dnd}
+                    onDropItem={(cell) => void edit(() => moveCell(pipeline, refOf(cell), fold.name))}
+                    onMergeFold={(source) => void edit(() => mergeCellFolds(pipeline, [fold.name, source]))}
+                    header={
                       <>
-                        <ul>
-                          {Object.entries(fold.tables).flatMap(([table, cols]) =>
-                            Object.entries(cols).map(([col, n]) => (
-                              <li key={`${table}|${col}`}>{`${table} · ${col}: ${n} cells`}</li>
-                            )),
-                          )}
-                        </ul>
-                        <FoldCells
-                          key={`${fold.name}-${version}`}
-                          pipeline={pipeline}
-                          fold={fold.name}
-                          splitMode={mode === 'split'}
-                          picked={splitSel.fold === fold.name ? splitSel.cells : []}
-                          onPick={(cell) => pickCell(fold.name, cell)}
-                          onOpen={(cell) => setOpen({ cell, fold: fold.name })}
-                        />
+                        <span className={`fold-name label-${fold.label}`}>{fold.name}</span>
+                        <span>{`${fold.cell_count} cells`}</span>
+                        {bulk && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              aria-label={`Mark ${fold.name} correct`}
+                              onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, 'correct'))}
+                            >
+                              ✓
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              aria-label={`Mark ${fold.name} false`}
+                              onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, 'false'))}
+                            >
+                              ✗
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              aria-label={`Clear label of ${fold.name}`}
+                              onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, null))}
+                            >
+                              Clear
+                            </Button>
+                          </>
+                        )}
                       </>
-                    )}
-                  </Card>
+                    }
+                  >
+                    <FoldCells
+                      key={`${fold.name}-${version}`}
+                      pipeline={pipeline}
+                      fold={fold.name}
+                      dnd={dnd}
+                      onCut={(cell) => void edit(() => splitCellFold(pipeline, fold.name, [refOf(cell)]))}
+                      onOpen={setOpen}
+                    />
+                  </FoldBox>
                 ))}
             </section>
           ))}
         </>
       )}
 
+      <DragGhost dnd={dnd} />
+
       {open && config.data && (
-        <CellDialog
-          dataset={config.data.selected_dataset}
-          cell={open.cell}
-          fold={open.fold}
-          allFolds={allFoldNames}
-          onClose={() => setOpen(null)}
-          onMove={async (to) => {
-            if (to !== open.fold && (await edit(() => moveCell(pipeline, refOf(open.cell), to)))) setOpen(null)
-          }}
-        />
+        <CellDialog dataset={config.data.selected_dataset} cell={open} onClose={() => setOpen(null)} />
       )}
 
       {error && <Notice kind="error">{error}</Notice>}
