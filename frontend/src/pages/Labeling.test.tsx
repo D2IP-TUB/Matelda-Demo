@@ -131,6 +131,21 @@ describe('Labeling', () => {
     await waitFor(() => expect(sessionData(pb).labeling_results).toEqual({ 't1|0|a': false }))
   })
 
+  it('the middle go-back button sits between Error and Correct and returns to the previous card', async () => {
+    renderPage()
+    const back = await screen.findByRole('button', { name: 'Go back' })
+    const [error, , correct] = Array.from(document.querySelectorAll('.verdict-buttons button'))
+    expect(error).toHaveAccessibleName('Error')
+    expect(correct).toHaveAccessibleName('Correct')
+    expect(document.querySelectorAll('.verdict-buttons button')[1]).toBe(back)
+    expect(back).toBeDisabled() // nothing to go back to on the first card
+    await answer('Correct')
+    expect(await screen.findByText('v1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Go back' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+  })
+
   it('with no cards (all folds bulk annotated) Next still starts propagation', async () => {
     m.fetchLabelingSample.mockResolvedValue({ cards: [], bulk_annotated_folds: 2 } as any)
     renderPage()

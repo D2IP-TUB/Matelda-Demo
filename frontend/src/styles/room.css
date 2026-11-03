@@ -3,3 +3,13 @@
 .join-qr { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin: 1rem 0; }
 .join-qr code { word-break: break-all; user-select: all; }
 .room-notice { padding: 0.5rem 0.75rem; border-radius: 6px; background: rgba(179, 38, 30, 0.1); }
+/* Labeling verdict buttons: bigger Error/Correct with a smaller go-back arrow between them. */
+.verdict-buttons { align-items: center; gap: 1.75rem; }
+.verdict-buttons .round { width: 92px; height: 92px; font-size: 2.8rem; }
+.verdict-buttons .round-back { width: 56px; height: 56px; font-size: 1.6rem; color: inherit; border-color: currentColor; opacity: 0.8; }
+.verdict-buttons .round-back:disabled { opacity: 0.35; }
+@media (max-width: 480px) {
+  .verdict-buttons { gap: 1rem; }
+  .verdict-buttons .round { width: 76px; height: 76px; font-size: 2.3rem; }
+  .verdict-buttons .round-back { width: 48px; height: 48px; }
+}

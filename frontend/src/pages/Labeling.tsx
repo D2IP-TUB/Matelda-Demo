@@ -363,6 +363,15 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
             <button type="button" className="round round-error" aria-label="Error" disabled={!card} onClick={() => deck.current?.swipe('left')}>
               ✕
             </button>
+            <button
+              type="button"
+              className="round round-back"
+              aria-label="Go back"
+              disabled={index === 0 || list.length === 0}
+              onClick={() => setIndex((i) => Math.max(0, i - 1))}
+            >
+              ←
+            </button>
             <button type="button" className="round round-correct" aria-label="Correct" disabled={!card} onClick={() => deck.current?.swipe('right')}>
               ✓
             </button>
