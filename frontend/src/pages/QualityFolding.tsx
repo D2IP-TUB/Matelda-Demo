@@ -267,6 +267,7 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
           selected={selected}
           onChange={setChosen}
           error={strategies.isError}
+          loading={strategies.isLoading}
         />
         <Button
           onClick={() => void run()}

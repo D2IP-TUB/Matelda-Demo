@@ -157,6 +157,7 @@ export function Configurations() {
           selected={selected}
           onChange={setChosen}
           error={strategies.isError}
+          loading={strategies.isLoading}
         />
       </Card>
 

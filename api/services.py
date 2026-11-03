@@ -3,6 +3,11 @@ takes several seconds and must not slow API startup or the test suite."""
 from typing import Any
 
 
+def preload() -> None:
+    """Import the ML backend (torch, transformers; several seconds) ahead of the first request."""
+    import backend  # noqa: F401
+
+
 def get_available_strategies() -> list[str]:
     from backend import get_available_strategies as fn
 

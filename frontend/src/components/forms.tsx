@@ -35,17 +35,20 @@ export function StrategyChecklist({
   selected,
   onChange,
   error,
+  loading,
 }: {
   strategies: string[]
   selected: string[]
   onChange: (selected: string[]) => void
   error?: boolean
+  loading?: boolean
 }) {
   const toggle = (s: string) =>
     onChange(selected.includes(s) ? selected.filter((x) => x !== s) : [...selected, s])
   return (
     <>
       {error && <Notice kind="error">Could not load strategies</Notice>}
+      {loading && <p>Loading strategies…</p>}
       <div className="checks">
         {strategies.map((s) => (
           <label key={s}>
@@ -54,7 +57,7 @@ export function StrategyChecklist({
           </label>
         ))}
       </div>
-      {!error && selected.length === 0 && <Notice kind="warn">Select at least one strategy.</Notice>}
+      {!error && !loading && selected.length === 0 && <Notice kind="warn">Select at least one strategy.</Notice>}
     </>
   )
 }
