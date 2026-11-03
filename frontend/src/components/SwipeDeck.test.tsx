@@ -54,6 +54,42 @@ describe('SwipeDeck', () => {
     await waitFor(() => expect(screen.queryByText('a:0')).toBeNull())
   })
 
+  it('a card that comes back enters from the side it was swiped to; forward moves and first render do not', async () => {
+    const render3 = (index: number) => (
+      <SwipeDeck
+        items={items}
+        index={index}
+        onSwipe={vi.fn()}
+        enterFrom={(item) => (item.key === 'a' ? 'right' : item.key === 'b' ? 'left' : undefined)}
+        renderCard={(i, d) => <p>{`${i.key}:${d}`}</p>}
+      />
+    )
+    const { rerender } = render(render3(1))
+    const top = () => screen.getByText(/:0$/).closest('[data-testid="deck-card"]')
+    expect(top()).not.toHaveAttribute('data-enter-from') // first render
+    rerender(render3(0)) // back to "a", which was swiped right
+    await waitFor(() => expect(screen.getByText('a:0')).toBeInTheDocument())
+    expect(top()).toHaveAttribute('data-enter-from', 'right')
+    rerender(render3(1)) // forward again: no entering animation for "b"
+    await waitFor(() => expect(screen.getByText('b:0')).toBeInTheDocument())
+    expect(top()).not.toHaveAttribute('data-enter-from')
+    rerender(render3(0))
+    rerender(render3(1))
+    rerender(render3(0))
+    await waitFor(() => expect(screen.getByText('a:0')).toBeInTheDocument())
+    expect(top()).toHaveAttribute('data-enter-from', 'right')
+  })
+
+  it('a card with no known swipe direction comes back without a side', async () => {
+    const view = (index: number) => (
+      <SwipeDeck items={items} index={index} onSwipe={vi.fn()} enterFrom={() => undefined} renderCard={(i, d) => <p>{`${i.key}:${d}`}</p>} />
+    )
+    const { rerender } = render(view(1))
+    rerender(view(0))
+    await waitFor(() => expect(screen.getByText('a:0')).toBeInTheDocument())
+    expect(screen.getByText('a:0').closest('[data-testid="deck-card"]')).not.toHaveAttribute('data-enter-from')
+  })
+
   it('swipes right and left through the handle, passing the current item', () => {
     const { ref, onSwipe } = setup()
     act(() => ref.current!.swipe('right'))

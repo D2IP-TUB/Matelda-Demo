@@ -146,6 +146,19 @@ describe('Labeling', () => {
     expect(await screen.findByText('v0')).toBeInTheDocument()
   })
 
+  it.each([
+    ['Correct', 'right'],
+    ['Error', 'left'],
+  ] as const)('going back after answering %s brings the card in from the %s', async (verdict, side) => {
+    renderPage()
+    await answer(verdict)
+    expect(await screen.findByText('v1')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Go back' }))
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+    const top = document.querySelector('[data-testid="deck-card"][data-depth="0"]')
+    expect(top).toHaveAttribute('data-enter-from', side)
+  })
+
   it('with no cards (all folds bulk annotated) Next still starts propagation', async () => {
     m.fetchLabelingSample.mockResolvedValue({ cards: [], bulk_annotated_folds: 2 } as any)
     renderPage()

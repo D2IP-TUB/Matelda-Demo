@@ -23,6 +23,11 @@ interface Props<T extends { key: string }> {
   renderCard: (item: T, depth: number) => ReactNode
   onSwipe: (direction: Direction, item: T) => void
   disabled?: boolean
+  /**
+   * When the index goes back, the card that returns slides in from the side it was swiped to.
+   * Return the direction it was swiped (undefined = a plain fade-in).
+   */
+  enterFrom?: (item: T) => Direction | undefined
   ref?: Ref<SwipeDeckHandle>
 }
 
@@ -37,19 +42,28 @@ export function decideSwipe(offsetX: number, velocityX: number): Direction | nul
   return null
 }
 
+const ENTER_DISTANCE = 520
+
+type ExitCustom = { direction: Direction; reduced: boolean; back: boolean }
+
 const exitVariants = {
-  exit: (custom: { direction: Direction; reduced: boolean }) => ({
-    x: custom.reduced ? 0 : custom.direction === 'right' ? 520 : -520,
-    rotate: custom.reduced ? 0 : custom.direction === 'right' ? 20 : -20,
-    opacity: 0,
-    transition: { duration: custom.reduced ? 0.15 : 0.32, ease: 'easeOut' as const },
-  }),
+  exit: (custom: ExitCustom) => {
+    // The card that drops out of the stack while going back just fades away.
+    if (custom.back) return { opacity: 0, transition: { duration: 0.15 } }
+    return {
+      x: custom.reduced ? 0 : custom.direction === 'right' ? 520 : -520,
+      rotate: custom.reduced ? 0 : custom.direction === 'right' ? 20 : -20,
+      opacity: 0,
+      transition: { duration: custom.reduced ? 0.15 : 0.32, ease: 'easeOut' as const },
+    }
+  },
 }
 
 function DeckCard({
   depth,
   draggable,
   fresh,
+  enterFrom,
   reduced,
   onRelease,
   children,
@@ -57,11 +71,12 @@ function DeckCard({
   depth: number
   draggable: boolean
   fresh: boolean
+  enterFrom?: Direction
   reduced: boolean
   onRelease: (offsetX: number, velocityX: number) => void
   children: ReactNode
 }) {
-  const x = useMotionValue(0)
+  const x = useMotionValue(enterFrom && !reduced ? (enterFrom === 'right' ? ENTER_DISTANCE : -ENTER_DISTANCE) : 0)
   const rotate = useTransform(x, [-220, 0, 220], reduced ? [0, 0, 0] : [-14, 0, 14])
   const correct = useTransform(x, [20, 120], [0, 1])
   const wrong = useTransform(x, [-120, -20], [1, 0])
@@ -83,11 +98,17 @@ function DeckCard({
       className="deck-card"
       data-testid="deck-card"
       data-depth={depth}
+      data-enter-from={enterFrom}
       aria-hidden={depth > 0 ? true : undefined}
       style={{ x, rotate, boxShadow: ring, zIndex: VISIBLE - depth, pointerEvents: depth === 0 ? 'auto' : 'none' }}
       variants={exitVariants}
-      initial={fresh ? { opacity: 0, scale: 0.9, y: 24 } : false}
-      animate={{ scale: 1 - depth * 0.04, y: depth * 14, opacity: depth === 0 ? 1 : 1 - depth * 0.15 }}
+      initial={enterFrom ? { opacity: 0, scale: 1, y: 0 } : fresh ? { opacity: 0, scale: 0.9, y: 24 } : false}
+      animate={{
+        scale: 1 - depth * 0.04,
+        y: depth * 14,
+        opacity: depth === 0 ? 1 : 1 - depth * 0.15,
+        ...(enterFrom ? { x: 0 } : {}),
+      }}
       exit="exit"
       transition={{ type: 'spring', stiffness: 260, damping: 26 }}
       drag={draggable ? 'x' : false}
@@ -123,12 +144,20 @@ export function SwipeDeck<T extends { key: string }>({
   renderCard,
   onSwipe,
   disabled = false,
+  enterFrom,
   ref,
 }: Props<T>) {
   const reduced = useReducedMotion() ?? false
   const [direction, setDirection] = useState<Direction>('right')
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+
+  // Going back (the index decreased since the last commit) brings a card in from the side it left.
+  const previousIndex = useRef(index)
+  const wentBack = index < previousIndex.current
+  useEffect(() => {
+    previousIndex.current = index
+  })
 
   const latest = useRef({ items, index, onSwipe, disabled })
   latest.current = { items, index, onSwipe, disabled }
@@ -157,7 +186,7 @@ export function SwipeDeck<T extends { key: string }>({
   const visible = items.slice(index, index + VISIBLE)
   return (
     <div className="deck" role="group" aria-label="Cards to label">
-      <AnimatePresence custom={{ direction, reduced }}>
+      <AnimatePresence custom={{ direction, reduced, back: wentBack }}>
         {visible
           .map((item, depth) => ({ item, depth }))
           .reverse()
@@ -167,6 +196,7 @@ export function SwipeDeck<T extends { key: string }>({
               depth={depth}
               draggable={depth === 0 && !disabled}
               fresh={mounted}
+              enterFrom={wentBack && depth === 0 ? enterFrom?.(item) : undefined}
               reduced={reduced}
               onRelease={(offset, velocity) => {
                 const dir = decideSwipe(offset, velocity)

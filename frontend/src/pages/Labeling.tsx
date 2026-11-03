@@ -65,7 +65,7 @@ function Excerpt({ dataset, card }: { dataset: string; card: CardData }) {
     <DataTable
       columns={page.data.columns}
       rows={page.data.rows}
-      cellStyle={(r, c) => (r === target && c === colIndex ? { background: 'rgb(244 177 28 / 55%)' } : undefined)}
+      cellStyle={(r, c) => (r === target && c === colIndex ? { background: 'rgba(10, 132, 255, 0.28)' } : undefined)}
     />
   )
 }
@@ -382,6 +382,7 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
             items={list}
             index={index}
             disabled={!card}
+            enterFrom={(c) => (c.key in results ? (results[c.key] ? 'right' : 'left') : undefined)}
             onSwipe={(direction) => void answer(direction === 'right')}
             renderCard={(c, depth) => <CardFace card={c} dataset={dataset} depth={depth} />}
           />
