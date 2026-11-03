@@ -278,10 +278,200 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pipelines/{name}/domain-folds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Domain Folds */
+        put: operations["save_domain_folds_api_pipelines__name__domain_folds_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/domain-folding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Domain Folding */
+        post: operations["start_domain_folding_api_pipelines__name__domain_folding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/quality-folding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Quality Folding */
+        post: operations["start_quality_folding_api_pipelines__name__quality_folding_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cell Fold Summary */
+        get: operations["cell_fold_summary_api_pipelines__name__cell_folds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/cells": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cell Fold Cells */
+        get: operations["cell_fold_cells_api_pipelines__name__cell_folds_cells_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cell Fold Move */
+        post: operations["cell_fold_move_api_pipelines__name__cell_folds_move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cell Fold Merge */
+        post: operations["cell_fold_merge_api_pipelines__name__cell_folds_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cell Fold Split */
+        post: operations["cell_fold_split_api_pipelines__name__cell_folds_split_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/label": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Cell Fold Label */
+        put: operations["cell_fold_label_api_pipelines__name__cell_folds_label_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** CellPage */
+        CellPage: {
+            /** Cells */
+            cells: components["schemas"]["CellView"][];
+            /** Total */
+            total: number;
+        };
+        /** CellRef */
+        CellRef: {
+            /** Table */
+            table: string;
+            /** Row */
+            row: number;
+            /** Col */
+            col: string;
+        };
+        /** CellView */
+        CellView: {
+            /** Table */
+            table: string;
+            /** Row */
+            row: number;
+            /** Col */
+            col: string;
+            /** Val */
+            val?: unknown;
+            /**
+             * Strategies
+             * @default []
+             */
+            strategies: string[];
+            /**
+             * Selected For Labeling
+             * @default false
+             */
+            selected_for_labeling: boolean;
+        };
         /** CompareResult */
         CompareResult: {
             /** Columns */
@@ -326,6 +516,33 @@ export interface components {
             /** Labeling Budget */
             labeling_budget: number;
         };
+        /** DomainFoldsBody */
+        DomainFoldsBody: {
+            /** Domain Folds */
+            domain_folds: {
+                [key: string]: string[];
+            };
+        };
+        /** FoldSummary */
+        FoldSummary: {
+            /** Name */
+            name: string;
+            /** Domain */
+            domain: string;
+            /** Cell Count */
+            cell_count: number;
+            /**
+             * Label
+             * @enum {string}
+             */
+            label: "correct" | "false" | "neutral";
+            /** Tables */
+            tables: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -350,6 +567,24 @@ export interface components {
             /** Job Id */
             job_id: string;
         };
+        /** LabelBody */
+        LabelBody: {
+            /** Fold */
+            fold: string;
+            /** Label */
+            label: ("correct" | "false") | null;
+        };
+        /** MergeBody */
+        MergeBody: {
+            /** Folds */
+            folds: string[];
+        };
+        /** MoveBody */
+        MoveBody: {
+            cell: components["schemas"]["CellRef"];
+            /** To Fold */
+            to_fold: string;
+        };
         /** PipelineConfig */
         PipelineConfig: {
             /** Selected Dataset */
@@ -372,6 +607,13 @@ export interface components {
             labeled_cells: {
                 [key: string]: unknown;
             }[];
+        };
+        /** QualityFoldingBody */
+        QualityFoldingBody: {
+            /** Labeling Budget */
+            labeling_budget?: number | null;
+            /** Selected Strategies */
+            selected_strategies?: string[] | null;
         };
         /** QualityFoldingRequest */
         QualityFoldingRequest: {
@@ -400,6 +642,13 @@ export interface components {
             domain_folds: {
                 [key: string]: string[];
             };
+        };
+        /** SplitBody */
+        SplitBody: {
+            /** Fold */
+            fold: string;
+            /** After */
+            after: components["schemas"]["CellRef"][];
         };
         /** TablePage */
         TablePage: {
@@ -970,6 +1219,315 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PipelineName"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_domain_folds_api_pipelines__name__domain_folds_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DomainFoldsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string[];
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_domain_folding_api_pipelines__name__domain_folding_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_quality_folding_api_pipelines__name__quality_folding_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["QualityFoldingBody"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobStarted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_summary_api_pipelines__name__cell_folds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_cells_api_pipelines__name__cell_folds_cells_get: {
+        parameters: {
+            query: {
+                fold: string;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CellPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_move_api_pipelines__name__cell_folds_move_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_merge_api_pipelines__name__cell_folds_merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_split_api_pipelines__name__cell_folds_split_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_label_api_pipelines__name__cell_folds_label_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
                 };
             };
             /** @description Validation Error */

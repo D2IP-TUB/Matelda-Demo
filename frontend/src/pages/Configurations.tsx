@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { BudgetField, StrategyChecklist } from '../components/forms'
 import { Button, Card, Notice } from '../components/ui'
 import { clampBudget, ensureSuffix, savePipelineChoice } from '../configurations/pipelineFlow'
 import {
@@ -23,7 +24,6 @@ export function Configurations() {
   const [mode, setMode] = useState<'new' | 'existing'>('new')
   const [dataset, setDataset] = useState('')
   const [budget, setBudget] = useState(10)
-  const [budgetText, setBudgetText] = useState('10')
   const [chosen, setChosen] = useState<string[] | null>(null) // null = all strategies
   const [typedName, setTypedName] = useState<string | null>(null)
   const [existing, setExisting] = useState('')
@@ -48,12 +48,7 @@ export function Configurations() {
   const nameTaken =
     mode === 'new' && !!name && (pipelines.data ?? []).includes(ensureSuffix(name, suffix))
 
-  useEffect(() => setBudgetText(String(budget)), [budget])
-
   const setBudgetFrom = (value: unknown) => setBudget(clampBudget(value))
-
-  const toggle = (strategy: string) =>
-    setChosen(selected.includes(strategy) ? selected.filter((s) => s !== strategy) : [...selected, strategy])
 
   const chooseExisting = async (pipeline: string) => {
     setExisting(pipeline)
@@ -71,7 +66,7 @@ export function Configurations() {
 
   const blockers: string[] = []
   if (strategies.isError) blockers.push('strategies')
-  if (selected.length === 0 && !strategies.isError) blockers.push('Select at least one strategy.')
+  if (selected.length === 0 && !strategies.isError) blockers.push('strategies')
   if (!activeDataset) blockers.push('Pick a dataset.')
   if (mode === 'new' && (!name || nameTaken)) blockers.push('name')
   if (mode === 'existing' && !existing) blockers.push('Select an existing pipeline.')
@@ -153,42 +148,16 @@ export function Configurations() {
       </Card>
 
       <Card title="Labeling budget">
-        <div className="row">
-          <input
-            type="range"
-            aria-label="Labeling budget slider"
-            min={1}
-            max={100}
-            value={budget}
-            onChange={(e) => setBudgetFrom(e.target.value)}
-          />
-          <label htmlFor="budget">Labeling budget</label>
-          <input
-            id="budget"
-            type="number"
-            value={budgetText}
-            onChange={(e) => {
-              setBudgetText(e.target.value)
-              if (e.target.value.trim() !== '') setBudgetFrom(e.target.value)
-            }}
-            onBlur={() => setBudgetText(String(budget))}
-          />
-        </div>
+        <BudgetField value={budget} onChange={setBudget} />
       </Card>
 
       <Card title="Error detection strategies">
-        {strategies.isError && <Notice kind="error">Could not load strategies</Notice>}
-        <div className="checks">
-          {(strategies.data ?? []).map((s) => (
-            <label key={s}>
-              <input type="checkbox" checked={selected.includes(s)} onChange={() => toggle(s)} />
-              {s}
-            </label>
-          ))}
-        </div>
-        {blockers.includes('Select at least one strategy.') && (
-          <Notice kind="warn">Select at least one strategy.</Notice>
-        )}
+        <StrategyChecklist
+          strategies={strategies.data ?? []}
+          selected={selected}
+          onChange={setChosen}
+          error={strategies.isError}
+        />
       </Card>
 
       {mode === 'new' && (

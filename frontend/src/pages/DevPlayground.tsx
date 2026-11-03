@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useJob } from '../jobs/useJob'
-import { fetchDatasets, startDomainFolding } from '../lib/api'
+import { fetchDatasets, startDatasetDomainFolding } from '../lib/api'
 
 interface DomainFolds {
   domain_folds: Record<string, string[]>
@@ -19,7 +19,7 @@ export function DevPlayground() {
   const run = async () => {
     setStartError('')
     try {
-      setJobId(await startDomainFolding(chosen, budget))
+      setJobId(await startDatasetDomainFolding(chosen, budget))
     } catch (e) {
       setStartError(e instanceof Error ? e.message : 'Failed to start')
     }
