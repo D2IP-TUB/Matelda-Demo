@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { JoinQr } from '../components/JoinQr'
 import { Link, useSearchParams } from 'react-router-dom'
 import { fetchDatasets } from '../lib/api'
 import { pb } from '../lib/pb'
 import { RoomService } from '../rooms/roomService'
-import type { Player, Room } from '../rooms/roomService'
+import type { Player } from '../rooms/roomService'
+import { NOTICE_KEY, useRoomInfo } from '../rooms/useRoomInfo'
 import { useSession } from '../session/SessionProvider'
 
 interface LobbyProps {
@@ -18,30 +20,18 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
   const [params, setParams] = useSearchParams()
   const roomName = params.get('room') ?? (session.data.room_name as string | undefined)
 
-  const [status, setStatus] = useState<'idle' | 'loading' | 'notfound' | 'ready'>('idle')
-  const [room, setRoom] = useState<Room | null>(null)
-  const [me, setMe] = useState<Player | null>(null)
-  const [players, setPlayers] = useState<Player[]>([])
+  const [status, setStatus] = useState<'idle' | 'loading' | 'notfound' | 'ended' | 'ready'>('idle')
   const [message, setMessage] = useState('')
   const [joinInput, setJoinInput] = useState('')
   const entered = useRef<string | null>(null)
+  const info = useRoomInfo(service)
+  const { room, me, players, isHost } = info
 
   const datasets = useQuery({ queryKey: ['datasets'], queryFn: loadDatasets })
 
-  const refresh = useCallback(
-    async (name: string) => {
-      const [freshRoom, freshPlayers] = await Promise.all([
-        service.getRoom(name),
-        service.listPlayers(name),
-      ])
-      if (freshRoom) setRoom(freshRoom)
-      setPlayers(freshPlayers)
-    },
-    [service],
-  )
-
   // Enter (create the player in) the room named in the URL or stored in the session.
   useEffect(() => {
+    if (!roomName) entered.current = null
     if (!session.ready || !roomName || entered.current === roomName) return
     entered.current = roomName
     setStatus('loading')
@@ -53,13 +43,17 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
           setStatus('notfound')
           return
         }
-        const token =
-          session.data.room_name === roomName ? (session.data.player_token as string) : undefined
+        if (found.phase === 'ended') {
+          setStatus('ended')
+          return
+        }
+        const stored = session.data.room_name as string | undefined
+        const token = stored === roomName ? (session.data.player_token as string) : undefined
+        if (stored && stored !== roomName) await info.leave()
         const player = await service.joinRoom(roomName, token)
+        await service.claimHost(found, player)
         await session.update({ room_name: roomName, player_token: player.token })
-        setRoom(found)
-        setMe(player)
-        setPlayers(await service.listPlayers(roomName))
+        await session.remove([NOTICE_KEY])
         setStatus('ready')
       } catch (e) {
         entered.current = null
@@ -67,7 +61,15 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
         setMessage(e instanceof Error ? e.message : 'Could not join the room')
       }
     })()
-  }, [session, roomName, service])
+  }, [session, roomName, service, info])
+
+  // Left, kicked or the session ended: back to the create/join view.
+  useEffect(() => {
+    if (status === 'ready' && !info.roomName) {
+      setStatus('idle')
+      if (params.get('room')) setParams({})
+    }
+  }, [status, info.roomName, params, setParams])
 
   // Once the room has started, its dataset becomes the session's dataset.
   useEffect(() => {
@@ -75,22 +77,6 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
       void session.update({ dataset_select: room.dataset })
     }
   }, [room?.phase, room?.dataset, session])
-
-  // Live updates while in a room.
-  useEffect(() => {
-    if (status !== 'ready' || !room) return
-    const name = room.name
-    let stop: (() => Promise<void>) | undefined
-    let cancelled = false
-    service.subscribe(name, () => void refresh(name)).then((s) => {
-      if (cancelled) void s()
-      else stop = s
-    })
-    return () => {
-      cancelled = true
-      if (stop) void stop()
-    }
-  }, [status, room?.name, service, refresh])
 
   const create = async () => {
     try {
@@ -102,19 +88,29 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
   }
 
   const vote = async (dataset: string) => {
-    if (!me || !room) return
+    if (!me) return
     await service.setVote(me, dataset)
-    setMe({ ...me, vote: dataset })
-    await refresh(room.name)
+    await info.refresh()
   }
 
   const start = async () => {
     if (!room) return
     try {
-      setRoom(await service.startRoom(room))
+      await service.startRoom(room)
+      await info.refresh()
       setMessage('')
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Could not start')
+    }
+  }
+
+  const kick = async (target: Player) => {
+    if (!room || !me) return
+    try {
+      await service.kickPlayer(room, me.id, target)
+      await info.refresh()
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Could not remove the player')
     }
   }
 
@@ -125,7 +121,13 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
       <h1>Lobby</h1>
       {message && <p role="alert">{message}</p>}
       {status === 'notfound' && <p>Room not found</p>}
-      {status !== 'ready' && (
+      {status === 'ended' && <p>This session has ended</p>}
+      {status !== 'ready' && status !== 'loading' && info.notice && (
+        <p className="room-notice" role="status">
+          {info.notice === 'removed' ? 'You were removed by the host' : 'The host ended the session'}
+        </p>
+      )}
+      {!(status === 'ready' && room) && (
         <section>
           <button onClick={create}>Create room</button>
           <form
@@ -146,11 +148,23 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
       {status === 'ready' && room && (
         <section>
           <h2>Room {room.name}</h2>
+          {room.phase === 'lobby' && (
+            <JoinQr url={`${window.location.origin}/lobby?room=${room.name}`} />
+          )}
+          <button type="button" onClick={() => void info.leave()}>
+            Leave room
+          </button>
           <ul>
             {players.map((p) => (
               <li key={p.id} data-testid="player">
                 {p.name}
                 {p.id === me?.id ? ' (you)' : ''}
+                {p.id === room.host ? ' (host)' : ''}
+                {isHost && p.id !== me?.id && (
+                  <button type="button" aria-label={`Kick ${p.name}`} onClick={() => void kick(p)}>
+                    Kick
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -170,9 +184,13 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
                   <label htmlFor={`ds-${d}`}>{d}</label> <span>({counts(d)})</span>
                 </div>
               ))}
-              <button onClick={start} disabled={!players.some((p) => p.vote)}>
-                Start
-              </button>
+              {isHost || !room.host ? (
+                <button onClick={start} disabled={!room.host || !players.some((p) => p.vote)}>
+                  Start
+                </button>
+              ) : (
+                <p>Waiting for the host to start</p>
+              )}
             </>
           ) : (
             <>

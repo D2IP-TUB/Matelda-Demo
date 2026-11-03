@@ -64,4 +64,13 @@ describe('SessionService', () => {
     await service.save(sid, { room_name: 'r', player_token: 't', domain_folds: { x: 1 } })
     expect(await service.clear(sid)).toEqual({ room_name: 'r', player_token: 't' })
   })
+
+  it('remove deletes only the given keys from the persisted data', async () => {
+    const pb = new FakePocketBase()
+    const service = new SessionService(pb as any, memoryStorage())
+    const { sid } = await service.load()
+    await service.save(sid, { room_name: 'r', player_token: 't', labeling_results: { x: 1 } })
+    expect(await service.remove(sid, ['room_name', 'player_token'])).toEqual({ labeling_results: { x: 1 } })
+    expect(pb.data.sessions[0].data).toEqual({ labeling_results: { x: 1 } })
+  })
 })

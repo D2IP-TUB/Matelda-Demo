@@ -73,4 +73,14 @@ export class SessionService {
     await this.pb.collection('sessions').update(rec.id, { data })
     return data
   }
+
+  /** Delete the given keys from the persisted session data. */
+  async remove(sid: string, keys: string[]): Promise<SessionData> {
+    const rec = await this.find(sid)
+    if (!rec) throw new Error('Session record missing')
+    const old = (rec.data ?? {}) as SessionData
+    const data = Object.fromEntries(Object.entries(old).filter(([k]) => !keys.includes(k)))
+    await this.pb.collection('sessions').update(rec.id, { data })
+    return data
+  }
 }

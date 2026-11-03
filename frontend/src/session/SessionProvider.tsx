@@ -10,6 +10,7 @@ interface SessionContextValue {
   data: SessionData
   update(patch: SessionData): Promise<void>
   clear(keep?: string[]): Promise<void>
+  remove(keys: string[]): Promise<void>
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null)
@@ -72,9 +73,20 @@ export function SessionProvider({
     [svc, state.sid],
   )
 
+  const remove = useCallback(
+    async (keys: string[]) => {
+      setState((s) => ({
+        ...s,
+        data: Object.fromEntries(Object.entries(s.data).filter(([k]) => !keys.includes(k))),
+      }))
+      if (state.sid) await svc.remove(state.sid, keys)
+    },
+    [svc, state.sid],
+  )
+
   const value = useMemo(
-    () => ({ ready: state.ready, sid: state.sid, data: state.data, update, clear }),
-    [state.ready, state.sid, state.data, update, clear],
+    () => ({ ready: state.ready, sid: state.sid, data: state.data, update, clear, remove }),
+    [state.ready, state.sid, state.data, update, clear, remove],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

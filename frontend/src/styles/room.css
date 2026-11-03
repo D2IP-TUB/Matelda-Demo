@@ -1,0 +1,5 @@
+.topbar .room-action { margin-left: 0.75rem; }
+.topbar .room-action.danger { color: #b3261e; }
+.join-qr { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin: 1rem 0; }
+.join-qr code { word-break: break-all; user-select: all; }
+.room-notice { padding: 0.5rem 0.75rem; border-radius: 6px; background: rgba(179, 38, 30, 0.1); }

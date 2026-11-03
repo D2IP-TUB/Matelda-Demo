@@ -75,4 +75,24 @@ describe('TopBar', () => {
     expect(await screen.findByText(/blue-otter-42/)).toBeInTheDocument()
     expect(await screen.findByText(/2 players/)).toBeInTheDocument()
   })
+
+  it('offers Leave room but not End session to a non-host', async () => {
+    const pb = new FakePocketBase()
+    pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: 'lobby', dataset: '', host: 'p1' }]
+    pb.data.players = [
+      { id: 'p1', room: 'blue-otter-42', name: 'A', token: 't1', created: '1' },
+      { id: 'p2', room: 'blue-otter-42', name: 'B', token: 't2', created: '2' },
+    ]
+    renderTopBar(pb, { room_name: 'blue-otter-42', player_token: 't2' })
+    expect(await screen.findByRole('button', { name: 'Leave room' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'End session' })).toBeNull()
+  })
+
+  it('offers End session to the host', async () => {
+    const pb = new FakePocketBase()
+    pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: 'lobby', dataset: '', host: 'p1' }]
+    pb.data.players = [{ id: 'p1', room: 'blue-otter-42', name: 'A', token: 't1', created: '1' }]
+    renderTopBar(pb, { room_name: 'blue-otter-42', player_token: 't1' })
+    expect(await screen.findByRole('button', { name: 'End session' })).toBeInTheDocument()
+  })
 })
