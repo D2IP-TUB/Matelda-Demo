@@ -42,7 +42,9 @@ export class FakeCollection {
         throw Object.assign(new Error('unique'), { status: 400 })
       }
     }
-    const rec = { id: `id${this.pb.counter++}`, created: new Date().toISOString(), ...body }
+    // PocketBase returns unset text fields as "" and unset json fields as null.
+    const zero = this.name === 'rooms' ? { pipeline: '', host: '', pool: null } : {}
+    const rec = { id: `id${this.pb.counter++}`, created: new Date().toISOString(), ...zero, ...body }
     this.rows.push(rec)
     this.pb.notify(this.name)
     return { ...rec }

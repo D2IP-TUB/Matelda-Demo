@@ -7,6 +7,7 @@ export function WaitingForLabeling({ players }: { players: Player[] }) {
     <>
       <h1>Labeling</h1>
       <Notice kind="info">Waiting for labeling — the host is preparing the cells</Notice>
+      <p>If the host has left, leave this room and create a new one.</p>
       <ul aria-label="Players">
         {players.map((p) => (
           <li key={p.id}>{p.name}</li>

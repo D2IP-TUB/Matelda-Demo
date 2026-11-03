@@ -19,7 +19,7 @@ function setup(path: string, role: 'helper' | 'host' | 'solo', opts: { phase?: s
   const pb = new FakePocketBase()
   let data: Record<string, unknown> = {}
   if (role !== 'solo') {
-    pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: opts.phase ?? 'started', dataset: '', host: 'p1', pool: opts.pool }]
+    pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: opts.phase ?? 'started', dataset: '', pipeline: '', host: 'p1', pool: opts.pool ?? null }]
     pb.data.players = [
       { id: 'p1', room: 'blue-otter-42', name: 'Hannah', token: 't1', created: '1' },
       { id: 'p2', room: 'blue-otter-42', name: 'Hugo', token: 't2', created: '2' },
@@ -115,23 +115,23 @@ describe('Layout gate with an unresolvable room', () => {
     expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
   })
 
-  it('does not get stuck for a removed player', async () => {
+  it('sends a removed player to the lobby', async () => {
     const pb = setup('/configuration', 'helper', { phase: 'started' })
     await screen.findByText(/Waiting for labeling/)
     await act(async () => {
       await pb.collection('players').delete('p2')
     })
-    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Run lobby' })).toBeInTheDocument()
     expect((pb.data.sessions[0].data as any).room_name).toBeUndefined()
   })
 
-  it('does not get stuck when the room ended', async () => {
+  it('sends the player to the lobby when the room ended', async () => {
     const pb = setup('/configuration', 'helper')
     await screen.findByText(/Waiting for labeling/)
     await act(async () => {
       await pb.collection('rooms').update('r', { phase: 'ended' })
     })
-    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Run lobby' })).toBeInTheDocument()
     expect((pb.data.sessions[0].data as any).room_name).toBeUndefined()
   })
 })
@@ -154,6 +154,7 @@ describe('WaitingForLabeling', () => {
   it('lists the players', () => {
     render(<WaitingForLabeling players={[{ id: 'a', name: 'Ann' }, { id: 'b', name: 'Bob' }] as any} />)
     expect(screen.getByText(/the host is preparing the cells/)).toBeInTheDocument()
+    expect(screen.getByText('If the host has left, leave this room and create a new one.')).toBeInTheDocument()
     expect(screen.getAllByRole('listitem').map((l) => l.textContent)).toEqual(['Ann', 'Bob'])
   })
 })

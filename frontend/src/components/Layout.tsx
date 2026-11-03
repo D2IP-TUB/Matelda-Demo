@@ -1,4 +1,5 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useSession } from '../session/SessionProvider'
 import type { RoomService } from '../rooms/roomService'
 import { useRoomInfo } from '../rooms/useRoomInfo'
@@ -13,6 +14,13 @@ export function Layout({ roomService }: { roomService?: RoomService }) {
   const { pathname } = useLocation()
   const { roomName, room, me, isHost, players, settled } = useRoomInfo(roomService)
   const { ready } = useSession()
+  const navigate = useNavigate()
+  // Kicked, ended or left: the stored room name goes from set to unset, so send the player to the lobby.
+  const prevRoomName = useRef(roomName)
+  useEffect(() => {
+    if (prevRoomName.current && !roomName && pathname !== '/lobby') navigate('/lobby')
+    prevRoomName.current = roomName
+  }, [roomName, pathname, navigate])
   const hostOnly = HOST_ONLY_PATHS.includes(pathname)
 
   let content = <Outlet />

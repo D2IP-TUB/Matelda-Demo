@@ -86,7 +86,7 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
   const pool = useMemo(() => room?.pool ?? [], [room?.pool])
   const poolReady = pool.length > 0
   const roomStarted = !inRoom || room.phase !== 'lobby'
-  const pipeline = inRoom ? (room.pipeline ?? sessionPipeline) : sessionPipeline
+  const pipeline = inRoom ? (room.pipeline || sessionPipeline) : sessionPipeline
   // Helpers must not touch any pipeline endpoint before the host has published the pool.
   const canUsePipeline = !inRoom || isHost || poolReady
 
@@ -168,9 +168,11 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
     started.current = true
     void (async () => {
       try {
-        // Cards this player already answered (kept in the session) come first, so a reload keeps order.
+        // Cards this player already answered come first, so a reload keeps order.
         const inPool = new Set(pool)
-        const answered = Object.keys(results).filter((k) => inPool.has(k))
+        // In a room only this player's saved room labels count; stale solo verdicts in the session do not.
+        const mine = (await service.roomLabels(room.name)).filter((l) => l.player === me.id)
+        const answered = [...new Set(mine.map((l) => l.cell_id).filter((k) => inPool.has(k)))]
         if (answered.length > 0) {
           const seeded = await fetchCards(pipeline, answered)
           setRoomCards(seeded)
@@ -219,6 +221,23 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
   }, [job.state, job.result, jobId, session, navigate])
 
   if (!session.ready) return <h1>Labeling</h1>
+  if (roomName && token && !info.settled) {
+    return (
+      <>
+        <h1>Labeling</h1>
+        <p>Loading room…</p>
+      </>
+    )
+  }
+  if (roomName && token && !inRoom) {
+    return (
+      <>
+        <h1>Labeling</h1>
+        <Notice kind="warn">Could not reach the room.</Notice>
+        <Link to="/lobby">Back to the lobby</Link>
+      </>
+    )
+  }
   if (inRoom && room.phase === 'lobby') {
     return (
       <>
@@ -275,15 +294,20 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
 
   const next = async () => {
     setError('')
-    const own = list
-      .filter((c) => c.key in results)
-      .map((c) => ({
-        table: c.table, row: c.row, col: c.col, val: c.val, is_error: !results[c.key],
-        domain_fold: c.domain_fold, cell_fold: c.cell_fold,
-      }))
+    const toOwn = (verdicts: Verdicts) =>
+      list
+        .filter((c) => c.key in verdicts)
+        .map((c) => ({
+          table: c.table, row: c.row, col: c.col, val: c.val, is_error: !verdicts[c.key],
+          domain_fold: c.domain_fold, cell_fold: c.cell_fold,
+        }))
     try {
       if (inRoom) {
         const labels = await service.roomLabels(room.name)
+        // Room mode: this player's verdicts are the ones saved in the room, not the session's (possibly stale) results.
+        const mine: Verdicts = {}
+        for (const l of labels) if (l.player === me.id) mine[l.cell_id] = l.value
+        const own = toOwn(mine)
         setJobId(
           await startPropagation(pipeline, {
             own,
@@ -292,7 +316,7 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
           }),
         )
       } else {
-        setJobId(await startPropagation(pipeline, { own }))
+        setJobId(await startPropagation(pipeline, { own: toOwn(results) }))
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not start label propagation')

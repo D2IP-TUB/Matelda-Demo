@@ -59,7 +59,7 @@ const answer = async (name: 'Correct' | 'Error') =>
 const POOL = [0, 1, 2, 3, 4].map((i) => `t1|${i}|a`)
 function seedRoom(phase = 'labeling', budget = 2, room: Record<string, unknown> = {}) {
   const pb = new FakePocketBase()
-  pb.data.rooms = [{ id: 'rm1', name: 'r1', phase, dataset: 'demo', host: 'pl1', ...room }]
+  pb.data.rooms = [{ id: 'rm1', name: 'r1', phase, dataset: 'demo', pipeline: '', host: 'pl1', pool: null, ...room }]
   pb.data.players = [
     { id: 'pl1', room: 'r1', token: 'tok', name: 'Blue Otter', budget, vote: 'demo', created: '1' },
     { id: 'pl2', room: 'r1', token: 'tok2', name: 'Red Yeti', budget, vote: 'demo', created: '2' },
@@ -178,6 +178,61 @@ describe('Labeling in a room', () => {
     expect(m.fetchCandidates).toHaveBeenCalledTimes(1)
     expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
     expect(m.fetchCandidates).toHaveBeenCalledTimes(1)
+  })
+
+  it('a host whose room has PocketBase zero values (pipeline "") publishes with the session pipeline', async () => {
+    const pb = seedRoom()
+    expect(pb.data.rooms[0]).toMatchObject({ pipeline: '', pool: null })
+    renderPage(ROOM_SESSION, pb)
+    await waitFor(() => expect(pb.data.rooms[0].pool).toEqual(POOL))
+    expect(m.fetchCandidates).toHaveBeenCalledWith('p1')
+    expect(pb.data.rooms[0].pipeline).toBe('p1')
+    expect(screen.queryByText(/Pipeline not configured/)).toBeNull()
+    expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
+  })
+
+  it('shows Loading room while the room has not loaded, never Pipeline not configured', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    const slow = new RoomService(pb as any)
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    const orig = slow.getRoom.bind(slow)
+    vi.spyOn(slow, 'getRoom').mockImplementation(async (n) => { await gate; return orig(n) })
+    const sessions = new SessionService(pb as any, seedSession(pb, { room_name: 'r1', player_token: 'tok2' }))
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SessionProvider service={sessions}>
+          <MemoryRouter initialEntries={['/labeling']}>
+            <Routes><Route path="/labeling" element={<Labeling roomService={slow} pollMs={5} />} /></Routes>
+          </MemoryRouter>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText(/Loading room…/)).toBeInTheDocument()
+    expect(screen.queryByText(/Pipeline not configured/)).toBeNull()
+    release()
+    expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
+  })
+
+  it('shows a could-not-reach notice when the stored room cannot be resolved', async () => {
+    const pb = seedRoom()
+    vi.spyOn(RoomService.prototype, 'getRoom').mockRejectedValue(new Error('network'))
+    renderPage({ ...ROOM_SESSION, pipeline_path: undefined }, pb)
+    expect(await screen.findByText(/Could not reach the room/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /lobby/i })).toHaveAttribute('href', '/lobby')
+    expect(screen.queryByText(/Pipeline not configured/)).toBeNull()
+    vi.restoreAllMocks()
+  })
+
+  it('room mode ignores stale solo labeling_results: cards unanswered and Next sends no stale verdicts', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
+    pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|3|a', player: 'pl1', created: '1' }]
+    renderPage({ ...ROOM_SESSION, labeling_results: { 't1|3|a': false, 't1|1|a': true } }, pb)
+    expect(await screen.findByText('v3')).toBeInTheDocument()
+    expect(screen.getByText('Card 1')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(m.startPropagation).toHaveBeenCalled())
+    expect(m.startPropagation.mock.calls[0][1].own).toEqual([])
   })
 
   it('a helper without a pool waits and touches no pipeline endpoint', async () => {
@@ -312,7 +367,7 @@ describe('Labeling in a room', () => {
     const pb = seedRoom()
     renderPage(ROOM_SESSION, pb)
     expect(await screen.findByText(/No cells to label — go back to Quality Folding\./)).toBeInTheDocument()
-    expect(pb.data.rooms[0].pool).toBeUndefined()
+    expect(pb.data.rooms[0].pool).toBeNull()
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
     expect(screen.getByRole('link', { name: 'Back' })).toBeInTheDocument()
   })
