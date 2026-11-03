@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { Configurations } from './pages/Configurations'
 import { DevPlayground } from './pages/DevPlayground'
 import { DomainFolding } from './pages/DomainFolding'
+import { ErrorDetection } from './pages/ErrorDetection'
 import { Intro } from './pages/Intro'
 import { Labeling } from './pages/Labeling'
 import { Lobby } from './pages/Lobby'
@@ -28,7 +29,8 @@ export function AppRoutes() {
         <Route path="/quality-folding" element={<QualityFolding />} />
         <Route path="/labeling" element={<Labeling />} />
         <Route path="/propagated-errors" element={<PropagatedErrors />} />
-        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding', '/quality-folding', '/labeling', '/propagated-errors'].includes(p.path)).map((p) => (
+        <Route path="/error-detection" element={<ErrorDetection />} />
+        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding', '/quality-folding', '/labeling', '/propagated-errors', '/error-detection'].includes(p.path)).map((p) => (
           <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
         ))}
       </Route>
