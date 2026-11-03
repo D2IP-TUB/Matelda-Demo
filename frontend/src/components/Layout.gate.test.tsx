@@ -15,7 +15,7 @@ function Page({ name }: { name: string }) {
   return <button type="button">{`Run ${name}`}</button>
 }
 
-function setup(path: string, role: 'helper' | 'host' | 'solo', opts: { phase?: string; pool?: string[] } = {}) {
+function setup(path: string, role: 'helper' | 'host' | 'solo', opts: { phase?: string; pool?: string[]; data?: Record<string, unknown> } = {}) {
   const pb = new FakePocketBase()
   let data: Record<string, unknown> = {}
   if (role !== 'solo') {
@@ -26,6 +26,7 @@ function setup(path: string, role: 'helper' | 'host' | 'solo', opts: { phase?: s
     ]
     data = { room_name: 'blue-otter-42', player_token: role === 'host' ? 't1' : 't2' }
   }
+  if (opts.data) data = opts.data
   const sessions = new SessionService(pb as any, seedSession(pb, data))
   render(
     <SessionProvider service={sessions}>
@@ -34,6 +35,7 @@ function setup(path: string, role: 'helper' | 'host' | 'solo', opts: { phase?: s
           <Route element={<Layout roomService={new RoomService(pb as any)} />}>
             <Route path="/lobby" element={<Page name="lobby" />} />
             <Route path="/configuration" element={<Page name="configuration" />} />
+            <Route path="/domain-folding" element={<Page name="domain" />} />
             <Route path="/quality-folding" element={<Page name="quality" />} />
             <Route path="/labeling" element={<p>LABELING PAGE</p>} />
           </Route>
@@ -84,6 +86,67 @@ describe('Layout helper gate', () => {
   it('does not gate non-pipeline routes', async () => {
     setup('/lobby', 'helper')
     expect(await screen.findByRole('button', { name: 'Run lobby' })).toBeInTheDocument()
+  })
+})
+
+describe('Layout gate with an unresolvable room', () => {
+  it('renders the page for a stale room name without a token', async () => {
+    setup('/configuration', 'solo', { data: { room_name: 'gone-room-1' } })
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+  })
+
+  it('renders the page when the room fetch fails', async () => {
+    const pb = new FakePocketBase()
+    pb.collection('rooms').getFullList = async () => {
+      throw new Error('network')
+    }
+    const sessions = new SessionService(pb as any, seedSession(pb, { room_name: 'blue-otter-42', player_token: 't2' }))
+    render(
+      <SessionProvider service={sessions}>
+        <MemoryRouter initialEntries={['/configuration']}>
+          <Routes>
+            <Route element={<Layout roomService={new RoomService(pb as any)} />}>
+              <Route path="/configuration" element={<Page name="configuration" />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </SessionProvider>,
+    )
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+  })
+
+  it('does not get stuck for a removed player', async () => {
+    const pb = setup('/configuration', 'helper', { phase: 'started' })
+    await screen.findByText(/Waiting for labeling/)
+    await act(async () => {
+      await pb.collection('players').delete('p2')
+    })
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+    expect((pb.data.sessions[0].data as any).room_name).toBeUndefined()
+  })
+
+  it('does not get stuck when the room ended', async () => {
+    const pb = setup('/configuration', 'helper')
+    await screen.findByText(/Waiting for labeling/)
+    await act(async () => {
+      await pb.collection('rooms').update('r', { phase: 'ended' })
+    })
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+    expect((pb.data.sessions[0].data as any).room_name).toBeUndefined()
+  })
+})
+
+describe('Layout gate extras', () => {
+  it('gates /domain-folding', async () => {
+    setup('/domain-folding', 'helper')
+    expect(await screen.findByText(/Waiting for labeling/)).toBeInTheDocument()
+    expect(mounted).not.toHaveBeenCalled()
+  })
+
+  it('shows the host the page even when the pool is published', async () => {
+    setup('/configuration', 'host', { pool: ['a'] })
+    expect(await screen.findByRole('button', { name: 'Run configuration' })).toBeInTheDocument()
+    expect(screen.queryByText('LABELING PAGE')).not.toBeInTheDocument()
   })
 })
 

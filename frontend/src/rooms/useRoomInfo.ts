@@ -19,6 +19,8 @@ export function useRoomInfo(roomService?: RoomService) {
   const token = (session.data.player_token as string | undefined) ?? null
   const [room, setRoom] = useState<Room | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
+  /** True once the first load for the current room name has finished, successfully or not. */
+  const [settled, setSettled] = useState(false)
   const sessionRef = useRef(session)
   sessionRef.current = session
   const refreshRef = useRef<() => Promise<void>>(async () => {})
@@ -27,8 +29,10 @@ export function useRoomInfo(roomService?: RoomService) {
     if (!session.ready || !roomName) {
       setRoom(null)
       setPlayers([])
+      setSettled(false)
       return
     }
+    setSettled(false)
     let cancelled = false
     let stop: (() => Promise<void>) | undefined
     const refresh = async () => {
@@ -51,6 +55,8 @@ export function useRoomInfo(roomService?: RoomService) {
         setPlayers(freshPlayers)
       } catch {
         // Keep the last known state; the next event retries.
+      } finally {
+        if (!cancelled) setSettled(true)
       }
     }
     refreshRef.current = refresh
@@ -94,6 +100,7 @@ export function useRoomInfo(roomService?: RoomService) {
     room,
     players,
     playerCount: players.length,
+    settled,
     me,
     isHost,
     notice: (session.data[NOTICE_KEY] as 'removed' | 'ended' | undefined) ?? null,

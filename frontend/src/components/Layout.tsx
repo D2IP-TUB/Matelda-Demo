@@ -11,14 +11,15 @@ const HOST_ONLY_PATHS = ['/intro', '/configuration', '/domain-folding', '/qualit
 
 export function Layout({ roomService }: { roomService?: RoomService }) {
   const { pathname } = useLocation()
-  const { roomName, room, me, isHost, players } = useRoomInfo(roomService)
+  const { roomName, room, me, isHost, players, settled } = useRoomInfo(roomService)
   const { ready } = useSession()
   const hostOnly = HOST_ONLY_PATHS.includes(pathname)
 
   let content = <Outlet />
   if (hostOnly && !ready) content = <></>
   else if (hostOnly && roomName) {
-    if (!room || !me) content = <></> // role unknown yet: neither flash the page nor redirect
+    if (!settled) content = <></> // first load in flight: neither flash the page nor redirect
+    else if (!room || !me) content = <Outlet /> // unresolvable room: behave like solo
     else if (!isHost && room.phase !== 'lobby') {
       content = room.pool && room.pool.length > 0
         ? <Navigate replace to="/labeling" />
