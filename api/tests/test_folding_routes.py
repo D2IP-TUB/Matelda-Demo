@@ -209,3 +209,94 @@ def test_real_folding_on_demo_dataset(tmp_path):
     quality = poll(client, client.post("/api/pipelines/real/quality-folding").json()["job_id"], timeout=900)
     assert quality["state"] == "done", quality
     assert quality["result"]["cell_fold_count"] > 0
+
+
+# ---------------------------------------------------------------- cell fold endpoints
+def _cell(table, row, col, strategies=None):
+    return {"table": table, "row": row, "col": col, "val": "v", "features": [1.0],
+            "strategies": strategies or [], "selected_for_labeling": False, "assigned_budget": None}
+
+
+F00, F01, F10 = "D0 / Cell Fold 0", "D0 / Cell Fold 1", "D1 / Cell Fold 0"
+CF = {
+    "D0": {F00: [_cell("t1", 0, "a"), _cell("t1", 1, "a"), _cell("t2", 0, "b")],
+           F01: [_cell("t1", 2, "a")]},
+    "D1": {F10: [_cell("t3", 0, "c")]},
+}
+
+
+@pytest.fixture
+def folded(env):
+    client, pipelines = env
+    cfg = stored(pipelines)
+    cfg["cell_folds"], cfg["cell_fold_labels"] = CF, {F00: "correct"}
+    (pipelines / "p1" / "configurations.json").write_text(json.dumps(cfg))
+    (pipelines / "p2").mkdir()
+    (pipelines / "p2" / "configurations.json").write_text(json.dumps({"selected_dataset": "d"}))
+    return client, pipelines
+
+
+def counts(summary):
+    return {s["name"]: s["cell_count"] for s in summary}
+
+
+def test_summary_endpoint(folded):
+    client, _ = folded
+    body = client.get("/api/pipelines/p1/cell-folds").json()
+    assert counts(body) == {F00: 3, F01: 1, F10: 1}
+    assert body[0]["label"] == "correct" and body[1]["label"] == "neutral"
+
+
+def test_cells_endpoint_pages_without_features(folded):
+    client, _ = folded
+    body = client.get("/api/pipelines/p1/cell-folds/cells", params={"fold": F00, "offset": 1, "limit": 1}).json()
+    assert body["total"] == 3 and len(body["cells"]) == 1
+    assert body["cells"][0]["row"] == 1 and "features" not in body["cells"][0]
+
+
+def test_cells_endpoint_errors(folded):
+    client, _ = folded
+    assert client.get("/api/pipelines/p1/cell-folds/cells", params={"fold": "nope"}).status_code == 404
+    assert client.get("/api/pipelines/p1/cell-folds/cells", params={"fold": F00, "limit": 201}).status_code == 422
+
+
+def test_move_endpoint_persists(folded):
+    client, pipelines = folded
+    r = client.post("/api/pipelines/p1/cell-folds/move",
+                    json={"cell": {"table": "t3", "row": 0, "col": "c"}, "to_fold": F01})
+    assert r.status_code == 200 and counts(r.json()) == {F00: 3, F01: 2}
+    assert sorted(stored(pipelines)["cell_folds"]) == ["D0"]
+
+
+def test_merge_endpoint_persists_and_validates(folded):
+    client, pipelines = folded
+    r = client.post("/api/pipelines/p1/cell-folds/merge", json={"folds": [F00, F01]})
+    assert counts(r.json()) == {F00: 4, F10: 1}
+    assert stored(pipelines)["cell_fold_labels"] == {F00: "correct"}
+    assert client.post("/api/pipelines/p1/cell-folds/merge", json={"folds": [F00]}).status_code == 422
+    assert client.post("/api/pipelines/p1/cell-folds/merge", json={"folds": [F00, "nope"]}).status_code == 404
+
+
+def test_split_endpoint(folded):
+    client, _ = folded
+    r = client.post("/api/pipelines/p1/cell-folds/split",
+                    json={"fold": F00, "after": [{"table": "t1", "row": 1, "col": "a"}]})
+    assert counts(r.json()) == {f"{F00} - Split 1": 2, f"{F00} - Split 2": 1, F01: 1, F10: 1}
+    assert client.post("/api/pipelines/p1/cell-folds/split", json={"fold": F01, "after": []}).status_code == 422
+
+
+def test_label_endpoint(folded):
+    client, pipelines = folded
+    r = client.put("/api/pipelines/p1/cell-folds/label", json={"fold": F01, "label": "false"})
+    assert {s["name"]: s["label"] for s in r.json()}[F01] == "false"
+    client.put("/api/pipelines/p1/cell-folds/label", json={"fold": F01, "label": None})
+    assert F01 not in stored(pipelines)["cell_fold_labels"]
+    assert client.put("/api/pipelines/p1/cell-folds/label", json={"fold": "nope", "label": "false"}).status_code == 404
+    assert client.put("/api/pipelines/p1/cell-folds/label", json={"fold": F01, "label": "maybe"}).status_code == 422
+
+
+def test_cell_fold_endpoints_without_cell_folds_or_pipeline(folded):
+    client, _ = folded
+    assert client.get("/api/pipelines/p2/cell-folds").status_code == 409
+    assert client.get("/api/pipelines/nope/cell-folds").status_code == 404
+    assert client.post("/api/pipelines/p2/cell-folds/merge", json={"folds": [F00, F01]}).status_code == 409
