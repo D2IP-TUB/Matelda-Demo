@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react'
 import { pb } from '../lib/pb'
 import { SessionService } from './sessionService'
-import type { SessionData } from './sessionService'
+import type { SessionData, StorageLike } from './sessionService'
 
 interface SessionContextValue {
   ready: boolean
@@ -13,8 +13,17 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null)
 
+function browserStorage(): StorageLike {
+  try {
+    return window.localStorage
+  } catch {
+    // Accessing localStorage itself can throw (blocked site data).
+    return { getItem: () => null, setItem: () => {} }
+  }
+}
+
 function defaultService(): SessionService {
-  return new SessionService(pb, window.localStorage)
+  return new SessionService(pb, browserStorage())
 }
 
 export function SessionProvider({
@@ -35,21 +44,29 @@ export function SessionProvider({
   useEffect(() => {
     if (started.current) return
     started.current = true
-    svc.load().then(({ sid, data }) => setState({ ready: true, sid, data }))
+    svc
+      .load()
+      .then(({ sid, data }) => setState({ ready: true, sid, data }))
+      // PocketBase unreachable: run with an in-memory session instead of never becoming ready.
+      .catch(() => setState({ ready: true, sid: '', data: {} }))
   }, [svc])
 
   const update = useCallback(
     async (patch: SessionData) => {
       setState((s) => ({ ...s, data: { ...s.data, ...patch } }))
-      await svc.save(state.sid, patch)
+      if (state.sid) await svc.save(state.sid, patch)
     },
     [svc, state.sid],
   )
 
   const clear = useCallback(
     async (keep?: string[]) => {
-      const data = await svc.clear(state.sid, keep)
-      setState((s) => ({ ...s, data }))
+      const keepKeys = keep ?? ['room_name', 'player_token']
+      setState((s) => ({
+        ...s,
+        data: Object.fromEntries(Object.entries(s.data).filter(([k]) => keepKeys.includes(k))),
+      }))
+      if (state.sid) await svc.clear(state.sid, keep)
     },
     [svc, state.sid],
   )
