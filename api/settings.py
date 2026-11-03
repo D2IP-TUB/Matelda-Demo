@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 class Settings:
     datasets_dir: Path
     cors_origins: list[str]
+    pipelines_dir: Path = REPO_ROOT / "pipelines"
 
 
 def get_settings() -> Settings:
@@ -16,4 +17,5 @@ def get_settings() -> Settings:
     return Settings(
         datasets_dir=REPO_ROOT / "datasets",
         cors_origins=[o.strip() for o in origins.split(",") if o.strip()],
+        pipelines_dir=REPO_ROOT / "pipelines",
     )
