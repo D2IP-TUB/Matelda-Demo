@@ -58,7 +58,7 @@ def test_create_then_get_roundtrip(env):
     client, pipelines = env
     r = client.post("/api/pipelines", json={"name": "p1", "config": CONFIG})
     assert r.status_code == 201 and r.json() == {"name": "p1"}
-    assert client.get("/api/pipelines/p1").json() == CONFIG
+    assert client.get("/api/pipelines/p1").json() == {**CONFIG, "has_cell_folds": False}
     assert json.loads((pipelines / "p1" / "configurations.json").read_text()) == CONFIG
     assert client.get("/api/pipelines").json() == ["p1"]
 
@@ -141,3 +141,19 @@ def test_get_traversal_name_404(env):
     client, _ = env
     assert client.get("/api/pipelines/..%2Fdatasets").status_code == 404
     assert client.get("/api/pipelines/.hidden").status_code == 404
+
+
+def test_get_and_put_do_not_ship_the_cell_folds(env):
+    client, pipelines = env
+    client.post("/api/pipelines", json={"name": "p1", "config": CONFIG})
+    path = pipelines / "p1" / "configurations.json"
+    data = json.loads(path.read_text())
+    data["cell_folds"] = {"D": {"F": [{"table": "t", "row": 0, "col": "a"}]}}
+    path.write_text(json.dumps(data))
+    got = client.get("/api/pipelines/p1").json()
+    assert "cell_folds" not in got and got["has_cell_folds"] is True
+    put = client.put("/api/pipelines/p1", json=CONFIG).json()
+    assert "cell_folds" not in put and put["has_cell_folds"] is True
+    assert "cell_folds" in json.loads(path.read_text())  # still stored
+    client.post("/api/pipelines", json={"name": "p2", "config": CONFIG})
+    assert client.get("/api/pipelines/p2").json()["has_cell_folds"] is False

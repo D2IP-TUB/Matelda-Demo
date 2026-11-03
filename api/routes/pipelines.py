@@ -60,7 +60,7 @@ def get_pipeline(name: str, settings: Settings = Depends(get_settings)) -> dict[
     path = store.resolve_pipeline(settings.pipelines_dir, name)
     if path is None:
         raise HTTPException(status_code=404, detail="Unknown pipeline")
-    return store.load_config(path)
+    return store.public_config(store.load_config(path))
 
 
 @router.post("/pipelines", status_code=201, response_model=PipelineName)
@@ -84,7 +84,7 @@ def update(
     _check_dataset(settings, body.selected_dataset)
     merged = store.apply_update(store.load_config(path), body.model_dump())
     store.save_config(path, merged)
-    return merged
+    return store.public_config(merged)
 
 
 @router.post("/pipelines/{name}/copy", status_code=201, response_model=PipelineName)

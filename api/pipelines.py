@@ -96,3 +96,10 @@ def apply_update(existing: dict[str, Any], update: dict[str, Any]) -> dict[str, 
         for key in DERIVED_KEYS:
             merged.pop(key, None)
     return merged
+
+
+def public_config(config: dict[str, Any]) -> dict[str, Any]:
+    """The config as sent to the browser: the (multi-MB) cell folds stay on the server."""
+    out = {k: v for k, v in config.items() if k != "cell_folds"}
+    out["has_cell_folds"] = bool(config.get("cell_folds"))
+    return out
