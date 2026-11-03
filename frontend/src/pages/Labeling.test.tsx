@@ -301,65 +301,13 @@ describe('Labeling in a room', () => {
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
   })
 
-  it('release button: hidden for helpers', async () => {
-    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
-    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
-    await screen.findByText(/^v\d$/)
-    expect(screen.queryByRole('button', { name: /Release unlabeled claims/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
-  })
-
-  it('release button: the host releases and sees the count', async () => {
-    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
-    pb.data.claims = [{ id: 'c9', room: 'r1', cell_id: 't1|4|a', player: 'pl2', created: '0' }]
-    renderPage(ROOM_SESSION, pb)
-    await screen.findByText(/^v\d$/)
-    fireEvent.click(screen.getByRole('button', { name: /Release unlabeled claims/ }))
-    expect(await screen.findByText(/Released 1 unlabeled claim\./)).toBeInTheDocument()
-    expect(pb.data.claims.map((c: any) => c.player)).toEqual(['pl1'])
-  })
-
-  it('Check again picks up a freed cell after the pool was exhausted', async () => {
+  it('has no release or check-again buttons, for the host or for helpers', async () => {
     const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
-    pb.data.claims = [{ id: 'c1', room: 'r1', cell_id: 't1|0|a', player: 'pl1', created: new Date().toISOString() }]
-    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
-    expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
-    pb.data.claims = []
-    fireEvent.click(screen.getByRole('button', { name: 'Check again' }))
-    expect(await screen.findByText('v0')).toBeInTheDocument()
-    expect(screen.queryByText(/All cells are claimed/)).toBeNull()
-  })
-
-  it('the host releasing stale claims picks up the freed cell when it has no card', async () => {
-    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
-    pb.data.claims = [{ id: 'c1', room: 'r1', cell_id: 't1|0|a', player: 'pl2', created: new Date(Date.now() - 600_000).toISOString() }]
     renderPage(ROOM_SESSION, pb)
-    expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Release unlabeled claims/ }))
-    expect(await screen.findByText('v0')).toBeInTheDocument()
-    expect(pb.data.claims.map((c: any) => c.player)).toEqual(['pl1'])
-  })
-
-  it('a fresh claim of another player is not released by the host', async () => {
-    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
-    pb.data.claims = [{ id: 'c1', room: 'r1', cell_id: 't1|0|a', player: 'pl2', created: new Date().toISOString() }]
-    renderPage(ROOM_SESSION, pb)
-    await screen.findByText(/^v\d$/)
-    fireEvent.click(screen.getByRole('button', { name: /Release unlabeled claims/ }))
-    expect(await screen.findByText(/Released 0 unlabeled claims/)).toBeInTheDocument()
-    expect(pb.data.claims.some((c: any) => c.id === 'c1')).toBe(true)
-  })
-
-  it('Check again retries after the next card failed to load', async () => {
-    const pb = seedLabeling()
-    renderPage(ROOM_SESSION, pb)
-    await screen.findByText('v0')
-    m.fetchCards.mockRejectedValueOnce(new Error('cards down'))
     await answer('Correct')
-    expect(await screen.findByText(/cards down/)).toBeInTheDocument()
-    fireEvent.click(await screen.findByRole('button', { name: 'Check again' }))
-    expect(await screen.findByText(/^v\d$/)).toBeInTheDocument()
-    expect(screen.queryByText(/cards down/)).toBeNull()
+    expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Release unlabeled claims/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Check again' })).toBeNull()
   })
 
   it('shows an error and does not publish when there are no candidate cells', async () => {

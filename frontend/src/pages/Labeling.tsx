@@ -22,9 +22,6 @@ import { RoomService } from '../rooms/roomService'
 import { useRoomInfo } from '../rooms/useRoomInfo'
 import { useSession } from '../session/SessionProvider'
 
-/** Claims idle for longer than this may be released by the host. */
-export const STALE_CLAIM_MS = 120_000
-
 type Verdicts = Record<string, boolean> // cell key -> "correct"
 
 function Excerpt({ dataset, card }: { dataset: string; card: CardData }) {
@@ -209,7 +206,6 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
   const deck = useRef<SwipeDeckHandle>(null)
   const [warning, setWarning] = useState('')
   const [error, setError] = useState('')
-  const [released, setReleased] = useState<number | null>(null)
   const [jobId, setJobId] = useState<string | null>(null)
   const job = useJob(jobId, pollMs)
   const handled = useRef<string | null>(null)
@@ -323,27 +319,9 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
     }
   }
 
-  const checkAgain = async () => {
-    setExhausted(false)
-    setRoomError('')
-    await loadNext()
-  }
-
-  const release = async () => {
-    if (!room) return
-    try {
-      const n = await service.releaseUnlabeledClaims(room.name, STALE_CLAIM_MS)
-      setReleased(n)
-      if (n > 0 && !list[index]) await checkAgain()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not release the claims')
-    }
-  }
-
   const card = list[index]
   const finished = loaded && list.length > 0 && !card && !loadingNext && (!inRoom || exhausted)
   const loadError = soloCards.isError ? (soloCards.error as Error).message : roomError
-  const canRetry = inRoom && (exhausted || !!roomError) && !loadingNext
 
   return (
     <>
@@ -360,11 +338,6 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
       {!loaded && !loadError && !poolError && <p>Loading cells to label…</p>}
       {warning && <Notice kind="warn">{warning}</Notice>}
       {inRoom && exhausted && <Notice kind="info">All cells are claimed.</Notice>}
-      {canRetry && (
-        <Button variant="ghost" onClick={() => void checkAgain()}>
-          Check again
-        </Button>
-      )}
 
       {!inRoom && soloCards.data && list.length === 0 && (
         <Notice kind="info">
@@ -400,15 +373,6 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
       {finished && !(inRoom && !isHost) && <Notice kind="info">All cards answered. Continue with Next.</Notice>}
       {finished && inRoom && !isHost && (
         <Notice kind="info">You&apos;re done — the host will continue with the results.</Notice>
-      )}
-
-      {inRoom && isHost && (
-        <div className="row">
-          <Button variant="ghost" onClick={() => void release()}>
-            Release unlabeled claims idle for over 2 minutes
-          </Button>
-          {released !== null && <span>{`Released ${released} unlabeled claim${released === 1 ? '' : 's'}.`}</span>}
-        </div>
       )}
 
       <JobStatus state={job.state} error={job.error} />
