@@ -25,7 +25,8 @@ Step order in the tracker (Streamlit sidebar order): Lobby, Intro, Configuration
 - Step tracker for the 9 steps: completed amber, current navy with amber ring, future grey; every step is a link (no gating). Collapses to "Step N of 9" + a select on narrow screens. **[my call]**
 - Palette from `.streamlit/config_light.toml`: navy `#002f67`, amber `#f4b11c`, grey `#e6e6e6`, white cards, monospace font.
 - Plain hand-written CSS with CSS variables; no CSS framework. Dark theme and theme toggle are out of scope. **[my call]**
-- Shared components: `Card`, `Button`, `Notice` (info/warn/error), `JobStatus` (running/failed/lost/done).
+- Shared components: `Card`, `Button`, `Notice` (info/warn/error), `JobStatus` (running/failed/lost/done), `DataTable`.
+- Prefer common, headless React libraries so behaviour and design can be changed later: `@tanstack/react-table` for tables (owner request). Libraries for later pages (swipe gestures for Labeling, charts for Results) are chosen when those batches start. **[my call]**
 
 ## Conventions for ported pages
 

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import jobs as jobs_routes
 from api.routes import matelda as matelda_routes
 from api.routes import meta as meta_routes
+from api.routes import pipelines as pipelines_routes
 from api.routes import tables as tables_routes
 from api.settings import get_settings
 
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     router.include_router(jobs_routes.router)
     router.include_router(matelda_routes.router)
     router.include_router(tables_routes.router)
+    router.include_router(pipelines_routes.router)
     app.include_router(router)
     return app
 
