@@ -86,3 +86,4 @@ pocketbase/
 # Local multiplayer settings
 .env
 !.env.example
+.superpowers/
