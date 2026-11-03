@@ -59,3 +59,15 @@ Step order in the tracker (Streamlit sidebar order): Lobby, Intro, Configuration
 ## Left to the builder
 
 Exact response shapes, component internals, table pagination size (default 100 rows), CSS details.
+
+## Batch 2 behaviour (Domain Folding, Quality Folding)
+
+**Where fold state lives.** Domain folds and cell folds are stored in the pipeline's `configurations.json` (`domain_folds`, `cell_folds`, `cell_fold_labels`), not in the PocketBase session: `cell_folds` is about 2.5 MB for the demo dataset. The API owns all edits to cell folds; the browser only receives summaries and pages of cells (without the `features` vectors). **[my call]** Domain folds are small, so the browser edits them locally and saves them with one call.
+
+**Prerequisite.** Both pages need `pipeline_path` in the session; without it they show a notice linking to Configurations. Quality Folding also needs saved domain folds, otherwise a notice linking to Domain Folding.
+
+**Domain Folding.** "Run domain based folding" starts a background job (budget and dataset come from the pipeline config); the result is saved as `domain_folds`. Running again replaces the folds and removes `cell_folds`, `cell_fold_labels` and `results`, since they would be stale. **[my call]** The fold list shows each fold with its tables; per table: a preview (first 20 rows, loaded on demand) and a "move to" select. Merge mode (select two or more folds, the first becomes the target) and split mode (select tables; each fold splits after every selected table, new folds are named `<fold> - Split N`). Empty folds disappear. "Save" and "Next" persist the folds (changing them removes the stale derived data above) and "Next" goes to Quality Folding.
+
+**Quality Folding.** Budget and strategies are editable on the page (same controls as Configurations) and saved to the pipeline config on run. "Run quality based folding" starts a job that saves `cell_folds`. The page lists domains and their cell folds with cell counts and label colour (green correct, red false). Per fold: show/hide, cells grouped by table and column, 20 cells at a time. Clicking a cell opens a dialog with the detection results (`strategies`, or "passed all checks"), a table excerpt around its row with the cell highlighted, and a select to move it to another fold. Actions: Merge (two or more folds; labels combine: correct+false conflict = neutral, correct only = correct, false only = false), Split (select cells in one fold; splits after each), Bulk annotate (per fold: correct / false / clear). All edits are saved immediately by the API. "Next" goes to Labeling.
+
+**Not in this batch:** the Streamlit per-fold remembered "visible cells" counts, restart button.
