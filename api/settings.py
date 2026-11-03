@@ -10,6 +10,7 @@ class Settings:
     datasets_dir: Path
     cors_origins: list[str]
     pipelines_dir: Path = REPO_ROOT / "pipelines"
+    raha_baseline_csv: Path = REPO_ROOT / "raha_baseline_results.csv"
 
 
 def get_settings() -> Settings:
@@ -18,4 +19,5 @@ def get_settings() -> Settings:
         datasets_dir=REPO_ROOT / "datasets",
         cors_origins=[o.strip() for o in origins.split(",") if o.strip()],
         pipelines_dir=REPO_ROOT / "pipelines",
+        raha_baseline_csv=REPO_ROOT / "raha_baseline_results.csv",
     )

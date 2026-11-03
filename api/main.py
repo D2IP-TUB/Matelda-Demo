@@ -14,6 +14,7 @@ from api.routes import labeling as labeling_routes
 from api.routes import matelda as matelda_routes
 from api.routes import meta as meta_routes
 from api.routes import pipelines as pipelines_routes
+from api.routes import results as results_routes
 from api.routes import tables as tables_routes
 from api.settings import get_settings
 
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     router.include_router(folding_routes.router)
     router.include_router(labeling_routes.router)
     router.include_router(detection_routes.router)
+    router.include_router(results_routes.router)
     app.include_router(router)
     return app
 
