@@ -7,6 +7,9 @@ STALE_AFTER_DOMAIN_FOLDS = ("cell_folds", "cell_fold_labels") + tuple(
     k for k in DERIVED_KEYS if k not in ("domain_folds", "cell_folds")
 )
 
+# Everything downstream of the cell folds.
+STALE_AFTER_QUALITY_FOLDS = ("cell_folds", "cell_fold_labels", "results")
+
 
 def validate_domain_folds(folds: dict[str, list[str]], known_tables: list[str]) -> None:
     seen: set[str] = set()
