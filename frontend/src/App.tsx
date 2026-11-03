@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
 import { Placeholder } from './pages/Placeholder'
+import { SessionProvider } from './session/SessionProvider'
 import { PAGES } from './routes'
 
 const queryClient = new QueryClient()
@@ -28,9 +29,11 @@ export function AppRoutes() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <SessionProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </SessionProvider>
     </QueryClientProvider>
   )
 }
