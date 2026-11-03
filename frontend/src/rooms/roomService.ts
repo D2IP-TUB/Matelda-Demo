@@ -6,6 +6,9 @@ export interface Room {
   name: string
   phase: 'lobby' | 'labeling'
   dataset: string
+  pipeline?: string
+  pool?: string[]
+  host?: string
 }
 
 export interface Player {

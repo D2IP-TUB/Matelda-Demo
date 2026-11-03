@@ -36,3 +36,15 @@ def test_sessions_collection_roundtrip():
         assert duplicate.status_code == 400
     finally:
         requests.delete(f"{PB_URL}/api/collections/sessions/records/{rec_id}")
+
+
+def test_rooms_migration_adds_pool_fields():
+    from pathlib import Path
+
+    migrations = Path(__file__).resolve().parents[2] / "pocketbase" / "pb_migrations"
+    text = "\n".join(p.read_text() for p in sorted(migrations.glob("*_updated_rooms.js")))
+    assert "pbc_3085411453" in text
+    for name, kind in (("pipeline", "text"), ("pool", "json"), ("host", "text")):
+        assert f'"name": "{name}"' in text
+        assert f'"type": "{kind}"' in text
+        assert f'removeById("{name}_field")' in text or f'removeByName("{name}")' in text
