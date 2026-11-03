@@ -25,13 +25,13 @@ function renderAt(path: string) {
 }
 
 describe('routes', () => {
-  it.each(PAGES.map((p) => [p.path, p.title]))('renders %s with its title', (path, title) => {
+  it.each(PAGES.map((p) => [p.path, p.title]))('renders %s with its title', async (path, title) => {
     renderAt(path)
-    expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()
   })
 
-  it('redirects / to the lobby', () => {
+  it('redirects / to the lobby', async () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1, name: 'Lobby' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Lobby' })).toBeInTheDocument()
   })
 })
