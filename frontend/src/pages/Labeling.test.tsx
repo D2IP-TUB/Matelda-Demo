@@ -108,6 +108,20 @@ describe('Labeling', () => {
     await waitFor(() => expect(sessionData(pb).labeling_results).toEqual({ 't1|0|a': true }))
   })
 
+  it('stacked back cards show their value, and the round buttons are disabled once all cards are answered', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    expect(screen.getByText('v1')).toBeInTheDocument()
+    expect(screen.getByText('v2')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Correct' })).toHaveClass('round', 'round-correct')
+    await answer('Correct')
+    await answer('Correct')
+    await answer('Correct')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Correct' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: 'Error' })).toBeDisabled()
+    expect(screen.getByText('Card 3 of 3')).toHaveClass('deck-progress')
+  })
+
   it('Previous lets the player overwrite a verdict', async () => {
     const { pb } = renderPage()
     await answer('Correct')

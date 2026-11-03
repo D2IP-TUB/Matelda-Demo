@@ -357,22 +357,25 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
         </Notice>
       )}
 
-      {card && (
+      {list.length > 0 && (
         <>
-          <p className="deck-progress">{inRoom ? `Card ${index + 1}` : `Card ${index + 1} of ${list.length}`}</p>
+          <p className="deck-progress">
+            {inRoom ? `Card ${Math.min(index + 1, list.length)}` : `Card ${Math.min(index + 1, list.length)} of ${list.length}`}
+          </p>
           <SwipeDeck
             ref={deck}
             items={list}
             index={index}
+            disabled={!card}
             onSwipe={(direction) => void answer(direction === 'right')}
             renderCard={(c, depth) => <CardFace card={c} dataset={dataset} depth={depth} />}
           />
           <p className="deck-hint">Drag the card right if the value is correct, left if it is wrong — or use the buttons or the ← → keys.</p>
           <div className="verdict-buttons">
-            <button type="button" className="round round-error" aria-label="Error" onClick={() => deck.current?.swipe('left')}>
+            <button type="button" className="round round-error" aria-label="Error" disabled={!card} onClick={() => deck.current?.swipe('left')}>
               ✕
             </button>
-            <button type="button" className="round round-correct" aria-label="Correct" onClick={() => deck.current?.swipe('right')}>
+            <button type="button" className="round round-correct" aria-label="Correct" disabled={!card} onClick={() => deck.current?.swipe('right')}>
               ✓
             </button>
           </div>
