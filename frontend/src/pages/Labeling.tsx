@@ -24,6 +24,33 @@ import { useSession } from '../session/SessionProvider'
 
 type Verdicts = Record<string, boolean> // cell key -> "correct"
 
+const iconProps = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  'aria-hidden': true,
+  focusable: false,
+}
+const CrossIcon = () => (
+  <svg {...iconProps} strokeWidth={3.2}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
+const CheckIcon = () => (
+  <svg {...iconProps} strokeWidth={3.2}>
+    <path d="M4 12.5l5 5L20 6.5" />
+  </svg>
+)
+/** Circular arrow turning back (counter-clockwise). */
+const BackIcon = () => (
+  <svg {...iconProps} strokeWidth={2.6}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5" />
+  </svg>
+)
+
 function Excerpt({ dataset, card }: { dataset: string; card: CardData }) {
   const start = Math.max(0, card.row - 5)
   const page = useQuery({
@@ -361,7 +388,7 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
           <p className="deck-hint">Drag the card right if the value is correct, left if it is wrong — or use the buttons or the ← → keys.</p>
           <div className="verdict-buttons">
             <button type="button" className="round round-error" aria-label="Error" disabled={!card} onClick={() => deck.current?.swipe('left')}>
-              ✕
+              <CrossIcon />
             </button>
             <button
               type="button"
@@ -370,10 +397,10 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
               disabled={index === 0 || list.length === 0}
               onClick={() => setIndex((i) => Math.max(0, i - 1))}
             >
-              ←
+              <BackIcon />
             </button>
             <button type="button" className="round round-correct" aria-label="Correct" disabled={!card} onClick={() => deck.current?.swipe('right')}>
-              ✓
+              <CheckIcon />
             </button>
           </div>
         </>
