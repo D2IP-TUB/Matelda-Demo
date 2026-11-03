@@ -1,5 +1,5 @@
 import createClient from 'openapi-fetch'
-import type { paths } from './schema'
+import type { components, paths } from './schema'
 
 // Types come from FastAPI's OpenAPI schema (npm run gen:api). Paths already include /api.
 export const api = createClient<paths>({ baseUrl: '' })
@@ -33,4 +33,46 @@ export async function startDomainFolding(dataset: string, labelingBudget: number
   })
   if (error || !data) throw new Error('Could not start domain folding')
   return data.job_id
+}
+
+export type TablePage = components['schemas']['TablePage']
+export type CompareResult = components['schemas']['CompareResult']
+
+function detailOf(error: unknown, fallback: string): string {
+  const detail = (error as { detail?: unknown } | undefined)?.detail
+  return typeof detail === 'string' ? detail : fallback
+}
+
+export async function fetchTables(dataset: string): Promise<string[]> {
+  const { data, error } = await api.GET('/api/datasets/{dataset}/tables', {
+    params: { path: { dataset } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load tables'))
+  return data
+}
+
+export async function fetchDirtyPage(
+  dataset: string,
+  table: string,
+  offset: number,
+  limit: number,
+): Promise<TablePage> {
+  const { data, error } = await api.GET('/api/datasets/{dataset}/tables/{table}/dirty', {
+    params: { path: { dataset, table }, query: { offset, limit } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the table'))
+  return data
+}
+
+export async function fetchCompare(
+  dataset: string,
+  table: string,
+  offset: number,
+  limit: number,
+): Promise<CompareResult> {
+  const { data, error } = await api.GET('/api/datasets/{dataset}/tables/{table}/compare', {
+    params: { path: { dataset, table }, query: { offset, limit } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not compare the table'))
+  return data
 }
