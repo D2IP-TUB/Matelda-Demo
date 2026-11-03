@@ -7,6 +7,7 @@ import { DomainFolding } from './pages/DomainFolding'
 import { Intro } from './pages/Intro'
 import { Lobby } from './pages/Lobby'
 import { Placeholder } from './pages/Placeholder'
+import { QualityFolding } from './pages/QualityFolding'
 import { SessionProvider } from './session/SessionProvider'
 import { PAGES } from './routes'
 
@@ -22,7 +23,8 @@ export function AppRoutes() {
         <Route path="/intro" element={<Intro />} />
         <Route path="/configuration" element={<Configurations />} />
         <Route path="/domain-folding" element={<DomainFolding />} />
-        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding'].includes(p.path)).map((p) => (
+        <Route path="/quality-folding" element={<QualityFolding />} />
+        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration', '/domain-folding', '/quality-folding'].includes(p.path)).map((p) => (
           <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
         ))}
       </Route>

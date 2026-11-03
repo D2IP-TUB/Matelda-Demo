@@ -95,3 +95,16 @@ td.diff-clean { background: rgb(46 204 113 / 30%); }
 .checks { display: flex; flex-direction: column; gap: 0.25rem; }
 .nav-row { display: flex; justify-content: space-between; margin-top: 1.25rem; }
 .dataset-vote { margin: 0.25rem 0; }
+
+.fold-name { font-weight: 700; }
+.label-correct { color: #1e8449; }
+.label-false { color: var(--danger); }
+.cells { list-style: none; padding: 0; margin: 0.5rem 0; }
+.cells li { padding: 0.15rem 0; cursor: pointer; display: flex; gap: 0.5rem; align-items: center; }
+button.link { background: none; border: 0; padding: 0; color: var(--navy); text-decoration: underline; cursor: pointer; text-align: left; }
+.tables { list-style: none; padding: 0; margin: 0; }
+.tables li { margin-bottom: 0.5rem; }
+.cell-dialog {
+  position: fixed; inset: 5vh 5vw; margin: auto; width: min(900px, 90vw); max-height: 90vh; overflow: auto;
+  border: 2px solid var(--navy); border-radius: var(--radius); background: var(--white); color: var(--navy); z-index: 10;
+}
