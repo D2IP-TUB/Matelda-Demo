@@ -5,12 +5,18 @@ from pydantic import BaseModel
 from api.pipelines import DERIVED_KEYS
 
 # Everything downstream of the domain folds.
-STALE_AFTER_DOMAIN_FOLDS = ("cell_folds", "cell_fold_labels") + tuple(
+STALE_AFTER_DOMAIN_FOLDS = ("cell_folds", "cell_fold_labels", "propagation_results", "error_detection") + tuple(
     k for k in DERIVED_KEYS if k not in ("domain_folds", "cell_folds")
 )
 
 # Everything downstream of the cell folds.
-STALE_AFTER_QUALITY_FOLDS = ("cell_folds", "cell_fold_labels", "results")
+STALE_AFTER_QUALITY_FOLDS = (
+    "cell_folds",
+    "cell_fold_labels",
+    "results",
+    "propagation_results",
+    "error_detection",
+)
 
 
 def validate_domain_folds(folds: dict[str, list[str]], known_tables: list[str]) -> None:
