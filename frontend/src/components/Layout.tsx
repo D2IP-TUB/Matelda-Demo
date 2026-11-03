@@ -21,6 +21,14 @@ export function Layout({ roomService }: { roomService?: RoomService }) {
     if (prevRoomName.current && !roomName && pathname !== '/lobby') navigate('/lobby')
     prevRoomName.current = roomName
   }, [roomName, pathname, navigate])
+  // Clicking Start moves everyone waiting in the lobby on to the first pipeline step. (Helpers land on
+  // the waiting screen there.) Only the live lobby -> labeling change counts, not opening a started room.
+  const phase = room?.phase
+  const prevPhase = useRef(phase)
+  useEffect(() => {
+    if (prevPhase.current === 'lobby' && phase === 'labeling' && pathname === '/lobby') navigate('/configuration')
+    prevPhase.current = phase
+  }, [phase, pathname, navigate])
   const hostOnly = HOST_ONLY_PATHS.includes(pathname)
 
   let content = <Outlet />
