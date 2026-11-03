@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { DataTable } from '../components/DataTable'
 import { SwipeDeck } from '../components/SwipeDeck'
 import type { SwipeDeckHandle } from '../components/SwipeDeck'
-import { Button, Card, JobStatus, Notice } from '../components/ui'
+import { Button, JobStatus, Notice } from '../components/ui'
 import { useJob } from '../jobs/useJob'
 import {
   fetchCandidates,
@@ -358,40 +358,25 @@ export function Labeling({ roomService, pollMs = 1000 }: { roomService?: RoomSer
       )}
 
       {card && (
-        <Card>
-          <p>{inRoom ? `Card ${index + 1}` : `Card ${index + 1} of ${list.length}`}</p>
-          <p>Swipe right (or press Correct) if the highlighted value is correct, left (Error) if it is wrong.</p>
+        <>
+          <p className="deck-progress">{inRoom ? `Card ${index + 1}` : `Card ${index + 1} of ${list.length}`}</p>
           <SwipeDeck
             ref={deck}
             items={list}
             index={index}
-            onSwipe={(d) => void answer(d === 'right')}
-            renderCard={(c, depth) =>
-              depth > 0 ? null : (
-                <>
-                  <h2>{String(c.val) === '' ? '(empty)' : String(c.val)}</h2>
-                  <p>
-                    <code>{c.table}</code> · column <code>{c.col}</code> · row {c.row} · {c.cell_fold}
-                  </p>
-                  <div>
-                    {c.strategies.map((s) => (
-                      <span key={s} className="pill">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                  <Excerpt dataset={dataset} card={c} />
-                </>
-              )
-            }
+            onSwipe={(direction) => void answer(direction === 'right')}
+            renderCard={(c, depth) => <CardFace card={c} dataset={dataset} depth={depth} />}
           />
+          <p className="deck-hint">Drag the card right if the value is correct, left if it is wrong — or use the buttons or the ← → keys.</p>
           <div className="verdict-buttons">
-            <Button variant="ghost" onClick={() => deck.current?.swipe('left')}>
-              Error
-            </Button>
-            <Button onClick={() => deck.current?.swipe('right')}>Correct</Button>
+            <button type="button" className="round round-error" aria-label="Error" onClick={() => deck.current?.swipe('left')}>
+              ✕
+            </button>
+            <button type="button" className="round round-correct" aria-label="Correct" onClick={() => deck.current?.swipe('right')}>
+              ✓
+            </button>
           </div>
-        </Card>
+        </>
       )}
       {inRoom && !card && loadingNext && <p>Loading the next cell…</p>}
       {finished && !(inRoom && !isHost) && <Notice kind="info">All cards answered. Continue with Next.</Notice>}
