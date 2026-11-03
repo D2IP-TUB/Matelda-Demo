@@ -7,7 +7,14 @@ import { SessionProvider } from './session/SessionProvider'
 import { SessionService } from './session/sessionService'
 import { FakePocketBase } from './test/fakePocketBase'
 
-vi.mock('./lib/api', () => ({ fetchDatasets: async () => [] }))
+vi.mock('./lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/api')>()),
+  fetchDatasets: async () => [],
+  fetchStrategies: async () => [],
+  fetchPipelines: async () => [],
+  suggestPipelineName: async () => 'x',
+  fetchTables: async () => [],
+}))
 
 function renderAt(path: string) {
   const storage = { getItem: () => null, setItem: () => {} }

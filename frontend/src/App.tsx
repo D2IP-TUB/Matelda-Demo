@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { Configurations } from './pages/Configurations'
 import { DevPlayground } from './pages/DevPlayground'
 import { Intro } from './pages/Intro'
 import { Lobby } from './pages/Lobby'
@@ -18,7 +19,8 @@ export function AppRoutes() {
         <Route path="/lobby" element={<Lobby />} />
         <Route path="/dev" element={<DevPlayground />} />
         <Route path="/intro" element={<Intro />} />
-        {PAGES.filter((p) => !['/lobby', '/intro'].includes(p.path)).map((p) => (
+        <Route path="/configuration" element={<Configurations />} />
+        {PAGES.filter((p) => !['/lobby', '/intro', '/configuration'].includes(p.path)).map((p) => (
           <Route key={p.path} path={p.path} element={<Placeholder title={p.title} />} />
         ))}
       </Route>

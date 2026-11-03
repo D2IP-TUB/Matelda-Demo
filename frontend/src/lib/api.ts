@@ -76,3 +76,55 @@ export async function fetchCompare(
   if (error || !data) throw new Error(detailOf(error, 'Could not compare the table'))
   return data
 }
+
+export type PipelineConfig = components['schemas']['PipelineConfig']
+export type PipelineConfigView = PipelineConfig & Record<string, unknown>
+
+export async function fetchStrategies(): Promise<string[]> {
+  const { data, error } = await api.GET('/api/strategies')
+  if (error || !data) throw new Error('Could not load strategies')
+  return data
+}
+
+export async function fetchPipelines(): Promise<string[]> {
+  const { data, error } = await api.GET('/api/pipelines')
+  if (error || !data) throw new Error('Could not load pipelines')
+  return data
+}
+
+export async function fetchPipeline(name: string): Promise<PipelineConfigView> {
+  const { data, error } = await api.GET('/api/pipelines/{name}', { params: { path: { name } } })
+  if (error || !data) throw new Error(detailOf(error, 'Could not load the pipeline'))
+  return data as PipelineConfigView
+}
+
+export async function suggestPipelineName(dataset: string, suffix: string): Promise<string> {
+  const { data, error } = await api.GET('/api/pipelines/suggest-name', {
+    params: { query: { dataset, suffix } },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not suggest a pipeline name'))
+  return data.name
+}
+
+export async function createPipeline(name: string, config: PipelineConfig): Promise<string> {
+  const { data, error } = await api.POST('/api/pipelines', { body: { name, config } })
+  if (error || !data) throw new Error(detailOf(error, 'Could not create the pipeline'))
+  return data.name
+}
+
+export async function updatePipeline(name: string, config: PipelineConfig): Promise<void> {
+  const { error } = await api.PUT('/api/pipelines/{name}', {
+    params: { path: { name } },
+    body: config,
+  })
+  if (error) throw new Error(detailOf(error, 'Could not save the pipeline'))
+}
+
+export async function copyPipeline(name: string, newName: string): Promise<string> {
+  const { data, error } = await api.POST('/api/pipelines/{name}/copy', {
+    params: { path: { name } },
+    body: { new_name: newName },
+  })
+  if (error || !data) throw new Error(detailOf(error, 'Could not copy the pipeline'))
+  return data.name
+}
