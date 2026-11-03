@@ -194,7 +194,7 @@ def _edit(
 
 @router.get("/pipelines/{name}/cell-folds", response_model=list[FoldSummary])
 def cell_fold_summary(name: str, settings: Settings = Depends(get_settings)) -> list[FoldSummary]:
-    config = store.load_config(_pipeline_dir(settings, name))
+    config = store.read_config(_pipeline_dir(settings, name))
     return summarize(_cell_folds_of(config), config.get("cell_fold_labels", {}))
 
 
@@ -206,7 +206,7 @@ def cell_fold_cells(
     limit: int = Query(20, ge=1, le=200),
     settings: Settings = Depends(get_settings),
 ) -> CellPage:
-    config = store.load_config(_pipeline_dir(settings, name))
+    config = store.read_config(_pipeline_dir(settings, name))
     try:
         cells, total = fold_cells(_cell_folds_of(config), fold, offset, limit)
     except FoldNotFound as e:

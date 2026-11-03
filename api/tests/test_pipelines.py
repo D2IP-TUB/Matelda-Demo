@@ -159,25 +159,52 @@ def test_get_and_put_do_not_ship_the_cell_folds(env):
     assert client.get("/api/pipelines/p2").json()["has_cell_folds"] is False
 
 
-def test_load_config_parses_once_until_file_changes(tmp_path, monkeypatch):
+def test_read_config_parses_once_until_save_or_file_change(tmp_path, monkeypatch):
+    import os
     from api import pipelines
 
     pipelines.save_config(tmp_path, {"a": 1})
     parses = []
     real = json.loads
     monkeypatch.setattr(pipelines.json, "loads", lambda *a, **k: (parses.append(1), real(*a, **k))[1])
-    assert pipelines.load_config(tmp_path) == {"a": 1}
-    assert pipelines.load_config(tmp_path) == {"a": 1}
+    assert pipelines.read_config(tmp_path) == {"a": 1}
+    assert pipelines.read_config(tmp_path) == {"a": 1}
     assert len(parses) == 1
     pipelines.save_config(tmp_path, {"a": 2})
-    assert pipelines.load_config(tmp_path) == {"a": 2}
+    assert pipelines.read_config(tmp_path) == {"a": 2}
     assert len(parses) == 2
+    f = tmp_path / "configurations.json"
+    st = f.stat()
+    os.utime(f, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))
+    pipelines.read_config(tmp_path)
+    assert len(parses) == 3
 
 
-def test_load_config_returns_independent_copies(tmp_path):
+def test_read_config_returns_same_object(tmp_path):
+    from api import pipelines
+
+    pipelines.save_config(tmp_path, {"a": {"b": 1}})
+    assert pipelines.read_config(tmp_path) is pipelines.read_config(tmp_path)
+
+
+def test_load_config_returns_independent_objects(tmp_path):
     from api import pipelines
 
     pipelines.save_config(tmp_path, {"a": {"b": [1]}})
+    shared = pipelines.read_config(tmp_path)
     first = pipelines.load_config(tmp_path)
     first["a"]["b"].append(2)
     assert pipelines.load_config(tmp_path) == {"a": {"b": [1]}}
+    assert pipelines.read_config(tmp_path) == {"a": {"b": [1]}}
+    assert shared == {"a": {"b": [1]}}
+
+
+def test_update_config_result_unaffected_by_earlier_read_config(tmp_path):
+    from api import pipelines
+
+    pipelines.save_config(tmp_path, {"a": {"b": [1]}})
+    shared = pipelines.read_config(tmp_path)
+    result = pipelines.update_config(tmp_path, lambda c: (c["a"]["b"].append(2), c)[1])
+    assert result == {"a": {"b": [1, 2]}}
+    assert shared == {"a": {"b": [1]}}
+    assert pipelines.read_config(tmp_path) == {"a": {"b": [1, 2]}}

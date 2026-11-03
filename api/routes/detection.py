@@ -70,7 +70,7 @@ def start_error_detection(
 
 @router.get("/pipelines/{name}/error-detection", response_model=DetectionSummary)
 def error_detection_summary(name: str, settings: Settings = Depends(get_settings)) -> DetectionSummary:
-    detection = store.load_config(_pipeline_dir(settings, name)).get("error_detection")
+    detection = store.read_config(_pipeline_dir(settings, name)).get("error_detection")
     if not detection:
         raise HTTPException(status_code=404, detail="No error detection result yet")
     return _summary(detection)
@@ -84,6 +84,6 @@ def detected_errors(
     limit: int = Query(100, ge=1, le=200),
     settings: Settings = Depends(get_settings),
 ) -> ErrorsPage:
-    detection = store.load_config(_pipeline_dir(settings, name)).get("error_detection") or {}
+    detection = store.read_config(_pipeline_dir(settings, name)).get("error_detection") or {}
     errors = detection.get("propagated_errors", {}).get(table, [])
     return ErrorsPage(errors=errors[offset : offset + limit], total=len(errors))

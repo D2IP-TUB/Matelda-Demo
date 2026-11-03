@@ -1,4 +1,3 @@
-import copy
 import json
 import re
 import shutil
@@ -35,6 +34,16 @@ _cache_lock = threading.Lock()
 
 
 def load_config(pipeline_dir: Path) -> dict[str, Any]:
+    """Fresh parse on every call; the caller owns the result and may mutate it."""
+    path = pipeline_dir / "configurations.json"
+    if not path.is_file():
+        return {}
+    return json.loads(path.read_text())
+
+
+def read_config(pipeline_dir: Path) -> dict[str, Any]:
+    """Cached parse keyed on (path, mtime_ns, size). The SHARED object is returned, not a copy:
+    callers must treat it (and everything nested in it) as read-only. Use load_config to mutate."""
     path = pipeline_dir / "configurations.json"
     if not path.is_file():
         return {}
@@ -48,7 +57,7 @@ def load_config(pipeline_dir: Path) -> dict[str, Any]:
             for stale in [k for k in _config_cache if k[0] == key[0]]:
                 del _config_cache[stale]
             _config_cache[key] = hit
-    return copy.deepcopy(hit)
+    return hit
 
 
 def _json_default(obj: Any) -> Any:

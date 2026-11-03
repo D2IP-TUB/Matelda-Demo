@@ -27,11 +27,11 @@ from api.settings import Settings, get_settings
 router = APIRouter()
 
 
-def _load(settings: Settings, name: str) -> tuple[Path, dict[str, Any]]:
+def _load(settings: Settings, name: str, shared: bool = True) -> tuple[Path, dict[str, Any]]:
     path = store.resolve_pipeline(settings.pipelines_dir, name)
     if path is None:
         raise HTTPException(status_code=404, detail="Unknown pipeline")
-    config = store.load_config(path)
+    config = (store.read_config if shared else store.load_config)(path)  # shared: read-only
     if not config.get("cell_folds"):
         raise HTTPException(status_code=409, detail="Run quality folding first")
     return path, config
@@ -146,7 +146,7 @@ def labeling_propagate(
     settings: Settings = Depends(get_settings),
     jobs: JobStore = Depends(get_job_store),
 ) -> JobStarted:
-    path, config = _load(settings, name)
+    path, config = _load(settings, name, shared=False)  # handed to a background job
     return JobStarted(
         job_id=jobs.submit(_run_propagation, path, config["selected_dataset"], config["cell_folds"], body)
     )
@@ -168,7 +168,7 @@ def propagation_results(
     path = store.resolve_pipeline(settings.pipelines_dir, name)
     if path is None:
         raise HTTPException(status_code=404, detail="Unknown pipeline")
-    results = store.load_config(path).get("propagation_results")
+    results = store.read_config(path).get("propagation_results")
     if not results or not results.get("labeled_cells"):
         raise HTTPException(status_code=409, detail="Run label propagation first")
     cells = results["labeled_cells"]
