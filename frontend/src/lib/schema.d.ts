@@ -737,6 +737,21 @@ export interface components {
             /** Error Rate */
             error_rate: number;
         };
+        /** ComparisonRow */
+        ComparisonRow: {
+            /** Time */
+            time: string;
+            /** Pipeline */
+            pipeline: string;
+            /** Labeling Budget */
+            labeling_budget?: number | null;
+            /** Precision */
+            precision?: number | null;
+            /** Recall */
+            recall?: number | null;
+            /** F1 */
+            f1?: number | null;
+        };
         /** CopyPipeline */
         CopyPipeline: {
             /** New Name */
@@ -881,6 +896,20 @@ export interface components {
             /** Folds */
             folds: string[];
         };
+        /** Metrics */
+        Metrics: {
+            /** Precision */
+            precision?: number | null;
+            /** Recall */
+            recall?: number | null;
+            /** F1 */
+            f1?: number | null;
+            /**
+             * Time
+             * @default
+             */
+            time: string;
+        };
         /** MoveBody */
         MoveBody: {
             cell: components["schemas"]["CellRef"];
@@ -953,6 +982,17 @@ export interface components {
             /** Selected Strategies */
             selected_strategies: string[];
         };
+        /** RahaBaseline */
+        RahaBaseline: {
+            /** Labeling Budget */
+            labeling_budget: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
+        };
         /** ResultsSummary */
         ResultsSummary: {
             /** Dataset */
@@ -961,18 +1001,10 @@ export interface components {
             pipeline: string;
             /** Labeling Budget */
             labeling_budget: number | null;
-            /** Metrics */
-            metrics: {
-                [key: string]: unknown;
-            } | null;
+            metrics: components["schemas"]["Metrics"] | null;
             /** Comparison */
-            comparison: {
-                [key: string]: unknown;
-            }[];
-            /** Raha */
-            raha: {
-                [key: string]: unknown;
-            } | null;
+            comparison: components["schemas"]["ComparisonRow"][];
+            raha: components["schemas"]["RahaBaseline"] | null;
         };
         /** RoomLabel */
         RoomLabel: {

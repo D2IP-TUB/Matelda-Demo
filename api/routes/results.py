@@ -14,13 +14,36 @@ from api.settings import Settings, get_settings
 router = APIRouter()
 
 
+class Metrics(BaseModel):
+    precision: float | None = None
+    recall: float | None = None
+    f1: float | None = None
+    time: str = ""
+
+
+class ComparisonRow(BaseModel):
+    time: str
+    pipeline: str
+    labeling_budget: int | None = None
+    precision: float | None = None
+    recall: float | None = None
+    f1: float | None = None
+
+
+class RahaBaseline(BaseModel):
+    labeling_budget: int
+    precision: float
+    recall: float
+    f1: float
+
+
 class ResultsSummary(BaseModel):
     dataset: str
     pipeline: str
     labeling_budget: int | None
-    metrics: dict[str, Any] | None
-    comparison: list[dict[str, Any]]
-    raha: dict[str, Any] | None
+    metrics: Metrics | None
+    comparison: list[ComparisonRow]
+    raha: RahaBaseline | None
 
 
 class AccuracyPage(BaseModel):
