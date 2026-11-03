@@ -3,15 +3,23 @@ export interface Page {
   title: string
 }
 
-// Flow order of the original Streamlit app.
+// Step order of the Streamlit sidebar.
 export const PAGES: Page[] = [
   { path: '/lobby', title: 'Lobby' },
-  { path: '/intro', title: 'InputOutput' },
+  { path: '/intro', title: 'Intro' },
   { path: '/configuration', title: 'Configurations' },
-  { path: '/domain-folding', title: 'DomainBasedFolding' },
-  { path: '/quality-folding', title: 'QualityBasedFolding' },
+  { path: '/domain-folding', title: 'Domain Folding' },
+  { path: '/quality-folding', title: 'Quality Folding' },
   { path: '/labeling', title: 'Labeling' },
-  { path: '/error-detection', title: 'ErrorDetection' },
-  { path: '/propagated-errors', title: 'PropagatedErrors' },
+  { path: '/propagated-errors', title: 'Propagated Errors' },
+  { path: '/error-detection', title: 'Error Detection' },
   { path: '/results', title: 'Results' },
 ]
+
+export function stepIndex(path: string): number {
+  return PAGES.findIndex((p) => p.path === path)
+}
+
+export function pageTitle(path: string): string {
+  return PAGES.find((p) => p.path === path)?.title ?? ''
+}

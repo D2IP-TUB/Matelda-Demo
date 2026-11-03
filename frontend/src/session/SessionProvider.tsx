@@ -6,6 +6,7 @@ import type { SessionData, StorageLike } from './sessionService'
 
 interface SessionContextValue {
   ready: boolean
+  sid: string
   data: SessionData
   update(patch: SessionData): Promise<void>
   clear(keep?: string[]): Promise<void>
@@ -72,8 +73,8 @@ export function SessionProvider({
   )
 
   const value = useMemo(
-    () => ({ ready: state.ready, data: state.data, update, clear }),
-    [state.ready, state.data, update, clear],
+    () => ({ ready: state.ready, sid: state.sid, data: state.data, update, clear }),
+    [state.ready, state.sid, state.data, update, clear],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

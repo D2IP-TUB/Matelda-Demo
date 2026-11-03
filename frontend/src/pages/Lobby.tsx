@@ -69,6 +69,13 @@ export function Lobby({ roomService, loadDatasets = fetchDatasets }: LobbyProps)
     })()
   }, [session, roomName, service])
 
+  // Once the room has started, its dataset becomes the session's dataset.
+  useEffect(() => {
+    if (room?.phase === 'labeling' && room.dataset && session.data.dataset_select !== room.dataset) {
+      void session.update({ dataset_select: room.dataset })
+    }
+  }, [room?.phase, room?.dataset, session])
+
   // Live updates while in a room.
   useEffect(() => {
     if (status !== 'ready' || !room) return

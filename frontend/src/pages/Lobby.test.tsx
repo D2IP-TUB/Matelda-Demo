@@ -57,6 +57,15 @@ describe('Lobby', () => {
     expect(screen.getByRole('link', { name: /intro/i })).toBeInTheDocument()
   })
 
+  it('stores the winning dataset in the session when the room starts', async () => {
+    const { pb } = renderLobby()
+    fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
+    fireEvent.click(await screen.findByLabelText('flights'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
+    await waitFor(() => expect(pb.data.sessions[0].data.dataset_select).toBe('flights'))
+  })
+
   it('refreshes the player list when another player joins', async () => {
     const { roomService, pb } = renderLobby()
     fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
