@@ -133,3 +133,19 @@ Several people can label together: each creates or joins a room (link, room name
 3. Players open `http://<LAN_IP>:8501/Lobby`. The live leaderboard for the projector is `http://<LAN_IP>:8090/`.
 
 The PocketBase collections have public API rules (demo setup); only run this on a trusted network.
+
+## React + FastAPI + PocketBase (development)
+
+The app is being moved from Streamlit to three separate services. The Streamlit app keeps working until every page is ported.
+
+| Part | Folder | Port | Role |
+|---|---|---|---|
+| React frontend | `frontend/` | 5173 | All UI. Talks to PocketBase directly (rooms, votes, sessions, realtime) and to the API for ML work. |
+| FastAPI | `api/` | 8000 (loopback only) | The only code that imports `backend/` (and through it `Matelda/`). Endpoints live under `/api`; long steps run as background jobs polled via `GET /api/jobs/{id}`. |
+| PocketBase | `pocketbase/` | 8090 | Rooms, players, labels, runs and per-browser `sessions`. Schema is created by `scripts/init_pocketbase.py`. |
+
+**Run everything:** `scripts/dev.sh`. It starts PocketBase, creates the collections, then starts the API and the Vite dev server. Vite proxies `/api` to FastAPI, so the browser only needs ports 5173 and 8090. It reads the host from `MATELDA_BASE_URL` in `.env` (the port in that variable is ignored; the Streamlit launcher still uses it). Open `http://<host>:5173/lobby`; `/dev` runs a real domain-folding job.
+
+**One-time setup:** `uv pip install --python venv/bin/python -r api/requirements.txt` and `cd frontend && npm install`.
+
+**Tests:** `venv/bin/python -m pytest api/tests` (add `-m slow` for the real pipeline run) and `cd frontend && npm test`. After changing API models, regenerate the typed client with the API running: `cd frontend && npm run gen:api`.
