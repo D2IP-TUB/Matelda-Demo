@@ -125,9 +125,7 @@ button.link { background: none; border: 0; padding: 0; color: var(--navy); text-
 .chips li:hover .cut, .cut:focus-visible { opacity: 1; }
 .modal-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 40%); z-index: 9; }
 
-.swipe-card { touch-action: pan-y; user-select: none; cursor: grab; transition: transform 0.1s; }
 .pill { display: inline-block; background: var(--grey); border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0 0.25rem 0.25rem 0; font-size: 0.8rem; }
-.verdict-buttons { display: flex; gap: 1rem; justify-content: center; margin: 1rem 0; }
 tr.current td { background: rgb(244 177 28 / 35%); }
 .handle, .chip { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .handle { touch-action: none; padding: 0.4rem 0.5rem; }
@@ -139,3 +137,36 @@ tr.current td { background: rgb(244 177 28 / 35%); }
 }
 @media (hover: hover) { .cut { opacity: 0; } }
 .chip { min-height: 2.25rem; }
+
+/* ---- swipe deck ---- */
+.deck { position: relative; height: 470px; max-width: 480px; margin: 0.5rem auto 0; }
+.deck-card {
+  position: absolute; inset: 0; background: var(--white); border-radius: 18px; padding: 1.1rem 1.25rem;
+  overflow: hidden; touch-action: pan-y; user-select: none; cursor: grab; will-change: transform;
+}
+.card-face { text-align: center; }
+.card-value { font-size: clamp(1.6rem, 5vw, 2.4rem); margin: 1.4rem 0 0.4rem; word-break: break-word; }
+.card-meta { opacity: 0.7; margin: 0 0 0.6rem; }
+.card-pills { margin-bottom: 0.9rem; }
+.card-face .table-wrap { text-align: left; max-height: 200px; font-size: 0.78rem; background: #f7f7f7; }
+.stamp {
+  position: absolute; top: 14px; padding: 0.1rem 0.7rem; border: 4px solid; border-radius: 10px;
+  font-weight: 800; font-size: 1.3rem; letter-spacing: 0.08em; pointer-events: none; z-index: 2; background: rgb(255 255 255 / 80%);
+}
+.stamp-correct { left: 14px; color: #2e8b57; transform: rotate(-12deg); }
+.stamp-error { right: 14px; color: var(--danger); transform: rotate(12deg); }
+.deck-progress { text-align: center; margin: 0.25rem 0; font-weight: 700; }
+.deck-hint { text-align: center; opacity: 0.65; font-size: 0.8rem; margin: 0.6rem 0 0; }
+.verdict-buttons { display: flex; gap: 2.5rem; justify-content: center; margin: 0.75rem 0 0.5rem; }
+.round {
+  width: 64px; height: 64px; border-radius: 50%; border: 4px solid; background: var(--white); font-size: 1.7rem;
+  font-weight: 800; cursor: pointer; box-shadow: 0 6px 16px rgb(0 0 0 / 18%); transition: transform 0.12s, box-shadow 0.12s;
+}
+.round:hover:not(:disabled) { transform: scale(1.08); }
+.round:active:not(:disabled) { transform: scale(0.94); }
+.round:disabled { opacity: 0.4; cursor: not-allowed; }
+.round-error { color: var(--danger); border-color: var(--danger); }
+.round-correct { color: #2e8b57; border-color: #2e8b57; }
+@media (prefers-reduced-motion: reduce) {
+  .round { transition: none; }
+}
