@@ -1,4 +1,4 @@
-import { generatePlayerName, generateRoomName, pickWinningDataset } from './names'
+import { generatePlayerName, generateRoomName } from './names'
 
 describe('names', () => {
   it('generates lowercase adj-noun-NN room names', () => {
@@ -16,20 +16,5 @@ describe('names', () => {
     const rng = () => 0
     const taken = new Set([generatePlayerName(new Set(), rng)!])
     expect(generatePlayerName(taken, rng)).toBeNull()
-  })
-
-  it('picks the most voted dataset', () => {
-    expect(pickWinningDataset(['a', 'b', 'b'])).toBe('b')
-  })
-
-  it('breaks ties using the rng', () => {
-    expect(pickWinningDataset(['a', 'b'], () => 0)).toBe('a')
-    expect(pickWinningDataset(['a', 'b'], () => 0.99)).toBe('b')
-  })
-
-  it('ignores empty votes and returns null without votes', () => {
-    expect(pickWinningDataset(['', '', 'a'])).toBe('a')
-    expect(pickWinningDataset([])).toBeNull()
-    expect(pickWinningDataset([''])).toBeNull()
   })
 })

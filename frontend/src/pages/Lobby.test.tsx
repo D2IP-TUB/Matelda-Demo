@@ -8,6 +8,8 @@ import { FakePocketBase } from '../test/fakePocketBase'
 import { seedSession } from '../test/helpers'
 import { TopBar } from '../components/TopBar'
 import { Lobby } from './Lobby'
+import { setLang } from '../i18n'
+import { de } from '../i18n/de'
 
 function renderLobby(url = '/lobby', pb = new FakePocketBase(), seed?: Record<string, unknown>) {
   const storage = seed ? seedSession(pb, seed) : { getItem: () => null, setItem: () => {} }
@@ -19,7 +21,7 @@ function renderLobby(url = '/lobby', pb = new FakePocketBase(), seed?: Record<st
       <SessionProvider service={sessions}>
         <MemoryRouter initialEntries={[url]}>
           <TopBar roomService={roomService} />
-          <Lobby roomService={roomService} loadDatasets={async () => ['beers', 'flights']} />
+          <Lobby roomService={roomService} />
         </MemoryRouter>
       </SessionProvider>
     </QueryClientProvider>,
@@ -35,38 +37,54 @@ describe('Lobby', () => {
     await waitFor(() => expect(screen.getAllByTestId('player')).toHaveLength(1))
   })
 
+  it('Create room shows the spinner inside the button while the room is being created', async () => {
+    const spy = vi.spyOn(RoomService.prototype, 'createRoom').mockImplementation(() => new Promise(() => {}))
+    try {
+      renderLobby()
+      const create = await screen.findByRole('button', { name: 'Create room' })
+      fireEvent.click(create)
+      await waitFor(() => expect(create).toHaveAttribute('aria-busy', 'true'))
+      expect(create.querySelector('.spinner')).not.toBeNull()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('Start shows the spinner inside the button while the room is starting', async () => {
+    renderLobby()
+    fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
+    const start = await screen.findByRole('button', { name: 'Start' })
+    await waitFor(() => expect(start).toBeEnabled())
+    const spy = vi.spyOn(RoomService.prototype, 'startRoom').mockImplementation(() => new Promise(() => {}))
+    try {
+      fireEvent.click(start)
+      await waitFor(() => expect(start).toHaveAttribute('aria-busy', 'true'))
+      expect(start.querySelector('.spinner')).not.toBeNull()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it('shows "Room not found" for an unknown ?room=', async () => {
     renderLobby('/lobby?room=ghost-room-00')
     expect(await screen.findByText('Room not found')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
   })
 
-  it('records a vote for the chosen dataset', async () => {
-    const { pb } = renderLobby()
+  it('does not offer a dataset choice', async () => {
+    renderLobby()
     fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
-    fireEvent.click(await screen.findByLabelText('beers'))
-    await waitFor(() => expect(pb.data.players[0].vote).toBe('beers'))
+    await screen.findByRole('button', { name: 'Start' })
+    expect(screen.queryByText(/dataset/i)).not.toBeInTheDocument()
   })
 
-  it('disables Start until someone voted, then shows the winner', async () => {
+  it('lets the host start the room', async () => {
     renderLobby()
     fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
     const start = await screen.findByRole('button', { name: 'Start' })
-    expect(start).toBeDisabled()
-    fireEvent.click(await screen.findByLabelText('flights'))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
-    expect(await screen.findByText(/Dataset: flights/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /intro/i })).toBeInTheDocument()
-  })
-
-  it('stores the winning dataset in the session when the room starts', async () => {
-    const { pb } = renderLobby()
-    fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
-    fireEvent.click(await screen.findByLabelText('flights'))
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
-    await waitFor(() => expect(pb.data.sessions[0].data.dataset_select).toBe('flights'))
+    await waitFor(() => expect(start).toBeEnabled())
+    fireEvent.click(start)
+    expect(await screen.findByRole('link', { name: /continue/i })).toBeInTheDocument()
   })
 
   it('refreshes the player list when another player joins', async () => {
@@ -91,13 +109,19 @@ describe('Lobby', () => {
       expect(screen.queryByRole('button', { name: /^Kick/ })).toBeNull()
     })
 
-    it('shows the QR code with the join URL', async () => {
+    it('shows the QR code and a Copy link button instead of the URL text', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
       renderLobby()
       fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
       const room = await screen.findByRole('heading', { name: /^Room / })
       const name = room.textContent!.replace('Room ', '')
-      expect(await screen.findByText(`http://localhost:3000/lobby?room=${name}`)).toBeInTheDocument()
+      const url = `http://localhost:3000/lobby?room=${name}`
       expect(document.querySelector('svg')).not.toBeNull()
+      expect(screen.queryByText(url)).toBeNull()
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy link' }))
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(url))
+      expect(await screen.findByRole('button', { name: 'Link copied' })).toBeInTheDocument()
     })
 
     it('keeps Start disabled until a host is set and hides it from non-hosts', async () => {
@@ -127,37 +151,43 @@ describe('Lobby', () => {
       expect(pb.data.players).toHaveLength(1)
     })
 
-    it('leaves the room, clears the session room keys and shows create/join again', async () => {
+    it('leaves the room, resets the whole session and shows create/join again', async () => {
       const { pb } = renderLobby()
       fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
       await waitFor(() => expect(pb.data.rooms[0].host).toBeTruthy())
       await waitFor(() => expect(pb.data.sessions[0].data.room_name).toBeTruthy())
-      pb.data.sessions[0].data.labeling_results = { keep: 1 }
-      fireEvent.click(screen.getAllByRole('button', { name: 'Leave room' })[0])
+      pb.data.sessions[0].data.labeling_results = { a: true }
+      pb.data.sessions[0].data.pipeline_path = 'p1'
+      pb.data.sessions[0].data.room_disputed_cells = ['t1|0|a']
+      fireEvent.click(screen.getByRole('button', { name: 'Leave room' }))
       expect(await screen.findByRole('button', { name: 'Create room' })).toBeInTheDocument()
       expect(screen.getByLabelText('Room name')).toBeInTheDocument()
       await waitFor(() => expect(pb.data.players).toHaveLength(0))
       expect(pb.data.sessions[0].data.room_name).toBeUndefined()
       expect(pb.data.sessions[0].data.player_token).toBeUndefined()
+      // a fresh start: nothing from the finished run can be reviewed again
+      await waitFor(() => expect(pb.data.sessions[0].data.pipeline_path).toBeUndefined())
+      expect(pb.data.sessions[0].data.labeling_results).toBeUndefined()
+      expect(pb.data.sessions[0].data.room_disputed_cells).toBeUndefined()
     })
 
-    it('transfers the host marker when the host leaves', async () => {
+    it('ends the room for everyone when the host leaves', async () => {
       const { pb, roomService } = renderLobby()
       fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
       await waitFor(() => expect(pb.data.rooms[0].host).toBeTruthy())
-      const second = await roomService.joinRoom(pb.data.rooms[0].name)
-      fireEvent.click(screen.getAllByRole('button', { name: 'Leave room' })[0])
-      await waitFor(() => expect(pb.data.rooms[0].host).toBe(second.id))
+      await roomService.joinRoom(pb.data.rooms[0].name)
+      fireEvent.click(screen.getByRole('button', { name: 'Leave room' }))
+      await waitFor(() => expect(pb.data.rooms[0].phase).toBe('ended'))
     })
 
-    it('shows the removed message and clears the room when kicked, keeping labeling results', async () => {
+    it('shows the removed message and resets the whole session when kicked', async () => {
       const pb = new FakePocketBase()
       pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: 'lobby', dataset: '', host: 'h' }]
       pb.data.players = []
       addPlayer(pb, 'blue-otter-42', 'h', 'th', 'Host')
       addPlayer(pb, 'blue-otter-42', 'm', 'tm', 'Me')
       renderLobby('/lobby', pb, {
-        room_name: 'blue-otter-42', player_token: 'tm', labeling_results: { a: 1 },
+        room_name: 'blue-otter-42', player_token: 'tm', labeling_results: { a: 1 }, pipeline_path: 'p1',
       })
       await waitFor(() => expect(screen.getAllByTestId('player')).toHaveLength(2))
       await act(async () => {
@@ -166,7 +196,8 @@ describe('Lobby', () => {
       expect(await screen.findByText('You were removed by the host')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
       await waitFor(() => expect(pb.data.sessions[0].data.room_name).toBeUndefined())
-      expect(pb.data.sessions[0].data.labeling_results).toEqual({ a: 1 })
+      await waitFor(() => expect(pb.data.sessions[0].data.pipeline_path).toBeUndefined())
+      expect(pb.data.sessions[0].data.labeling_results).toBeUndefined()
     })
 
     it('shows "This session has ended" for an ended room link and adds no player', async () => {
@@ -199,37 +230,12 @@ describe('Lobby', () => {
   })
 
   describe('TopBar room actions', () => {
-    it('lets the host end the session after confirming; everyone is dropped with a notice', async () => {
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-      const { pb } = renderLobby()
+    it('has a single Leave room button and no End session', async () => {
+      renderLobby()
       fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
-      await waitFor(() => expect(pb.data.rooms[0].host).toBeTruthy())
-      fireEvent.click(await screen.findByRole('button', { name: 'End session' }))
-      expect(confirm).toHaveBeenCalled()
-      await waitFor(() => expect(pb.data.rooms[0].phase).toBe('ended'))
-      expect(await screen.findByText('The host ended the session')).toBeInTheDocument()
-      await waitFor(() => expect(pb.data.sessions[0].data.room_name).toBeUndefined())
-      confirm.mockRestore()
-    })
-
-    it('does nothing when the confirmation is cancelled', async () => {
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-      const { pb } = renderLobby()
-      fireEvent.click(await screen.findByRole('button', { name: 'Create room' }))
-      await waitFor(() => expect(pb.data.rooms[0].host).toBeTruthy())
-      fireEvent.click(await screen.findByRole('button', { name: 'End session' }))
-      expect(pb.data.rooms[0].phase).toBe('lobby')
-      confirm.mockRestore()
-    })
-
-    it('hides End session from non-hosts', async () => {
-      const pb = new FakePocketBase()
-      pb.data.rooms = [{ id: 'r', name: 'blue-otter-42', phase: 'lobby', dataset: '', host: 'h' }]
-      pb.data.players = [{ id: 'h', room: 'blue-otter-42', name: 'H', token: 'th', created: '1' }]
-      renderLobby('/lobby?room=blue-otter-42', pb)
-      await waitFor(() => expect(screen.getAllByTestId('player')).toHaveLength(2))
+      await screen.findByRole('button', { name: 'Leave room' })
+      expect(screen.getAllByRole('button', { name: 'Leave room' })).toHaveLength(1)
       expect(screen.queryByRole('button', { name: 'End session' })).toBeNull()
-      expect(screen.getAllByRole('button', { name: 'Leave room' }).length).toBeGreaterThan(0)
     })
 
     it('Leave mid-labeling keeps shared labels and frees unlabeled claims', async () => {
@@ -243,7 +249,7 @@ describe('Lobby', () => {
         { id: 'c1', room, cell_id: 'a', player: me },
         { id: 'c2', room, cell_id: 'b', player: me },
       ]
-      fireEvent.click(screen.getAllByRole('button', { name: 'Leave room' })[0])
+      fireEvent.click(screen.getByRole('button', { name: 'Leave room' }))
       await waitFor(() => expect(pb.data.claims.map((c) => c.cell_id)).toEqual(['a']))
       expect(pb.data.labels).toHaveLength(1)
     })
@@ -268,7 +274,7 @@ describe('Lobby', () => {
     it.each([0, 40])('Lobby does not re-admit a removed player (delay %i ms)', async (delay) => {
       const pb = setup(delay)
       renderLobby('/lobby?room=blue-otter-42', pb, {
-        room_name: 'blue-otter-42', player_token: 'gone', labeling_results: { a: 1 },
+        room_name: 'blue-otter-42', player_token: 'gone', labeling_results: { a: 1 }, pipeline_path: 'p1',
       })
       expect(await screen.findByText('You were removed by the host')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Create room' })).toBeInTheDocument()
@@ -276,7 +282,7 @@ describe('Lobby', () => {
       await new Promise((r) => setTimeout(r, 100))
       expect(pb.data.players).toHaveLength(1)
       expect(pb.data.sessions[0].data.player_token).toBeUndefined()
-      expect(pb.data.sessions[0].data.labeling_results).toEqual({ a: 1 })
+      expect(pb.data.sessions[0].data.labeling_results).toBeUndefined()
     })
 
     it('TopBar alone clears the keys and creates no player', async () => {
@@ -302,5 +308,49 @@ describe('Lobby', () => {
       expect(pb.data.players).toHaveLength(2)
       expect(pb.data.sessions[0].data.player_token).toBe('tm')
     })
+  })
+})
+
+describe('Lobby (German)', () => {
+  beforeEach(() => act(() => setLang('de')))
+  afterEach(() => act(() => setLang('en')))
+
+  it('shows the German create-room action and headline', async () => {
+    renderLobby()
+    expect(await screen.findByRole('button', { name: de.lobby.createRoom })).toBeInTheDocument()
+    expect(screen.getByText(de.lobby.headline)).toBeInTheDocument()
+    expect(screen.getByText(de.lobby.lead)).toBeInTheDocument()
+    expect(screen.getByText(de.lobby.hostText)).toBeInTheDocument()
+  })
+
+  it('renders a frontend-made "room not found" message in German', async () => {
+    renderLobby('/lobby?room=ghost-room-00')
+    expect(await screen.findByText(de.lobby.roomNotFound)).toBeInTheDocument()
+  })
+
+  it('shows the kick failure in German and keeps room and player names unchanged', async () => {
+    const spy = vi.spyOn(RoomService.prototype, 'kickPlayer').mockRejectedValue('boom')
+    try {
+      const pb = new FakePocketBase()
+      await pb.collection('rooms').create({ id: 'r1', name: 'blue-otter-42', phase: 'lobby', host: 'h' })
+      for (const [id, token, name] of [['h', 'th', 'Host'], ['m', 'tm', 'Me']]) {
+        await pb.collection('players').create({ id, room: 'blue-otter-42', token, name })
+      }
+      renderLobby('/lobby', pb, { room_name: 'blue-otter-42', player_token: 'th' })
+      expect(await screen.findByText('blue-otter-42')).toBeInTheDocument()
+      fireEvent.click(await screen.findByRole('button', { name: de.topbar.kickPlayer('Me') }))
+      expect(await screen.findByText(de.topbar.removeFailed)).toBeInTheDocument()
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it('RoomError messages are built in the active language', async () => {
+    const pb = new FakePocketBase()
+    const svc = new RoomService(pb as any)
+    const room: any = { id: 'r', name: 'x', host: 'h', phase: 'lobby' }
+    await expect(svc.kickPlayer(room, 'other', { id: 'p' } as any)).rejects.toThrow(de.lobby.onlyHostRemove)
+    act(() => setLang('en'))
+    await expect(svc.kickPlayer(room, 'other', { id: 'p' } as any)).rejects.toThrow('Only the host can remove players')
   })
 })

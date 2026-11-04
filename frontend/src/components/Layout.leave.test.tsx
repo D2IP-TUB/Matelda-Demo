@@ -61,8 +61,8 @@ describe('Layout leaves the room', () => {
   })
 
   it('Leave from the top bar goes to the lobby', async () => {
-    setup('/quality-folding')
-    await screen.findByText('QUALITY PAGE')
+    setup('/labeling')
+    await screen.findByText('LABELING PAGE')
     fireEvent.click(await screen.findByRole('button', { name: 'Leave room' }))
     expect(await screen.findByText(/^LOBBY/)).toBeInTheDocument()
   })

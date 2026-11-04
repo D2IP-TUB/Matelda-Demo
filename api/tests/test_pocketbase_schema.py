@@ -48,3 +48,21 @@ def test_rooms_migration_adds_pool_fields():
         assert f'"name": "{name}"' in text
         assert f'"type": "{kind}"' in text
         assert f'removeById("{name}_field")' in text or f'removeByName("{name}")' in text
+
+
+def test_rooms_migration_adds_labeling_closed():
+    from pathlib import Path
+
+    migrations = Path(__file__).resolve().parents[2] / "pocketbase" / "pb_migrations"
+    text = "\n".join(p.read_text() for p in sorted(migrations.glob("*_updated_rooms.js")))
+    assert '"name": "labeling_closed"' in text
+    assert 'removeById("labeling_closed_field")' in text
+
+
+def test_rooms_migration_adds_host_path():
+    from pathlib import Path
+
+    migrations = Path(__file__).resolve().parents[2] / "pocketbase" / "pb_migrations"
+    text = "\n".join(p.read_text() for p in sorted(migrations.glob("*_updated_rooms.js")))
+    assert '"name": "host_path"' in text
+    assert 'removeById("host_path_field")' in text

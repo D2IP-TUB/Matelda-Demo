@@ -42,7 +42,7 @@ NOUNS = [
 TEAM_COLORS = ['#f4b11c', '#4cc9f0', '#3ddc97', '#ff6b6b', '#b388ff', '#ff8fab', '#7bd88f', '#ff9f43', '#5aa9ff', '#e6e65a']
 
 def room_color(room_name: str) -> str:
-    """Team color of a room (same hash/palette as teamColor() in admin/index.html)."""
+    """Team color of a room for the Streamlit UI (the live dashboard, admin/index.html, assigns its own distinct colours)."""
     h = 0
     for ch in room_name:
         h = (h * 31 + ord(ch)) % 2**32

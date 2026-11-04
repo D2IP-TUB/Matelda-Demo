@@ -23,12 +23,3 @@ export function generatePlayerName(taken: Set<string>, rng: Rng = Math.random): 
   }
   return null
 }
-
-export function pickWinningDataset(votes: string[], rng: Rng = Math.random): string | null {
-  const counts = new Map<string, number>()
-  for (const vote of votes) if (vote) counts.set(vote, (counts.get(vote) ?? 0) + 1)
-  if (counts.size === 0) return null
-  const top = Math.max(...counts.values())
-  const leaders = [...counts].filter(([, n]) => n === top).map(([dataset]) => dataset)
-  return pick(leaders, rng)
-}

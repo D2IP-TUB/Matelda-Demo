@@ -9,6 +9,19 @@ export const ROOM_KEYS = ['room_name', 'player_token']
 export const NOTICE_KEY = 'room_notice'
 
 /**
+ * Leaving a session (on purpose, kicked, or ended by the host) starts you fresh: the pipeline,
+ * labels and every other step's progress go with it, so a finished run cannot be reviewed again.
+ * `notice` is kept so the lobby can say why you are out.
+ */
+export async function resetSession(
+  session: { clear(keep?: string[]): Promise<void>; update(patch: Record<string, unknown>): Promise<void> },
+  notice?: 'removed' | 'ended',
+) {
+  await session.clear([])
+  if (notice) await session.update({ [NOTICE_KEY]: notice })
+}
+
+/**
  * The room stored in the session, live: its record, players and the current player.
  * Also drops the player out of the session when the host removes them or ends the room.
  */
@@ -47,8 +60,7 @@ export function useRoomInfo(roomService?: RoomService) {
           : null
         if (gone) {
           cancelled = true
-          await sessionRef.current.update({ [NOTICE_KEY]: gone })
-          await sessionRef.current.remove(ROOM_KEYS)
+          await resetSession(sessionRef.current, gone)
           return
         }
         setRoom(freshRoom)
@@ -77,21 +89,16 @@ export function useRoomInfo(roomService?: RoomService) {
   const me = (token && players.find((p) => p.token === token)) || null
   const isHost = !!me && !!room?.host && room.host === me.id
 
-  /** Leave the stored room: the session is cleared first, then the player is removed server side. */
+  /** Leave the stored room: the whole session is reset first, then the player is removed server side. */
   const leave = useCallback(async () => {
     const s = sessionRef.current
     const name = s.data.room_name as string | undefined
     const tok = s.data.player_token as string | undefined
-    await s.remove([...ROOM_KEYS, NOTICE_KEY])
+    await resetSession(s)
     if (!name || !tok) return
     const [r, p] = await Promise.all([service.getRoom(name), service.getPlayer(name, tok)])
     if (r && p) await service.leaveRoom(r, p)
   }, [service])
-
-  const endSession = useCallback(async () => {
-    if (!room || !me) return
-    await service.endRoom(room, me.id)
-  }, [service, room, me])
 
   const refresh = useCallback(() => refreshRef.current(), [])
 
@@ -105,7 +112,6 @@ export function useRoomInfo(roomService?: RoomService) {
     isHost,
     notice: (session.data[NOTICE_KEY] as 'removed' | 'ended' | undefined) ?? null,
     leave,
-    endSession,
     refresh,
   }
 }

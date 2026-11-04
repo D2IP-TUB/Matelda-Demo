@@ -1,5 +1,6 @@
 """Read-only summaries for the Results page."""
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -31,22 +32,62 @@ def latest_metrics(config: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+_summary_cache: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
+_summary_lock = threading.Lock()
+
+
+def _summary(pipeline_dir: Path) -> dict[str, Any] | None:
+    """Just the few fields the comparison table needs from a pipeline's config.
+
+    The config files are huge (all folds and cells), and parsing every pipeline's on each Results visit took seconds.
+    The small summary is cached per pipeline and re-read only when its file changes (mtime + size).
+    """
+    path = pipeline_dir / "configurations.json"
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    stamp = (st.st_mtime_ns, st.st_size)
+    key = str(path)
+    with _summary_lock:
+        hit = _summary_cache.get(key)
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    try:
+        config = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return None
+    summary = {
+        "dataset": config.get("selected_dataset"),
+        "budget": config.get("labeling_budget"),
+        "results": [
+            {"Time": e.get("Time", ""), "metrics": e.get("metrics", {})} for e in config.get("results", [])
+        ],
+    }
+    with _summary_lock:
+        _summary_cache[key] = (stamp, summary)
+    return summary
+
+
+def warm_summaries(pipelines_dir: Path) -> None:
+    """Fill the cache ahead of time (at server start) so the first Results visit is not the slow one."""
+    for name in store.list_pipelines(pipelines_dir):
+        _summary(pipelines_dir / name)
+
+
 def comparison_rows(pipelines_dir: Path, dataset: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for name in store.list_pipelines(pipelines_dir):
-        try:
-            config = store.load_config(pipelines_dir / name)
-        except (OSError, json.JSONDecodeError):
+        summary = _summary(pipelines_dir / name)
+        if summary is None or summary["dataset"] != dataset:
             continue
-        if config.get("selected_dataset") != dataset:
-            continue
-        for entry in config.get("results", []):
-            metrics = entry.get("metrics", {})
+        for entry in summary["results"]:
+            metrics = entry["metrics"]
             rows.append(
                 {
-                    "time": entry.get("Time", ""),
+                    "time": entry["Time"],
                     "pipeline": name,
-                    "labeling_budget": config.get("labeling_budget"),
+                    "labeling_budget": summary["budget"],
                     "precision": _metric(metrics, "precision"),
                     "recall": _metric(metrics, "recall"),
                     "f1": _metric(metrics, "f1"),

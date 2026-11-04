@@ -1,0 +1,93 @@
+/* Error detection: landing visual language (stage, aurora, hairline surfaces, gradient accents). */
+.detection-page { --det-edge: linear-gradient(135deg, var(--accent-ring), transparent 45%, var(--accent-tint) 80%); }
+.detection-page > * { animation: det-rise 0.7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 110ms); }
+.detection-page > :nth-child(2) { --i: 1; }
+.detection-page > :nth-child(3) { --i: 2; }
+.detection-page > :nth-child(4) { --i: 3; }
+.detection-page > :nth-child(n+5) { --i: 4; }
+@keyframes det-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+.detection-page h2 { letter-spacing: var(--track-tight); margin-top: var(--s-7); font-size: var(--text-title2); }
+
+/* run card: gradient hairline edge, glows while running */
+.detection-page .card {
+  position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-4);
+  border-radius: var(--panel-r); padding: var(--s-6) var(--panel-pad);
+  border: 1px solid transparent;
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--det-edge) border-box;
+  box-shadow: var(--shadow-2);
+  transition: box-shadow var(--dur-slow) var(--ease-out);
+}
+.detection-page .card::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(520px 200px at 0% 0%, var(--accent-tint), transparent 70%);
+}
+.detection-page .card > * { position: relative; }
+.detection-page .card .btn { min-height: 52px; padding-inline: var(--s-6); border-radius: var(--r-pill); font-weight: 700; }
+.detection-page .card:has(.btn[aria-busy="true"]) { animation: det-glow 2.2s ease-in-out infinite; }
+@keyframes det-glow {
+  0%, 100% { box-shadow: var(--shadow-2), 0 0 0 0 var(--accent-tint); }
+  50% { box-shadow: var(--shadow-2), 0 0 32px var(--accent-tint); }
+}
+
+/* table tiles */
+.detection-page .table-grid { gap: var(--s-4); }
+.detection-page .table-tile {
+  display: grid; grid-template-columns: auto 1fr; column-gap: var(--s-4); align-items: center; text-align: left;
+  min-height: 72px; padding: var(--s-4) var(--s-5); border-radius: var(--tile-r); border: 1px solid var(--separator);
+  background: var(--surface); color: var(--label); box-shadow: var(--tile-shadow);
+  transition: transform var(--dur-base) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base);
+}
+.detection-page .table-tile:hover { transform: translateY(-3px); border-color: var(--accent-ring); box-shadow: var(--shadow-2), 0 12px 32px var(--accent-tint); }
+.detection-page .table-tile:active { transform: scale(0.98); }
+.detection-page .table-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.detection-page .tile-ico { grid-row: span 2; color: var(--accent-text); background: var(--accent-tint); border-radius: var(--r-md); padding: var(--s-3); box-sizing: content-box; }
+.detection-page .table-tile-name { font-weight: 700; letter-spacing: var(--track-tight); overflow-wrap: anywhere; }
+.detection-page .table-tile-count { color: var(--label-2); font-size: var(--text-footnote); }
+
+/* nav */
+.detection-page .nav-row { align-items: center; flex-wrap: wrap; margin-top: var(--s-7); gap: var(--s-3); }
+.detection-page .nav-row .btn { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-pill); padding-inline: var(--s-5); }
+.detection-page .nav-row .btn-primary { padding-inline: var(--s-6); font-weight: 700; box-shadow: var(--cta-glow); }
+
+/* modal */
+.detection-page .modal-backdrop { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.detection-page .table-dialog {
+  padding: var(--s-6); border: 1px solid var(--separator); box-shadow: var(--shadow-3);
+  background: radial-gradient(600px 240px at 90% -10%, var(--accent-tint), transparent 70%), var(--surface);
+}
+.detection-page .table-dialog h2 { margin-top: 0; background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; overflow-wrap: anywhere; }
+.detection-page .table-dialog > .btn { min-height: var(--hit); border-radius: var(--r-pill); margin-top: var(--s-4); }
+
+.detection-page .heat-legend { display: flex; align-items: center; gap: var(--s-3); margin: var(--s-3) 0 var(--s-5); color: var(--label-2); font-size: var(--text-caption); font-weight: 600; }
+.detection-page .heat-bar {
+  flex: 1; max-width: 320px; height: 10px; border-radius: var(--r-pill); border: 1px solid var(--separator);
+  background: linear-gradient(90deg, var(--surface-2), rgba(10, 132, 255, 1));
+}
+
+.detection-page .err-list { list-style: none; margin: var(--s-3) 0; padding: 0; display: grid; gap: var(--s-2); }
+.detection-page .err-list li {
+  position: relative; padding: var(--s-3) var(--s-4); border-radius: var(--r-md);
+  background: var(--surface-2); border: 1px solid var(--separator);
+  font-size: var(--text-footnote); line-height: var(--lh-body); overflow-wrap: anywhere;
+  transition: border-color var(--dur-base), background var(--dur-base);
+}
+.detection-page .err-list li:hover { border-color: var(--accent-ring); }
+.detection-page .meter { display: block; height: 5px; border-radius: var(--r-pill); background: var(--fill); margin-bottom: var(--s-2); overflow: hidden; }
+.detection-page .meter > span { display: block; height: 100%; border-radius: inherit; background: var(--brand-gradient); }
+.detection-page .pager { gap: var(--s-3); flex-wrap: wrap; }
+.detection-page .pager button { min-height: var(--hit); padding-inline: var(--s-4); border-radius: var(--r-pill); }
+.detection-page.detection-modal h4 { margin: var(--s-6) 0 var(--s-2); letter-spacing: var(--track-tight); }
+
+@media (max-width: 480px) {
+  .detection-page .card { padding: var(--s-5) var(--s-4); }
+  .detection-page .card .btn { width: 100%; }
+  .detection-page .nav-row .btn { flex: 1; }
+  .detection-page .table-dialog { padding: var(--s-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .detection-page > * { animation: none; }
+  .detection-page .card:has(.btn[aria-busy="true"]) { animation: none; box-shadow: var(--shadow-2), 0 0 24px var(--accent-tint); }
+  .detection-page .table-tile, .detection-page .err-list li { transition: none; }
+  .detection-page .table-tile:hover { transform: none; }
+}

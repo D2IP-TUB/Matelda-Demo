@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { setLang } from '../i18n'
+import { de } from '../i18n/de'
 import * as api from '../lib/api'
 import { RoomService } from '../rooms/roomService'
 import { SessionProvider } from '../session/SessionProvider'
@@ -11,8 +13,6 @@ import { Results } from './Results'
 
 vi.mock('../lib/api', () => ({
   fetchResults: vi.fn(),
-  fetchLabelAccuracy: vi.fn(),
-  labelAccuracyCsvUrl: (name: string) => `/api/pipelines/${name}/label-accuracy.csv`,
 }))
 const m = vi.mocked(api)
 
@@ -68,10 +68,6 @@ const ROOM_SESSION = { pipeline_path: 'p1', room_name: 'r1', player_token: 'tok'
 
 beforeEach(() => {
   m.fetchResults.mockReset().mockResolvedValue(RESULTS as any)
-  m.fetchLabelAccuracy.mockReset().mockResolvedValue({
-    total: 4, correct: 3, accuracy: 0.75,
-    rows: [{ table: 't1', row: 0, col: 'a', val: 'x', user_said_error: false, truth_is_error: false, clean_value: 'x', correct: true }],
-  } as any)
 })
 
 describe('Results', () => {
@@ -91,11 +87,14 @@ describe('Results', () => {
     expect(await stat('Labeling Budget')).toHaveTextContent('12')
   })
 
-  it('points to Error Detection when there are no metrics yet', async () => {
+  it('shows an empty state leading back to error detection, and a greyed-out "Start a new round", when there are no metrics yet', async () => {
     m.fetchResults.mockResolvedValue({ ...RESULTS, metrics: null, comparison: [], raha: null } as any)
     renderPage()
-    expect(await screen.findByText(/No results yet/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Error Detection/ })).toHaveAttribute('href', '/error-detection')
+    await waitFor(() => expect(m.fetchResults).toHaveBeenCalled())
+    expect(await screen.findByRole('heading', { name: 'No results yet' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to Error Detection' })).toHaveAttribute('href', '/error-detection')
+    expect(screen.queryByRole('heading', { name: 'Model Performance Metrics' })).toBeNull()
+    expect(screen.getByText('Start a new round')).toHaveAttribute('aria-disabled', 'true')
   })
 
   it('lists the comparison newest first, highlights the current run and sorts by clicking', async () => {
@@ -126,40 +125,26 @@ describe('Results', () => {
     expect(await screen.findByText('n/a')).toBeInTheDocument()
   })
 
-  it('checks the labeling accuracy on request and offers the CSV', async () => {
-    renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Check my labeling accuracy' }))
-    expect(await screen.findByText('75.0%')).toBeInTheDocument()
-    expect(m.fetchLabelAccuracy).toHaveBeenCalledWith('p1', 0, 100)
-    expect(screen.getByRole('link', { name: 'Download CSV' })).toHaveAttribute(
-      'href', '/api/pipelines/p1/label-accuracy.csv',
-    )
+  it('shows a helper the host\'s run read-only: the room pipeline, no sharing, no buttons', async () => {
+    const pb = seedRoom()
+    Object.assign(pb.data.rooms[0], { host: 'pl1', pipeline: 'p-room' })
+    renderPage({ room_name: 'r1', player_token: 'tok2' }, pb)
+    expect(await screen.findByText('Result Comparison (Dataset: demo)')).toBeInTheDocument()
+    expect(m.fetchResults).toHaveBeenCalledWith('p-room')
+    expect(screen.queryByText('Start a new round')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Back' })).toBeNull() // their screen follows the host
+    await new Promise((r) => setTimeout(r, 50))
+    expect(pb.data.runs ?? []).toHaveLength(0)
   })
 
-  it('shows the API message when there are no saved labels', async () => {
-    m.fetchLabelAccuracy.mockRejectedValue(new Error('No saved user labels yet; finish the labeling step first'))
-    renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Check my labeling accuracy' }))
-    expect(await screen.findByText(/No saved user labels yet/)).toBeInTheDocument()
-  })
-
-  it('has no room section outside a room', async () => {
-    renderPage()
-    await screen.findByText('Labeling Budget', { selector: '.stat span' })
-    expect(screen.queryByText('Room labeling')).toBeNull()
-  })
-
-  it('summarises the room with per-player flags', async () => {
-    renderPage({ ...ROOM_SESSION, room_disputed_cells: ['a', 'b'] }, seedRoom())
-    expect(await screen.findByText('Room labeling')).toBeInTheDocument()
-    expect(await screen.findByText('Blue Otter (you)')).toBeInTheDocument()
-    expect(screen.getByText('Labels in the room', { selector: '.stat span' }).nextSibling).toHaveTextContent('8')
-    expect(screen.getByText('Labelers', { selector: '.stat span' }).nextSibling).toHaveTextContent('2')
-    expect(screen.getByText('Room accuracy', { selector: '.stat span' }).nextSibling).toHaveTextContent('88%')
-    const you = screen.getByText('Blue Otter (you)').closest('tr')!
-    expect(you.textContent).toContain('very fast')
-    expect(you.textContent).toContain('same answer')
-    expect(screen.getByText(/2 disputed cell\(s\)/)).toBeInTheDocument()
+  it('tells a helper to wait for the host when there are no results yet', async () => {
+    m.fetchResults.mockResolvedValue({ ...RESULTS, metrics: null, comparison: [], raha: null } as any)
+    const pb = seedRoom()
+    Object.assign(pb.data.rooms[0], { host: 'pl1', pipeline: 'p-room' })
+    renderPage({ room_name: 'r1', player_token: 'tok2' }, pb)
+    expect(await screen.findByText(/The host hasn't run error detection yet/)).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.queryByText(/Pipeline not configured/)).toBeNull()
   })
 
   it('shares the run with the room once per result', async () => {
@@ -171,7 +156,7 @@ describe('Results', () => {
     })
     first.unmount()
     const second = renderPage(ROOM_SESSION, pb, true)
-    await screen.findByText('Room labeling')
+    await screen.findByText('Result Comparison (Dataset: demo)')
     expect(pb.data.runs).toHaveLength(1)
     second.unmount()
     m.fetchResults.mockResolvedValue({ ...RESULTS, metrics: { ...RESULTS.metrics, time: '2025-04-01 09:00:00' } } as any)
@@ -179,15 +164,47 @@ describe('Results', () => {
     await waitFor(() => expect(pb.data.runs).toHaveLength(2))
   })
 
-  it('offers the share text with the metrics and copies it', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  it('has no share-your-results card', async () => {
     renderPage()
-    const text = await screen.findByTestId('share-text')
-    expect(text.textContent).toContain('Precision: 0.90')
-    expect(text.textContent).toContain('Dataset: demo')
-    expect(text.textContent).toContain('Pipeline: p1')
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
-    expect(writeText).toHaveBeenCalledWith(text.textContent)
+    await screen.findByText('Result Comparison (Dataset: demo)')
+    expect(screen.queryByText('Share your results')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull()
+  })
+})
+
+describe('Results (German)', () => {
+  beforeEach(() => act(() => setLang('de')))
+  afterEach(() => act(() => setLang('en')))
+  const r = de.results
+
+  it('translates the words but keeps metric names and 0.87-style numbers', async () => {
+    renderPage()
+    expect(await screen.findByRole('heading', { level: 2, name: r.performance })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Results' })).toBeInTheDocument()
+    const stat = (label: string) => screen.getByText(label, { selector: '.stat span' }).nextSibling
+    expect(stat('Precision')).toHaveTextContent('0.90')
+    expect(stat('Recall')).toHaveTextContent('0.80')
+    expect(stat('F1 Score')).toHaveTextContent('0.85')
+    expect(stat('Labeling Budget')).toHaveTextContent('12')
+    expect(screen.getByText(r.comparisonTitle('demo'))).toBeInTheDocument()
+    expect(screen.getByText(r.sortHint)).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: r.colTime })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Precision' })).toBeInTheDocument()
+    expect(screen.getByText(r.baselineTitle)).toBeInTheDocument()
+    expect(screen.getByText(r.baselineText(12))).toBeInTheDocument()
+    expect(screen.getByText(r.newRound)).toBeInTheDocument()
+  })
+
+  it('shows the German empty state', async () => {
+    m.fetchResults.mockResolvedValue({ ...RESULTS, metrics: null, comparison: [], raha: null } as any)
+    renderPage()
+    expect(await screen.findByRole('heading', { name: r.emptyTitle })).toBeInTheDocument()
+    expect(screen.getByText(r.emptyText)).toBeInTheDocument()
+    expect(screen.getByText(r.newRound)).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('explains the missing pipeline in German', async () => {
+    renderPage({})
+    expect(await screen.findByText(r.prereqText)).toBeInTheDocument()
   })
 })

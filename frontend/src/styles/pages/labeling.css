@@ -1,0 +1,259 @@
+/* Labeling page — scoped under .labeling-page */
+/* The page is as wide as the others so the footer bar matches; the content column is 560px and centred.
+   The page is a flex column (so the footer sits at the bottom), where `margin: auto` children would shrink to their
+   content (the card stack and bars would collapse): every child therefore takes the full column width. */
+.labeling-page > :where(:not(.nav-row):not(.confirm-backdrop)) { width: 100%; max-width: 560px; margin-inline: auto; }
+.labeling-page .labeling-head { gap: var(--s-3); justify-content: center; }
+.labeling-page .info-btn {
+  width: var(--hit); height: var(--hit); border: 1px solid var(--separator); background: var(--fill); color: var(--label-2);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+.labeling-page .info-btn svg { width: 22px; height: 22px; }
+.labeling-page .info-btn:hover { background: var(--accent-tint); color: var(--accent-text); }
+.labeling-page .info-btn.on { color: var(--accent-text); border-color: transparent; box-shadow: var(--selected-ring); }
+.labeling-page .info-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.labeling-page .labeling-info {
+  max-width: 460px; margin: var(--s-2) auto var(--s-4); padding: var(--s-4) var(--s-5); border-radius: var(--r-lg);
+  background: var(--surface); border: 1px solid var(--separator); box-shadow: var(--shadow-2);
+  color: var(--label-2); font-size: var(--text-footnote); line-height: 1.5; text-align: left;
+  animation: lbl-rise var(--dur-slow) var(--ease-out) both;
+}
+.labeling-page .labeling-info b { color: var(--label); }
+@keyframes lbl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.labeling-page .deck-progress {
+  margin: var(--s-2) auto var(--s-2); font-size: var(--text-footnote); letter-spacing: 0.02em;
+}
+.labeling-page .lp-bar {
+  height: 6px; max-width: 420px; margin: 0 auto var(--s-4); border-radius: var(--r-pill);
+  background: var(--fill); overflow: hidden; box-shadow: inset 0 0 0 1px var(--separator);
+}
+.labeling-page .lp-bar span {
+  display: block; height: 100%; border-radius: inherit;
+  background: var(--brand-gradient); box-shadow: 0 0 12px var(--accent-ring);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+/* deck: each card is a profile card. Table = photo, cell value = name, strategies = interest pills. */
+.labeling-page {
+  --on-photo: #fff;                      /* text on the dark photo scrim: same in both themes */
+  --scrim: linear-gradient(to top, rgb(0 0 0 / 92%) 0%, rgb(0 0 0 / 78%) 38%, rgb(0 0 0 / 0%) 100%);
+  --glass: rgb(255 255 255 / 18%);
+}
+.labeling-page .deck {
+  height: clamp(480px, 68vh, 600px); max-width: 420px; margin: 0 auto; padding-bottom: 28px;
+  animation: lbl-deck-in 0.9s var(--ease-out) 0.15s both;
+}
+@keyframes lbl-deck-in { from { opacity: 0; translate: 0 24px; scale: 0.97; } to { opacity: 1; translate: 0 0; scale: 1; } }
+.labeling-page .deck-card {
+  inset: 0 0 28px 0; padding: 0; border-radius: var(--hero-r); overflow: hidden;
+  background: var(--surface); border: 1px solid var(--separator);
+  box-shadow: 0 20px 56px -16px rgb(0 0 0 / 24%), 0 2px 6px rgb(0 0 0 / 8%);
+}
+.labeling-page .deck-card[data-depth='1'], .labeling-page .deck-card[data-depth='2'] { box-shadow: 0 16px 40px rgb(0 0 0 / 28%); }
+.labeling-page .card-face { position: relative; height: 100%; }
+
+.labeling-page .card-photo {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  background: linear-gradient(160deg, var(--accent-tint), var(--surface-2));
+}
+.labeling-page .card-photo .table-wrap {
+  max-height: none; height: 100%; overflow: hidden; border-radius: 0; box-shadow: none; background: var(--surface);
+}
+.labeling-page .card-excerpt { position: absolute; inset: 0; overflow: hidden; }
+/* natural width so the target column can sit in the middle; Labeling.tsx translates the table */
+.labeling-page .card-photo .table-wrap { overflow: visible; background: transparent; }
+.labeling-page .card-photo table { font-size: var(--text-footnote); width: max-content; background: var(--surface); box-shadow: 0 0 0 1px var(--separator); }
+.labeling-page .card-photo th, .labeling-page .card-photo td { padding: var(--s-3) var(--s-4); }
+.labeling-page .card-photo > p { padding: var(--s-6); color: var(--label-2); text-align: center; }
+
+.labeling-page .card-info {
+  position: absolute; inset: auto 0 0 0; padding: 96px var(--s-5) var(--s-5);
+  background: var(--scrim); color: var(--on-photo); text-align: left;
+}
+.labeling-page .deck-card[data-depth='1'] .card-info,
+.labeling-page .deck-card[data-depth='2'] .card-info { inset: 0; display: flex; align-items: flex-end; }
+.labeling-page .card-value {
+  margin: 0; font-size: clamp(2rem, 8vw, 2.75rem); line-height: 1.05; font-weight: 800;
+  letter-spacing: -0.03em; overflow-wrap: anywhere; max-width: 100%; color: var(--on-photo);
+  text-shadow: 0 1px 12px rgb(0 0 0 / 35%);
+}
+.labeling-page .card-meta { margin: var(--s-2) 0 var(--s-3); font-size: var(--text-footnote); color: rgb(255 255 255 / 78%); }
+.labeling-page .card-meta code {
+  background: none; padding: 0; font-family: inherit; font-size: inherit; font-weight: 600; color: var(--on-photo);
+}
+.labeling-page .card-pills { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.labeling-page .card-pills .pill {
+  margin: 0; padding: 5px var(--s-3); color: var(--on-photo); background: var(--glass);
+  border: 1px solid rgb(255 255 255 / 30%); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  font-size: var(--text-footnote); font-weight: 500;
+}
+
+/* show-more toggle for strategies beyond the first two */
+.labeling-page .card-pills .pill-more {
+  min-height: 32px; padding: 0 var(--s-3); border: 1px dashed rgb(255 255 255 / 55%); border-radius: var(--r-pill);
+  background: transparent; color: var(--on-photo); font: 600 var(--text-footnote) var(--font-sans); cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.labeling-page .card-pills .pill-more:hover { background: var(--glass); }
+.labeling-page .card-pills .pill-more:focus-visible { outline: 3px solid var(--on-photo); outline-offset: 2px; }
+
+/* stamps: outlined, like/nope style */
+.labeling-page .stamp {
+  top: var(--s-6); background: rgb(0 0 0 / 40%); -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-width: 3px; border-radius: var(--r-md); font-size: var(--text-title2); font-weight: 800; letter-spacing: 0.08em;
+}
+.labeling-page .stamp-correct { left: var(--s-5); color: #30d158; border-color: #30d158; text-shadow: 0 0 16px rgb(48 209 88 / 55%); }
+.labeling-page .stamp-error { right: var(--s-5); color: #ff6b61; border-color: #ff6b61; text-shadow: 0 0 16px rgb(255 107 97 / 55%); }
+
+/* buttons */
+.labeling-page .verdict-buttons { gap: var(--s-6); margin: var(--s-3) auto var(--s-2); }
+.labeling-page .verdict-buttons .round {
+  position: relative; width: 84px; height: 84px; padding: 0; display: grid; place-items: center;
+  border: 2px solid currentColor; background: var(--surface); box-shadow: var(--shadow-2);
+  transition: transform var(--dur-base) var(--ease-spring), background var(--dur-base), color var(--dur-base), box-shadow var(--dur-base);
+}
+.labeling-page .verdict-buttons .round-error:hover:not(:disabled), .labeling-page .verdict-buttons .round-error:active:not(:disabled) {
+  background: var(--bad); color: var(--on-photo); transform: scale(1.1); box-shadow: 0 0 28px rgb(255 107 97 / 55%);
+}
+.labeling-page .verdict-buttons .round-correct:hover:not(:disabled), .labeling-page .verdict-buttons .round-correct:active:not(:disabled) {
+  background: var(--good); color: var(--on-photo); transform: scale(1.1); box-shadow: 0 0 28px rgb(48 209 88 / 55%);
+}
+.labeling-page .verdict-buttons .round:active:not(:disabled) { transform: scale(1.14); }
+.labeling-page .verdict-buttons .round svg { width: 38px; height: 38px; }
+.labeling-page .verdict-buttons .round-error { border-color: var(--bad); color: var(--bad); }
+.labeling-page .verdict-buttons .round-correct { border-color: var(--good); color: var(--good); }
+.labeling-page .verdict-buttons .round-back {
+  width: 52px; height: 52px; border-color: var(--separator); background: var(--fill); color: var(--label-2);
+}
+.labeling-page .verdict-buttons .round-back svg { width: 22px; height: 22px; }
+.labeling-page .round kbd {
+  position: absolute; bottom: -26px; left: 50%; transform: translateX(-50%);
+  min-width: 28px; padding: 1px var(--s-2); border-radius: var(--r-sm);
+  background: var(--fill); color: var(--label-2); font: 600 var(--text-caption) var(--font-sans);
+  text-align: center; pointer-events: none;
+}
+.labeling-page .round:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+#root .page .labeling-page.labeling-page > .verdict-buttons { margin-bottom: calc(var(--s-6) + 72px); }
+.labeling-page .deck-hint { font-size: var(--text-caption); max-width: 36ch; margin-inline: auto; }
+
+.labeling-page .nav-row { margin-top: var(--s-5); align-items: center; padding-top: var(--s-4); border-top: 1px solid var(--separator); }
+.labeling-page .nav-row .btn { min-height: 48px; }
+
+@media (max-width: 480px) {
+  .labeling-page .deck { height: clamp(420px, 64vh, 520px); }
+  .labeling-page .card-info { padding: 72px var(--s-4) var(--s-4); }
+  .labeling-page .verdict-buttons { gap: var(--s-5); }
+  .labeling-page .verdict-buttons .round { width: 76px; height: 76px; }
+  .labeling-page .verdict-buttons .round svg { width: 34px; height: 34px; }
+  .labeling-page .verdict-buttons .round-back { width: 48px; height: 48px; }
+  .labeling-page .round kbd { display: none; }
+  #root .page .labeling-page.labeling-page > .verdict-buttons { margin-bottom: calc(var(--s-3) + 72px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .labeling-page .lp-bar span { transition: none; }
+  .labeling-page .deck, .labeling-page .labeling-info { animation: none; }
+  .labeling-page .verdict-buttons .round { transition: none; }
+}
+
+/* inspect: the card stops being draggable and the table can be dragged around instead */
+.labeling-page .deck-tools { display: flex; justify-content: center; margin: calc(var(--s-5) * -1) auto 0; position: relative; z-index: 1; } /* tucked up under the card */
+.labeling-page .inspect-btn {
+  min-height: 32px; padding: 0 var(--s-4); border: 1px solid var(--separator); border-radius: var(--r-pill); cursor: pointer;
+  background: var(--fill); color: var(--accent-text); font-weight: 600; font-size: var(--text-caption, 0.75rem);
+  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.labeling-page .inspect-btn:hover:not(:disabled) { background: var(--fill-hover); }
+.labeling-page .inspect-btn.on { border-color: transparent; box-shadow: var(--selected-ring); }
+.labeling-page .inspect-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* a pad over the whole card that catches the drag (above the name scrim, so any spot works) */
+.labeling-page .inspect-pad { position: absolute; inset: 0; z-index: 3; cursor: grab; touch-action: none; user-select: none; }
+.labeling-page .inspect-pad:active { cursor: grabbing; }
+.labeling-page .deck-card:has(.inspect-pad) { cursor: default; box-shadow: 0 0 0 3px var(--accent-ring), var(--shadow-3); }
+
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+.confirm-dialog {
+  background: var(--surface, #fff);
+  color: inherit;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 420px;
+  width: 100%;
+}
+.confirm-dialog .row {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* full screen mode: the labeling page covers the window; the bottom bar stays reachable */
+.labeling-page.is-full {
+  position: fixed; inset: 0; z-index: calc(var(--z-bar) + 10); max-width: none; margin: 0;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s-4) max(var(--s-4), env(safe-area-inset-right)) max(3vh, env(safe-area-inset-bottom)) max(var(--s-4), env(safe-area-inset-left));
+  background: var(--bg, var(--surface));
+  display: flex; flex-direction: column; /* short content: the bar still sits at the bottom, lifted by --bar-lift */
+}
+.labeling-page.is-full > :not(.nav-row):not(.confirm-backdrop):not(.labeling-head) { width: 100%; max-width: 560px; margin-inline: auto; }
+.labeling-page.is-full .labeling-head { width: 100%; max-width: 560px; margin-inline: auto; }
+.page .labeling-page.is-full > .nav-row {
+  width: 100%; margin-top: auto; margin-bottom: 0; flex-shrink: 0;
+  bottom: max(var(--bar-lift), env(safe-area-inset-bottom));
+  max-width: min(1400px, 100%); margin-inline: auto;
+}
+
+
+/* The footer bar sits below the content instead of floating over the cards: the page scrolls to reach it,
+   so it can never cover the verdict buttons. (Full screen keeps its own pinned bar.) */
+#root .page .labeling-page:not(.is-full) > .nav-row { position: static; }
+
+/* Title dead-centre over the cards; the full-screen and info buttons hang off the right edge of the column. */
+#root .page .labeling-page .labeling-head { position: relative; justify-content: center; width: 100%; max-width: 560px; margin-inline: auto; }
+#root .page .labeling-page .labeling-head h1 { margin: 0; text-align: center; }
+#root .page .labeling-page .labeling-head .info-btn { position: absolute; top: 50%; translate: 0 -50%; }
+#root .page .labeling-page .labeling-head .info-btn:last-of-type { right: 0; }
+#root .page .labeling-page .labeling-head .info-btn:first-of-type { right: calc(var(--hit) + var(--s-3)); }
+
+/* Full screen shows only the card, its progress and the verdict buttons: no title, no info button, no footer bar.
+   The one thing kept is the exit button, floated into the top-right corner. */
+#root .page .labeling-page.is-full { justify-content: center; }
+#root .page .labeling-page.is-full > .nav-row,
+#root .page .labeling-page.is-full .labeling-head h1,
+#root .page .labeling-page.is-full .labeling-head .info-btn[aria-controls] { display: none; }
+#root .page .labeling-page.is-full .labeling-head {
+  position: fixed; top: max(var(--s-4), env(safe-area-inset-top)); right: max(var(--s-4), env(safe-area-inset-right));
+  width: auto; max-width: none; margin: 0; z-index: 2;
+}
+#root .page .labeling-page.is-full .labeling-head .info-btn:first-of-type { position: static; translate: none; }
+
+/* Full screen: use the whole window for the card. Its height follows the window (minus progress and buttons),
+   its width follows its height, and the column is wide enough to hold it. */
+#root .page .labeling-page.is-full > * { max-width: min(100%, 900px); }
+#root .page .labeling-page.is-full .deck {
+  height: max(420px, calc(100dvh - 300px)); max-width: min(100%, calc((100dvh - 300px) * 0.85));
+}
+#root .page .labeling-page.is-full .lp-bar { max-width: min(100%, calc((100dvh - 300px) * 0.85)); }
+#root .page .labeling-page.is-full.labeling-page > .verdict-buttons { margin-bottom: var(--s-4); }
+#root .page .labeling-page.is-full .card-value { font-size: clamp(2.2rem, 5vw, 3.5rem); }
+
+/* Phones, full screen: the footer bar is hidden, so drop the room the phone layout keeps for it underneath
+   (it squeezed the card into the top half), let the card take all the height that is left, and keep the progress
+   line clear of the exit button in the corner. */
+@media (max-width: 560px) {
+  #root .page > .labeling-page.is-full:not(#_) {
+    padding-top: max(var(--s-4), env(safe-area-inset-top));
+    padding-bottom: max(var(--s-4), env(safe-area-inset-bottom));
+  }
+  #root .page .labeling-page.is-full > :is(.deck-progress, .lp-bar) { width: auto; align-self: stretch; margin-inline: calc(var(--hit) + var(--s-3)); }
+  #root .page .labeling-page.is-full .deck-progress { line-height: var(--hit); margin-block: 0; }
+  #root .page .labeling-page.is-full .deck { flex: 1 1 auto; height: auto; min-height: 320px; max-width: 100%; margin-top: var(--s-3); }
+  #root .page .labeling-page.is-full .lp-bar { max-width: none; }
+}

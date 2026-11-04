@@ -1,0 +1,201 @@
+/*
+ * Matelda design system — tokens
+ * Derived from the landing page: ink-black stage, one electric-blue accent, a blue→violet→pink brand
+ * gradient used sparingly, soft depth. Dark is the landing's own palette; light is its daylight twin.
+ * See docs/style-guide.md.
+ * Components must use these semantic tokens only (no raw hex in app.css).
+ * Spacing is a 4pt scale; type is a fixed scale; motion shares three durations.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- type ---- */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --text-caption: 0.75rem;   /* 12 */
+  --text-footnote: 0.8125rem; /* 13 */
+  --text-body: 1rem;         /* 16 */
+  --text-callout: 1.0625rem; /* 17 */
+  --text-title3: 1.25rem;    /* 20 */
+  --text-title2: 1.5rem;     /* 24 */
+  --text-title1: 2rem;       /* 32 */
+  --text-display: clamp(2rem, 4vw + 1rem, 3rem);
+  --lh-tight: 1.15;
+  --lh-body: 1.5;
+  --track-tight: -0.022em;   /* Apple tightens large type */
+
+  /* ---- spacing (4pt) ---- */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+
+  /* ---- shape ---- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+  --hit: 44px; /* minimum touch target */
+  /* a selected / pressed control: a crisp 1px accent line with a soft halo around it, no fill */
+  --selected-ring: 0 0 0 1px var(--accent), 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+
+  /* ---- cards: three tiers, used by every rectangular surface ----
+   * panel: a container for content (.card, form groups, boards)
+   * tile : an item inside or beside panels (stats, table tiles, list rows)
+   * hero : a showcase card (lobby, results headline) */
+  --panel-r: var(--r-xl);
+  --panel-pad: var(--s-5);
+  --panel-shadow: var(--shadow-1);
+  --tile-r: var(--r-lg);
+  --tile-pad: var(--s-4);
+  --tile-shadow: var(--shadow-1);
+  --hero-r: var(--r-xl);
+  --hero-pad: var(--s-6);
+  --hero-shadow: var(--shadow-2);
+
+  /* ---- motion ---- */
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 380ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* ---- z-index ---- */
+  --z-bar: 20;
+  --z-backdrop: 40;
+  --z-modal: 50;
+  --z-drag: 60;
+  --bar-shadow: 0 0 0 1px var(--separator), var(--shadow-2), 0 16px 40px -18px rgb(0 0 0 / 22%); /* floating Back/Continue bar */
+  --bar-lift: 3%; /* how far the floating Back/Continue bar floats above the bottom edge, as a share of the screen height */
+
+  /* ---- colour: light (the landing's daylight twin: cool paper, ink text, deepened blue) ---- */
+  --bg: #f4f5fa;
+  --surface: #ffffff;
+  --surface-2: #eceef6;          /* inset wells, table headers */
+  --fill: rgb(40 50 90 / 8%);    /* tinted button / chip fill */
+  --fill-hover: rgb(40 50 90 / 14%);
+  --label: #0b0d16;              /* the landing's ink */
+  --label-2: #565b70;            /* 6.4:1 on white */
+  --label-3: #8a8fa3;            /* decorative / disabled only */
+  --separator: rgb(11 13 22 / 12%);
+  --accent: #1a62c9;             /* 5.9:1 on white */
+  --accent-fill: #1a62c9;        /* button fill: white text stays ≥4.5:1 */
+  --accent-hover: #1f6fe0;
+  --accent-press: #1553ab;
+  --on-accent: #ffffff;
+  --accent-tint: rgb(26 98 201 / 10%);
+  --accent-ring: rgb(26 98 201 / 35%);
+  --good: #1a7f37;
+  --good-tint: rgb(26 127 55 / 12%);
+  --bad: #c9231a;
+  --bad-tint: rgb(201 35 26 / 10%);
+  --warn: #8a5a00;
+  --warn-tint: rgb(255 159 10 / 16%);
+  --brand-gradient: linear-gradient(100deg, #4f9bf0, #1a62c9 55%, #134a99);
+  --accent-text: var(--accent); /* blue text only on light surfaces */
+  /* the landing's stage: soft blue and violet glows behind the page, and the call-to-action fill */
+  --aurora: radial-gradient(900px 500px at 78% -5%, rgb(47 127 230 / 12%), transparent 60%),
+    radial-gradient(700px 420px at 5% 30%, rgb(26 98 201 / 8%), transparent 60%);
+  --cta-bg: var(--accent-fill);
+  --cta-fg: #ffffff;
+  --cta-glow: 0 6px 20px -4px rgb(26 98 201 / 18%);
+
+  /* ---- materials & depth ---- */
+  --material: rgb(244 245 250 / 74%);
+  --scrim: rgb(11 13 22 / 32%);
+  --shadow-1: 0 1px 2px rgb(11 13 22 / 5%), 0 1px 1px rgb(11 13 22 / 3%);
+  --shadow-2: 0 1px 4px rgb(11 13 22 / 4%), 0 6px 20px rgb(11 13 22 / 4%);
+  --shadow-3: 0 10px 36px rgb(11 13 22 / 12%), 0 2px 6px rgb(11 13 22 / 5%);
+}
+
+/* dark: follows the system unless the user picked a theme via [data-theme] */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    /* ---- colour: dark (the landing page's own palette) ---- */
+    --bg: #07080d;
+    --surface: #12141d;
+    --surface-2: #1a1d29;
+    --fill: rgb(255 255 255 / 10%);
+    --fill-hover: rgb(255 255 255 / 16%);
+    --label: #f5f5f7;
+    --label-2: #a9adbd;            /* 8.2:1 on --surface */
+    --label-3: #6b7085;
+    --separator: rgb(255 255 255 / 10%);
+    --accent: #3b99ff;             /* the landing's electric blue */
+    --accent-fill: #0b72e0;        /* button fill: white text ≥4.5:1 */
+    --accent-hover: #2486f5;
+    --accent-press: #0a62c4;
+    --on-accent: #ffffff;
+    --accent-tint: rgb(59 153 255 / 16%);
+    --accent-ring: rgb(59 153 255 / 50%);
+    --good: #30d158;
+    --good-tint: rgb(48 209 88 / 18%);
+    --bad: #ff6b61;
+    --bad-tint: rgb(255 107 97 / 18%);
+    --warn: #ffb340;
+    --warn-tint: rgb(255 159 10 / 20%);
+    --brand-gradient: linear-gradient(100deg, #ffffff, #e3f0ff 55%, #b4d6fa);
+    --accent-text: var(--label); /* never blue text on black */
+    --aurora: radial-gradient(900px 500px at 78% -5%, rgb(170 210 255 / 10%), transparent 60%),
+      radial-gradient(700px 420px at 5% 30%, rgb(150 195 245 / 6%), transparent 60%);
+    --cta-bg: #ffffff;
+    --cta-fg: #07080d;
+    --cta-glow: 0 6px 20px -4px rgb(59 153 255 / 18%);
+    --material: rgb(7 8 13 / 72%);
+    --scrim: rgb(0 0 0 / 55%);
+    --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 7%);
+    --shadow-2: 0 0 0 0.5px rgb(255 255 255 / 8%), 0 6px 20px rgb(0 0 0 / 28%);
+    --bar-shadow: 0 0 0 1px var(--separator), 0 6px 20px -8px rgb(0 0 0 / 22%); /* lighter than light mode's: dark surfaces show heavy shadows */
+    --shadow-3: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 14px 40px rgb(0 0 0 / 40%);
+  }
+}
+:root[data-theme='dark'] {
+  /* ---- colour: dark (the landing page's own palette) ---- */
+  --bg: #07080d;
+  --surface: #12141d;
+  --surface-2: #1a1d29;
+  --fill: rgb(255 255 255 / 10%);
+  --fill-hover: rgb(255 255 255 / 16%);
+  --label: #f5f5f7;
+  --label-2: #a9adbd;            /* 8.2:1 on --surface */
+  --label-3: #6b7085;
+  --separator: rgb(255 255 255 / 10%);
+  --accent: #3b99ff;             /* the landing's electric blue */
+  --accent-fill: #0b72e0;        /* button fill: white text ≥4.5:1 */
+  --accent-hover: #2486f5;
+  --accent-press: #0a62c4;
+  --on-accent: #ffffff;
+  --accent-tint: rgb(59 153 255 / 16%);
+  --accent-ring: rgb(59 153 255 / 50%);
+  --good: #30d158;
+  --good-tint: rgb(48 209 88 / 18%);
+  --bad: #ff6b61;
+  --bad-tint: rgb(255 107 97 / 18%);
+  --warn: #ffb340;
+  --warn-tint: rgb(255 159 10 / 20%);
+  --brand-gradient: linear-gradient(100deg, #ffffff, #e3f0ff 55%, #b4d6fa);
+  --accent-text: var(--label);
+  --aurora: radial-gradient(900px 500px at 78% -5%, rgb(170 210 255 / 10%), transparent 60%),
+    radial-gradient(700px 420px at 5% 30%, rgb(150 195 245 / 6%), transparent 60%);
+  --cta-bg: #ffffff;
+  --cta-fg: #07080d;
+  --cta-glow: 0 6px 20px -4px rgb(59 153 255 / 18%);
+  --material: rgb(7 8 13 / 72%);
+  --scrim: rgb(0 0 0 / 55%);
+  --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 7%);
+  --shadow-2: 0 0 0 0.5px rgb(255 255 255 / 8%), 0 6px 20px rgb(0 0 0 / 28%);
+  --bar-shadow: 0 0 0 1px var(--separator), 0 6px 20px -8px rgb(0 0 0 / 22%); /* lighter than light mode's: dark surfaces show heavy shadows */
+  --shadow-3: 0 0 0 0.5px rgb(255 255 255 / 10%), 0 14px 40px rgb(0 0 0 / 40%);
+}
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
+/* card padding shrinks on phones so content keeps its width */
+@media (max-width: 480px) {
+  :root { --panel-pad: var(--s-4); --tile-pad: var(--s-3); --hero-pad: var(--s-5); }
+}

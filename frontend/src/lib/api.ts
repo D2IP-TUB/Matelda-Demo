@@ -218,6 +218,33 @@ export const splitCellFold = (name: string, fold: string, after: CellRef[]) =>
     'Could not split the fold',
   )
 
+export const moveFoldToDomain = (name: string, fold: string, toDomain: string) =>
+  editFolds(
+    api.POST('/api/pipelines/{name}/cell-folds/move-fold', {
+      params: { path: { name } },
+      body: { fold, to_domain: toDomain },
+    }),
+    'Could not move the fold',
+  )
+
+export const mergeDomains = (name: string, domain: string, into: string) =>
+  editFolds(
+    api.POST('/api/pipelines/{name}/cell-folds/merge-domain', {
+      params: { path: { name } },
+      body: { domain, into },
+    }),
+    'Could not merge the domains',
+  )
+
+export const splitDomain = (name: string, domain: string, afterFold: string) =>
+  editFolds(
+    api.POST('/api/pipelines/{name}/cell-folds/split-domain', {
+      params: { path: { name } },
+      body: { domain, after_fold: afterFold },
+    }),
+    'Could not split the domain',
+  )
+
 export const setFoldLabel = (name: string, fold: string, label: 'correct' | 'false' | null) =>
   editFolds(
     api.PUT('/api/pipelines/{name}/cell-folds/label', {
@@ -284,10 +311,15 @@ export async function startPropagation(
   return data.job_id
 }
 
-export async function fetchPropagation(name: string, offset: number, limit: number): Promise<PropagationPage> {
-  const { data, error } = await api.GET('/api/pipelines/{name}/propagation', {
+/**
+ * Resolves to null when label propagation has not run yet (409). Throwing there would make react-query retry
+ * a "not yet" answer three times with backoff, leaving the page on "Loading results…" for ~7 s.
+ */
+export async function fetchPropagation(name: string, offset: number, limit: number): Promise<PropagationPage | null> {
+  const { data, error, response } = await api.GET('/api/pipelines/{name}/propagation', {
     params: { path: { name }, query: { offset, limit } },
   })
+  if (response.status === 409) return null
   if (error || !data) throw new Error(detailOf(error, 'Could not load the propagation results'))
   return data
 }
@@ -329,13 +361,12 @@ export async function fetchResults(name: string): Promise<ResultsSummary> {
   return data
 }
 
-export async function fetchLabelAccuracy(name: string, offset: number, limit: number): Promise<AccuracyPage> {
-  const { data, error } = await api.GET('/api/pipelines/{name}/label-accuracy', {
+/** The labels compared with the truth, or `null` when no labels are saved yet (the labeling step has not run). */
+export async function fetchLabelAccuracy(name: string, offset: number, limit: number): Promise<AccuracyPage | null> {
+  const { data, error, response } = await api.GET('/api/pipelines/{name}/label-accuracy', {
     params: { path: { name }, query: { offset, limit } },
   })
+  if (response.status === 409) return null
   if (error || !data) throw new Error(detailOf(error, 'Could not load the labeling accuracy'))
   return data
 }
-
-export const labelAccuracyCsvUrl = (name: string) =>
-  `/api/pipelines/${encodeURIComponent(name)}/label-accuracy.csv`

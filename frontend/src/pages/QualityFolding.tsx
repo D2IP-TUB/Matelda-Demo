@@ -1,11 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DataTable } from '../components/DataTable'
-import { CutButton, DragGhost, FoldBox, Modal, useDragController } from '../components/foldBoard'
+import { CutToggle, DomainBox, DragGhost, FoldBox, Modal, Seam, ToolToggle, useCutMode, useDragController } from '../components/foldBoard'
 import type { DragController } from '../components/foldBoard'
 import { BudgetField, StrategyChecklist } from '../components/forms'
-import { Button, Card, JobStatus, Notice } from '../components/ui'
+import { Button, Card, InfoButton, JobStatus, Notice, Prereq } from '../components/ui'
+import { StepSlot } from '../components/StepSlot'
+import { t, useT } from '../i18n'
 import { useJob } from '../jobs/useJob'
 import {
   fetchCellFolds,
@@ -14,78 +16,182 @@ import {
   fetchPipeline,
   fetchStrategies,
   mergeCellFolds,
+  mergeDomains,
   moveCell,
+  moveFoldToDomain,
   setFoldLabel,
   splitCellFold,
+  splitDomain,
   startQualityFolding,
 } from '../lib/api'
 import type { CellRef, CellView, FoldSummary } from '../lib/api'
 import { useSession } from '../session/SessionProvider'
+import '../styles/pages/quality-folding.css'
 
-const PAGE = 20
+const PAGE = 10
+
+/** The domain is shown once on its rectangle, so inside it a fold is just "Cell Fold 0". */
+const tailOf = (f: FoldSummary) => (f.name.includes(' / ') ? f.name.slice(f.name.lastIndexOf(' / ') + 3) : f.name)
+/** A fold moved in from another domain keeps its full name when its short name would clash with a neighbour. */
+const shortName = (f: FoldSummary, siblings: FoldSummary[]) =>
+  siblings.some((o) => o !== f && tailOf(o) === tailOf(f)) ? f.name : tailOf(f)
+
+/** What a chip shows: just the value; its origin (table, column, row) is in the details popup. */
+const valueOf = (c: CellView) => (c.val === null || c.val === undefined || c.val === '' ? t().qualityFolding.empty : String(c.val))
 
 const refOf = (c: CellRef | CellView): CellRef => ({ table: c.table, row: c.row, col: c.col })
+const keyOf = (c: CellRef) => `${c.table}|${c.row}|${c.col}`
+
+/** A cell dragged to another fold, shown there before the server has answered. */
+type Moved = { cell: CellView; from: string; to: string; done: boolean }
+/** A change on its way to the server, with how the folds look once it is through. */
+type Pending = { id: number; preview: (folds: FoldSummary[]) => FoldSummary[] }
+
+const recount = (folds: FoldSummary[], fold: string, by: number) =>
+  folds.map((f) => (f.name === fold ? { ...f, cell_count: f.cell_count + by } : f))
+const mergePreview = (target: string, source: string) => (folds: FoldSummary[]) => {
+  const gone = folds.find((f) => f.name === source)
+  return gone ? recount(folds.filter((f) => f !== gone), target, gone.cell_count) : folds
+}
+
+/** Every fold of `source` joins the end of `target`, as the server does it. */
+const mergeDomainPreview = (target: string, source: string) => (folds: FoldSummary[]) => {
+  const moving = folds.filter((f) => f.domain === source).map((f) => ({ ...f, domain: target }))
+  const rest = folds.filter((f) => f.domain !== source)
+  const at = rest.map((f) => f.domain).lastIndexOf(target) + 1
+  return at === 0 ? folds : [...rest.slice(0, at), ...moving, ...rest.slice(at)]
+}
 
 function FoldCells({
   pipeline,
   fold,
+  cellCount,
+  shownCount,
+  moved,
   dnd,
+  cutting,
   onCut,
   onOpen,
 }: {
   pipeline: string
   fold: string
+  /** The size the server reports; a change of it reloads the cells. */
+  cellCount: number
+  /** The size on screen, with changes still on their way. */
+  shownCount: number
+  moved: Map<string, Moved>
   dnd: DragController
+  cutting: boolean
   onCut: (cell: CellView) => void
   onOpen: (cell: CellView) => void
 }) {
+  const q = useT().qualityFolding
   const [cells, setCells] = useState<CellView[]>([])
   const [total, setTotal] = useState(0)
   const [error, setError] = useState('')
+  const loaded = useRef(0)
+  loaded.current = cells.length
 
-  const load = async (offset: number) => {
+  // Load the first page, and reload (quietly, the old cells stay on screen) whenever the fold's size changes,
+  // i.e. after a cell was moved in or out. Cells already shown with "Show more" are kept.
+  useEffect(() => {
+    let current = true
+    const limit = Math.min(200, Math.max(PAGE, loaded.current))
+    fetchFoldCells(pipeline, fold, 0, limit)
+      .then((page) => {
+        if (!current) return
+        setCells(page.cells)
+        setTotal(page.total)
+        setError('')
+      })
+      .catch((e) => current && setError(e instanceof Error ? e.message : t().qualityFolding.loadCellsFailed))
+    return () => {
+      current = false
+    }
+  }, [pipeline, fold, cellCount])
+
+  const totalRef = useRef(0)
+  totalRef.current = total
+  const loading = useRef(false)
+  const list = useRef<HTMLUListElement | null>(null)
+
+  // No "show more" button: the next page loads by itself when the list is scrolled near its end.
+  const more = async () => {
+    if (loading.current || loaded.current >= totalRef.current) return
+    loading.current = true
     try {
-      const page = await fetchFoldCells(pipeline, fold, offset, PAGE)
-      setCells((prev) => (offset === 0 ? page.cells : [...prev, ...page.cells]))
+      const page = await fetchFoldCells(pipeline, fold, loaded.current, PAGE)
+      setCells((prev) => [...prev, ...page.cells])
       setTotal(page.total)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load the cells')
+      setError(e instanceof Error ? e.message : t().qualityFolding.loadCellsFailed)
+    } finally {
+      loading.current = false
     }
   }
-  useEffect(() => {
-    void load(0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pipeline, fold])
+  const nearEnd = (el: HTMLElement) => el.scrollHeight > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 60
+
+  // The bottom of the list is greyed out while there is more to scroll to: cells below the visible part, or cells
+  // not loaded yet. It clears once the very end is reached.
+  const [hasMore, setHasMore] = useState(false)
+  const checkMore = () => {
+    const el = list.current
+    if (!el) return
+    setHasMore(loaded.current < totalRef.current || el.scrollTop + el.clientHeight < el.scrollHeight - 2)
+  }
+  useLayoutEffect(checkMore, [cells, total])
+
+  // cells dragged in show up first, cells dragged out disappear, whether or not the server has answered yet
+  const movedIn = [...moved.values()].filter((m) => m.to === fold && !cells.some((c) => keyOf(c) === keyOf(m.cell)))
+  const shown = [
+    ...movedIn.map((m) => m.cell),
+    ...cells.filter((c) => {
+      const m = moved.get(keyOf(c))
+      return !m || m.to === fold
+    }),
+  ]
+  const hidden = Math.max(0, shownCount - shown.length)
 
   return (
     <div>
       {error && <Notice kind="error">{error}</Notice>}
-      <ul className="chips scroll">
-        {cells.map((cell, i) => (
-          <li key={`${cell.table}|${cell.row}|${cell.col}`}>
+      <div className={`cells-scroll${hasMore ? ' has-more' : ''}`}>
+      <ul
+        className="chips scroll"
+        ref={list}
+        onScroll={(e) => {
+          checkMore()
+          if (nearEnd(e.currentTarget)) void more()
+        }}
+      >
+        {shown.map((cell, i) => (
+          <li key={keyOf(cell)}>
             <button
               type="button"
               className="chip"
               data-testid="cell"
-              {...dnd.source({ kind: 'item', fold, item: cell }, `${cell.table} · ${cell.col}: ${String(cell.val)}`)}
+              title={q.clickDetails}
+              {...dnd.source({ kind: 'item', fold, item: cell }, valueOf(cell))}
               onClick={() => onOpen(cell)}
             >
-              {`${cell.table} · row ${cell.row} · ${cell.col}: ${String(cell.val)}`}
+              {valueOf(cell)}
             </button>
-            {i < total - 1 && (
-              <CutButton
-                label={`Split ${fold} after ${cell.table} ${cell.row} ${cell.col}`}
+            {i < shownCount - 1 && (
+              <Seam
+                cutting={cutting}
+                label={q.splitCellAfter(fold, cell.table, cell.row, cell.col)}
                 onCut={() => onCut(cell)}
               />
             )}
           </li>
         ))}
+        {hidden > 0 && (
+          <li className="more-row" aria-hidden="true">
+            {q.scrollMore(hidden)}
+          </li>
+        )}
       </ul>
-      {cells.length < total && (
-        <Button variant="ghost" onClick={() => void load(cells.length)}>
-          Show more
-        </Button>
-      )}
+      </div>
     </div>
   )
 }
@@ -99,6 +205,7 @@ function CellDialog({
   cell: CellView
   onClose: () => void
 }) {
+  const q = useT().qualityFolding
   const start = Math.max(0, cell.row - 5)
   const excerpt = useQuery({
     queryKey: ['excerpt', dataset, cell.table, start],
@@ -109,12 +216,23 @@ function CellDialog({
     ? data.rows.map((_, r) => data.columns.map((c) => start + r === cell.row && c === cell.col))
     : undefined
   return (
-    <Modal label="Cell details" onClose={onClose}>
-      <h2>{`Details for ${String(cell.val)}`}</h2>
-      <p>
-        Table <code>{cell.table}</code> · column <code>{cell.col}</code> · row {cell.row}
-      </p>
-      <h3>Error detection results</h3>
+    <Modal label={q.cellDetails} onClose={onClose}>
+      <h2>{q.detailsFor(valueOf(cell))}</h2>
+      <dl className="origin">
+        <dt>{q.value}</dt>
+        <dd>{valueOf(cell)}</dd>
+        <dt>{q.table}</dt>
+        <dd>
+          <code>{cell.table}</code>
+        </dd>
+        <dt>{q.column}</dt>
+        <dd>
+          <code>{cell.col}</code>
+        </dd>
+        <dt>{q.row}</dt>
+        <dd>{cell.row}</dd>
+      </dl>
+      <h3>{q.detectionResults}</h3>
       {cell.strategies.length > 0 ? (
         <ul>
           {cell.strategies.map((s) => (
@@ -122,19 +240,21 @@ function CellDialog({
           ))}
         </ul>
       ) : (
-        <p>This cell passed all error detection checks.</p>
+        <p>{q.passedAll}</p>
       )}
-      <h3>Table excerpt</h3>
+      <h3>{q.excerpt}</h3>
       {excerpt.isError && <Notice kind="error">{(excerpt.error as Error).message}</Notice>}
       {data && <DataTable columns={data.columns} rows={data.rows} diff={diff} highlight="dirty" />}
       <Button variant="ghost" onClick={onClose}>
-        Close
+        {q.close}
       </Button>
     </Modal>
   )
 }
 
 export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
+  const tr = useT()
+  const q = tr.qualityFolding
   const session = useSession()
   const queryClient = useQueryClient()
   const pipeline = session.data.pipeline_path as string | undefined
@@ -170,42 +290,66 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
   }, [job.state, jobId, pipeline, queryClient])
 
   const dnd = useDragController()
-  const [bulk, setBulk] = useState(false)
+  const [cutting, setCutting] = useCutMode()
+  // Bulk annotation shows the ✓ ✗ ↩ buttons on every fold; unlike split mode it stays on until toggled off.
+  const [annotating, setAnnotating] = useState(false)
+  // changes go to the server one after the other, never two at once and never dropped; the screen shows them at once
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
+  const seq = useRef(0)
+  const [pending, setPending] = useState<Pending[]>([])
+  const [moved, setMoved] = useState<Map<string, Moved>>(new Map())
   const [open, setOpen] = useState<CellView | null>(null)
   const [version, setVersion] = useState(0)
   const [error, setError] = useState('')
 
-  if (!session.ready) return <h1>Quality Folding</h1>
+  if (!session.ready) return <div className="quality-page"><h1>Quality Folding</h1></div>
   if (!pipeline) {
     return (
-      <>
+      <div className="quality-page">
         <h1>Quality Folding</h1>
-        <Notice kind="warn">Pipeline not configured.</Notice>
-        <Link to="/configuration">Go back to Configurations</Link>
-      </>
+        <Prereq title={q.prereqTitle} to="/configuration" action={q.backToConfig}>{q.prereqText}</Prereq>
+      </div>
     )
   }
-  if (config.data && !hasDomainFolds) {
-    return (
-      <>
-        <h1>Quality Folding</h1>
-        <Notice kind="warn">Run domain based folding first.</Notice>
-        <Link to="/domain-folding">Go to Domain Folding</Link>
-      </>
-    )
-  }
+  const blocked = !!config.data && !hasDomainFolds // shown, but greyed out until domain based folding has run
 
-  const edit = async (fn: () => Promise<unknown>): Promise<boolean> => {
+  const edit = (
+    fn: () => Promise<FoldSummary[]>,
+    opts: { preview?: (folds: FoldSummary[]) => FoldSummary[]; move?: Omit<Moved, 'done'> } = {},
+  ): Promise<boolean> => {
+    const id = ++seq.current
+    const { preview, move } = opts
+    if (preview) setPending((p) => [...p, { id, preview }])
+    if (move) setMoved((all) => new Map(all).set(keyOf(move.cell), { ...move, done: false }))
     setError('')
-    try {
-      await fn()
-      await queryClient.invalidateQueries({ queryKey: ['cellFolds', pipeline] })
-      setVersion((v) => v + 1)
-      return true
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'The change could not be saved')
-      return false
+    const send = async () => {
+      try {
+        // the server answers with the new folds, so show them at once instead of waiting for a refetch
+        queryClient.setQueryData(['cellFolds', pipeline], await fn())
+        setMoved((all) => {
+          const next = new Map(all)
+          if (move) next.set(keyOf(move.cell), { ...move, done: true })
+          // other changes reshuffle whole folds, and the reloaded cells already show the earlier moves
+          else for (const [k, m] of next) if (m.done) next.delete(k)
+          return next
+        })
+        return true
+      } catch (e) {
+        setError(e instanceof Error ? e.message : q.saveFailed)
+        if (move) setMoved((all) => {
+          const next = new Map(all)
+          if (next.get(keyOf(move.cell))?.to === move.to) next.delete(keyOf(move.cell))
+          return next
+        })
+        await queryClient.invalidateQueries({ queryKey: ['cellFolds', pipeline] }) // show what the server really has
+        return false
+      } finally {
+        setPending((p) => p.filter((x) => x.id !== id))
+      }
     }
+    const result = queue.current.then(send)
+    queue.current = result
+    return result
   }
 
   const run = async () => {
@@ -218,94 +362,162 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
         }),
       )
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start quality folding')
+      setError(e instanceof Error ? e.message : q.startFailed)
     }
   }
 
-  const folds: FoldSummary[] = cellFolds.data ?? []
+  const serverFolds: FoldSummary[] = cellFolds.data ?? []
+  const serverCount = new Map(serverFolds.map((f) => [f.name, f.cell_count]))
+  const folds = pending.reduce((all, p) => p.preview(all), serverFolds)
+  const setLabel = (fold: string, label: 'correct' | 'false' | null) =>
+    void edit(() => setFoldLabel(pipeline, fold, label), {
+      preview: (all) => all.map((f) => (f.name === fold ? { ...f, label: label ?? 'neutral' } : f)),
+    })
   const domains = [...new Set(folds.map((f) => f.domain))]
+  const byDomain = Object.fromEntries(domains.map((d) => [d, folds.filter((f) => f.domain === d)]))
 
   return (
-    <>
-      <h1>Quality Folding</h1>
+    <div className="quality-page">
+      <header className="qp-head">
+        <div className="title-row">
+          <h1>Quality Folding</h1>
+        <InfoButton label={q.infoLabel} title="Quality folding">
+          <p>
+            {q.introA}<b>{q.introFolds}</b>{q.introB}
+          </p>
+          <h3>{q.editTitle}</h3>
+          <ul>
+            <li><b>{q.move}</b>{q.moveText}</li>
+            <li><b>{q.merge}</b>{q.mergeA}<b>⠿</b>{q.mergeB}</li>
+            <li>
+              <b>{q.split}</b>{q.splitA}<b>{`✂ ${tr.shell.splitFolds}`}</b>{q.splitB}
+            </li>
+            <li><b>{q.inspect}</b>{q.inspectText}</li>
+          </ul>
+          <h3>{q.markTitle}</h3>
+          <p>{q.markA}<b>{`✓ ${q.bulkAnnotate}`}</b>{q.markB}</p>
+          <ul>
+            <li><b>✓</b>{q.markOr}<b>✗</b>{q.markWhole}</li>
+            <li><b>↩</b>{q.markBack}</li>
+          </ul>
+        </InfoButton>
+        </div>
+        <p className="qp-lede">{q.lead}</p>
+      </header>
 
-      <Card title="Settings">
-        <BudgetField value={effectiveBudget} onChange={setBudget} />
-        <StrategyChecklist
-          strategies={strategies.data ?? []}
-          selected={selected}
-          onChange={setChosen}
-          error={strategies.isError}
-          loading={strategies.isLoading}
-        />
+      {blocked && (
+        <Prereq title={q.blockedTitle} to="/domain-folding" action={q.blockedAction}>
+          {q.blockedText}
+        </Prereq>
+      )}
+
+      <Card title={q.settings}>
+        <fieldset className="qp-fieldset" disabled={blocked}>
+        <section className="qp-group" aria-labelledby="qp-budget-h">
+          <h3 id="qp-budget-h" className="qp-group-title">{q.budget}</h3>
+          <BudgetField value={effectiveBudget} onChange={setBudget} />
+        </section>
+        <section className="qp-group" aria-labelledby="qp-strategies-h">
+          <h3 id="qp-strategies-h" className="qp-group-title">{q.strategies}</h3>
+          <StrategyChecklist
+            strategies={strategies.data ?? []}
+            selected={selected}
+            onChange={setChosen}
+            error={strategies.isError}
+            loading={strategies.isLoading}
+          />
+        </section>
         <Button
           onClick={() => void run()}
-          disabled={job.state === 'running' || selected.length === 0 || !config.data}
+          loading={job.state === 'running'}
+          disabled={blocked || selected.length === 0 || !config.data}
         >
-          Run quality based folding
+          {q.run}
         </Button>
         <JobStatus state={job.state} error={job.error} />
+        </fieldset>
       </Card>
 
       {cellFolds.isError && <Notice kind="error">{(cellFolds.error as Error).message}</Notice>}
-      {config.data && config.data.has_cell_folds !== true && (
-        <Notice kind="info">No cell folds yet. Run quality based folding to create them.</Notice>
-      )}
 
       {folds.length > 0 && (
         <>
-          <div className="row">
-            <Button variant="ghost" onClick={() => setBulk(!bulk)}>
-              {bulk ? 'Done annotating' : 'Bulk annotate'}
-            </Button>
-          </div>
-          <p className="hint">
-            {bulk
-              ? 'Mark whole folds as correct or false; labels are used for error detection.'
-              : "Drag a cell (touch: press and hold, then drag) onto another fold to move it, drag a fold's handle onto another fold to merge them, click ✂ between two cells to split, click a cell for details."}
-          </p>
-
+          <CutToggle
+            on={cutting}
+            onToggle={() => setCutting((c) => !c)}
+            hint={q.cutHint}
+          >
+            <ToolToggle on={annotating} onToggle={() => setAnnotating((a) => !a)} icon="✓">
+              {q.bulkAnnotate}
+            </ToolToggle>
+          </CutToggle>
+          <div className={`domain-grid${cutting ? ' cutting' : ''}`}>
           {domains.map((domain) => (
-            <section key={domain}>
-              <h2>{domain}</h2>
-              {folds
-                .filter((f) => f.domain === domain)
-                .map((fold) => (
+            <DomainBox
+              key={domain}
+              name={domain}
+              title={domain}
+              dnd={dnd}
+              onDropFold={(fold) =>
+                void edit(() => moveFoldToDomain(pipeline, fold, domain), {
+                  preview: (all) => all.map((f) => (f.name === fold ? { ...f, domain } : f)),
+                })
+              }
+              onMergeDomain={(source) =>
+                void edit(() => mergeDomains(pipeline, source, domain), {
+                  preview: mergeDomainPreview(domain, source),
+                })
+              }
+            >
+              <div className="fold-grid inner">
+              {byDomain[domain].map((fold, index) => (
                   <FoldBox<CellView>
                     key={fold.name}
                     name={fold.name}
+                    domain={domain}
                     dnd={dnd}
-                    onDropItem={(cell) => void edit(() => moveCell(pipeline, refOf(cell), fold.name))}
-                    onMergeFold={(source) => void edit(() => mergeCellFolds(pipeline, [fold.name, source]))}
+                    onDropItem={(cell, from) =>
+                      void edit(() => moveCell(pipeline, refOf(cell), fold.name), {
+                        preview: (all) => recount(recount(all, from, -1), fold.name, 1),
+                        move: { cell, from, to: fold.name },
+                      })
+                    }
+                    onMergeFold={(source) =>
+                      void edit(() => mergeCellFolds(pipeline, [fold.name, source]), {
+                        preview: mergePreview(fold.name, source),
+                      })
+                    }
                     header={
                       <>
-                        <span className={`fold-name label-${fold.label}`}>{fold.name}</span>
-                        <span>{`${fold.cell_count} cells`}</span>
-                        {bulk && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              aria-label={`Mark ${fold.name} correct`}
-                              onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, 'correct'))}
-                            >
-                              ✓
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              aria-label={`Mark ${fold.name} false`}
-                              onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, 'false'))}
-                            >
-                              ✗
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              aria-label={`Clear label of ${fold.name}`}
-                              onClick={() => void edit(() => setFoldLabel(pipeline, fold.name, null))}
-                            >
-                              Clear
-                            </Button>
-                          </>
-                        )}
+                        <span className={`fold-name label-${fold.label}`}>{shortName(fold, byDomain[domain])}</span>
+                        <span>{q.cellsCount(fold.cell_count)}</span>
+                        {annotating && <span className="fold-marks">
+                          <Button
+                            variant="ghost"
+                            aria-label={q.markCorrect(fold.name)}
+                            title={q.titleCorrect}
+                            onClick={() => setLabel(fold.name, 'correct')}
+                          >
+                            ✓
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            aria-label={q.markFalse(fold.name)}
+                            title={q.titleFalse}
+                            onClick={() => setLabel(fold.name, 'false')}
+                          >
+                            ✗
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            aria-label={q.clearLabel(fold.name)}
+                            title={q.titleClear}
+                            disabled={!fold.label}
+                            onClick={() => setLabel(fold.name, null)}
+                          >
+                            ↩
+                          </Button>
+                        </span>}
                       </>
                     }
                   >
@@ -313,14 +525,30 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
                       key={`${fold.name}-${version}`}
                       pipeline={pipeline}
                       fold={fold.name}
+                      cellCount={serverCount.get(fold.name) ?? fold.cell_count}
+                      shownCount={fold.cell_count}
+                      moved={moved}
                       dnd={dnd}
+                      cutting={cutting}
                       onCut={(cell) => void edit(() => splitCellFold(pipeline, fold.name, [refOf(cell)]))}
                       onOpen={setOpen}
                     />
+                    {index < byDomain[domain].length - 1 && (
+                      <Seam
+                        cutting={cutting}
+                        spacer={false}
+                        className="fold-seam"
+                        label={q.splitDomainAfter(domain, fold.name)}
+                        title={q.splitDomainTitle}
+                        onCut={() => void edit(() => splitDomain(pipeline, domain, fold.name))}
+                      />
+                    )}
                   </FoldBox>
                 ))}
-            </section>
+              </div>
+            </DomainBox>
           ))}
+          </div>
         </>
       )}
 
@@ -334,12 +562,24 @@ export function QualityFolding({ pollMs = 1000 }: { pollMs?: number }) {
 
       <div className="nav-row">
         <Link className="btn btn-ghost" to="/domain-folding">
-          Back
+          {q.back}
         </Link>
-        <Link className="btn btn-primary" to="/labeling">
-          Next → Labeling
-        </Link>
+        <StepSlot />
+        {blocked || folds.length === 0 ? (
+          <span
+            className="btn btn-primary"
+            role="link"
+            aria-disabled="true"
+            title={blocked ? q.blockedTitle : q.runFirstQuality}
+          >
+            {q.continue}
+          </span>
+        ) : (
+          <Link className="btn btn-primary" to="/labeling">
+            {q.continue}
+          </Link>
+        )}
       </div>
-    </>
+    </div>
   )
 }

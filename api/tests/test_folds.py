@@ -82,7 +82,10 @@ from api.folds import (
     fold_cells,
     merge_folds,
     move_cell,
+    move_fold_to_domain,
     set_label,
+    split_domain,
+    merge_domains,
     split_fold,
     summarize,
 )
@@ -223,4 +226,92 @@ def test_operations_do_not_mutate_inputs():
     merge_folds(folds, labels, [F00, F01])
     split_fold(folds, labels, F00, [CellRef(table="t1", row=1, col="a")])
     set_label(labels, F00, None)
+    assert (folds, labels) == before
+
+
+# ---------------------------------------------------------------- domain-level operations
+def three_in_d0():
+    folds = make_folds()
+    folds["D0"]["D0 / Cell Fold 2"] = [cell("t4", 0, "d")]
+    return folds
+
+
+F02 = "D0 / Cell Fold 2"
+
+
+def test_move_fold_to_domain_keeps_name_cells_and_label():
+    folds, labels = move_fold_to_domain(make_folds(), {F01: "false"}, F01, "D1")
+    assert list(folds["D0"]) == [F00]
+    assert list(folds["D1"]) == [F10, F01]
+    assert len(folds["D1"][F01]) == 2 and labels == {F01: "false"}
+
+
+def test_move_last_fold_out_of_a_domain_removes_that_domain():
+    folds, _ = move_fold_to_domain(make_folds(), {}, F10, "D0")
+    assert list(folds) == ["D0"] and list(folds["D0"]) == [F00, F01, F10]
+
+
+def test_move_fold_to_its_own_domain_changes_nothing():
+    folds, labels = move_fold_to_domain(make_folds(), {F00: "correct"}, F00, "D0")
+    assert folds == make_folds() and labels == {F00: "correct"}
+
+
+def test_move_fold_unknown_fold_or_domain():
+    with pytest.raises(FoldNotFound):
+        move_fold_to_domain(make_folds(), {}, "nope", "D1")
+    with pytest.raises(FoldNotFound):
+        move_fold_to_domain(make_folds(), {}, F00, "nope")
+
+
+def test_split_domain_keeps_the_left_and_moves_the_right_into_a_new_domain():
+    folds, labels = split_domain(three_in_d0(), {F02: "correct"}, "D0", F00)
+    assert list(folds) == ["D0", "D0 - Split 1", "D1"]  # the new domain sits right after the one it came from
+    assert list(folds["D0"]) == [F00]
+    assert list(folds["D0 - Split 1"]) == [F01, F02]
+    assert labels == {F02: "correct"}  # fold names and labels do not change
+
+
+def test_split_domain_in_the_middle():
+    folds, _ = split_domain(three_in_d0(), {}, "D0", F01)
+    assert list(folds["D0"]) == [F00, F01] and list(folds["D0 - Split 1"]) == [F02]
+
+
+def test_split_domain_picks_a_free_name():
+    folds = three_in_d0()
+    folds["D0 - Split 1"] = {"X": [cell("t9", 0, "z")]}
+    out, _ = split_domain(folds, {}, "D0", F00)
+    assert "D0 - Split 2" in out and list(out["D0 - Split 2"]) == [F01, F02]
+
+
+def test_split_domain_after_the_last_fold_or_with_a_foreign_fold_is_rejected():
+    with pytest.raises(ValueError):
+        split_domain(make_folds(), {}, "D0", F01)  # nothing to the right
+    with pytest.raises(FoldNotFound):
+        split_domain(make_folds(), {}, "D0", F10)  # fold belongs to another domain
+    with pytest.raises(FoldNotFound):
+        split_domain(make_folds(), {}, "nope", F00)
+
+
+def test_merge_domains_moves_every_fold_to_the_end_of_the_target():
+    folds, labels = merge_domains(make_folds(), {F00: "correct"}, "D0", "D1")
+    assert list(folds) == ["D1"]
+    assert list(folds["D1"]) == [F10, F00, F01]
+    assert labels == {F00: "correct"}  # fold names and labels do not change
+
+
+def test_merge_domains_rejects_unknown_or_same_domain():
+    with pytest.raises(FoldNotFound):
+        merge_domains(make_folds(), {}, "nope", "D1")
+    with pytest.raises(FoldNotFound):
+        merge_domains(make_folds(), {}, "D0", "nope")
+    with pytest.raises(ValueError):
+        merge_domains(make_folds(), {}, "D0", "D0")
+
+
+def test_domain_operations_do_not_mutate_inputs():
+    folds, labels = three_in_d0(), {F00: "correct"}
+    before = copy.deepcopy((folds, labels))
+    move_fold_to_domain(folds, labels, F01, "D1")
+    split_domain(folds, labels, "D0", F00)
+    merge_domains(folds, labels, "D0", "D1")
     assert (folds, labels) == before

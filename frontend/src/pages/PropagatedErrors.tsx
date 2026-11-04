@@ -1,9 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Card, Notice } from '../components/ui'
+import { Modal } from '../components/foldBoard'
+import { Button, Card, InfoButton, Loading, Notice, Prereq } from '../components/ui'
+import { StepSlot } from '../components/StepSlot'
+import { useT } from '../i18n'
 import { fetchPropagation } from '../lib/api'
 import { useSession } from '../session/SessionProvider'
+import '../styles/pages/propagated-errors.css'
 
 const PAGE = 20
 
@@ -26,47 +30,128 @@ interface Labeled {
   propagated_cells?: Propagated[]
 }
 
-function LabeledRow({ cell }: { cell: Labeled }) {
-  const [open, setOpen] = useState(false)
-  const icon = cell.is_error ? '❌' : '✅'
+function VerdictBadge({ error }: { error?: boolean }) {
+  const p = useT().propagatedErrors
   return (
-    <div className="labeled">
-      <button type="button" className="link" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {`${icon} Cell: ${String(cell.val ?? 'Unknown Value')}`}
+    <span className={`pe-badge ${error ? 'is-error' : 'is-ok'}`}>
+      <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {error ? <path d="M4 4l8 8M12 4l-8 8" /> : <path d="M3 8.5l3.2 3.2L13 4.8" />}
+      </svg>
+      {error ? p.error : p.correct}
+    </span>
+  )
+}
+
+function LabeledRow({ cell }: { cell: Labeled }) {
+  const p = useT().propagatedErrors
+  const tr = useT().ui
+  const [open, setOpen] = useState(false)
+  const n = cell.propagated_cells?.length ?? 0
+  return (
+    <li className="pe-item">
+      <button type="button" className="pe-cell" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <VerdictBadge error={cell.is_error} />
+        <span className="pe-cell-main">
+          <span className="pe-cell-val">{p.cellLabel(String(cell.val ?? p.unknownValue))}</span>
+          <span className="pe-cell-sub">{[cell.table, cell.col, cell.row !== undefined ? p.rowN(cell.row) : null].filter(Boolean).join(' · ')}</span>
+        </span>
+        <span className="pe-count">{n > 0 ? p.nPropagated(n) : p.nonePropagated}</span>
+        <svg className="pe-chev" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 3l5 5-5 5" />
+        </svg>
       </button>
       {open && (
-        <div className="labeled-details">
-          <ul>
-            {cell.table && <li>Table: {cell.table}</li>}
-            {cell.row !== undefined && <li>Row: {cell.row}</li>}
-            {cell.col && <li>Column: {cell.col}</li>}
-            {cell.domain_fold && <li>Domain fold: {cell.domain_fold}</li>}
-            {cell.cell_fold && <li>Cell fold: {cell.cell_fold}</li>}
-          </ul>
+        <Modal label={p.modalLabel} onClose={() => setOpen(false)}>
+          <div className="propagated-page pe-modal">
+          <h2 className="pe-modal-title">
+            <VerdictBadge error={cell.is_error} />
+            {p.cellLabel(String(cell.val ?? p.unknownValue))}
+          </h2>
+          <dl className="origin">
+            {cell.table && (
+              <>
+                <dt>{p.dtTable}</dt>
+                <dd>
+                  <code>{cell.table}</code>
+                </dd>
+              </>
+            )}
+            {cell.col && (
+              <>
+                <dt>{p.dtColumn}</dt>
+                <dd>
+                  <code>{cell.col}</code>
+                </dd>
+              </>
+            )}
+            {cell.row !== undefined && (
+              <>
+                <dt>{p.dtRow}</dt>
+                <dd>{cell.row}</dd>
+              </>
+            )}
+            {cell.domain_fold && (
+              <>
+                <dt>{p.dtDomainFold}</dt>
+                <dd>{cell.domain_fold}</dd>
+              </>
+            )}
+            {cell.cell_fold && (
+              <>
+                <dt>{p.dtCellFold}</dt>
+                <dd>{cell.cell_fold}</dd>
+              </>
+            )}
+          </dl>
           {cell.propagated_cells && cell.propagated_cells.length > 0 ? (
             <>
-              <b>Propagated to:</b>
-              <ul>
-                {cell.propagated_cells.map((p, i) => (
-                  <li key={i}>
-                    {`${p.table ?? 'Unknown'} · row ${p.row ?? '?'} · ${p.col ?? '?'} · value ${String(p.val ?? '')}`}
-                    <br />
-                    Confidence: {Math.round((p.confidence ?? 0) * 100)}%
-                    {p.reason ? ` — ${p.reason}` : ''}
-                  </li>
-                ))}
-              </ul>
+              <h3>{p.propagatedTo(cell.propagated_cells.length)}</h3>
+              <div className="pe-table-wrap">
+              <table className="propagated">
+                <thead>
+                  <tr>
+                    <th>{p.colTable}</th>
+                    <th>{p.colRow}</th>
+                    <th>{p.colColumn}</th>
+                    <th>{p.colValue}</th>
+                    <th>{p.colConfidence}</th>
+                    <th>{p.colReason}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cell.propagated_cells.map((pc, i) => (
+                    <tr key={i}>
+                      <td>{pc.table ?? p.unknown}</td>
+                      <td>{pc.row ?? '?'}</td>
+                      <td>{pc.col ?? '?'}</td>
+                      <td>{String(pc.val ?? '')}</td>
+                      <td>
+                        <span className="pill pe-conf" aria-label={p.confidenceAria(Math.round((pc.confidence ?? 0) * 100))}>
+                          {`${Math.round((pc.confidence ?? 0) * 100)}%`}
+                        </span>
+                      </td>
+                      <td>{pc.reason ?? ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
             </>
           ) : (
-            <p>No cells were propagated from this label</p>
+            <p>{p.noPropagated}</p>
           )}
-        </div>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            {tr.close}
+          </Button>
+          </div>
+        </Modal>
       )}
-    </div>
+    </li>
   )
 }
 
 export function PropagatedErrors() {
+  const p = useT().propagatedErrors
   const session = useSession()
   const pipeline = session.data.pipeline_path as string | undefined
   const [offset, setOffset] = useState(0)
@@ -76,66 +161,91 @@ export function PropagatedErrors() {
     enabled: !!pipeline,
   })
 
-  if (!session.ready) return <h1>Propagated Errors</h1>
+  const head = (
+    <header className="pe-head">
+      <div className="title-row">
+        <h1>Propagated Errors</h1>
+        <InfoButton label={p.infoLabel} title={p.infoTitle}>
+          <p>{p.infoIntro}</p>
+          <h3>{p.whatToDo}</h3>
+          <ol>
+            <li>{p.infoStep1}</li>
+            <li>{p.infoStep2}</li>
+            <li>{p.infoStep3}</li>
+          </ol>
+        </InfoButton>
+      </div>
+      <p className="pe-lead">{p.lead}</p>
+    </header>
+  )
+  if (!session.ready) return <div className="propagated-page">{head}</div>
   if (!pipeline) {
     return (
-      <>
-        <h1>Propagated Errors</h1>
-        <Notice kind="warn">Pipeline not configured.</Notice>
-        <Link to="/configuration">Go back to Configurations</Link>
-      </>
+      <div className="propagated-page">
+        {head}
+        <Prereq title={p.prereqTitle} to="/configuration" action={p.backToConfig}>{p.prereqText}</Prereq>
+      </div>
     )
   }
-  const notYet = results.isError && /label propagation first/i.test((results.error as Error).message)
+  const notYet = results.data === null
 
   return (
-    <>
-      <h1>Propagated Errors</h1>
+    <div className="propagated-page">
+      {head}
+      {results.isPending && <Loading className="pe-loading">{p.loading}</Loading>}
       {notYet && (
-        <>
-          <Notice kind="info">Run label propagation first: finish the labeling step and press Next.</Notice>
-          <Link to="/labeling">Go to Labeling</Link>
-        </>
+        <Prereq title={p.notYetTitle} to="/labeling" action={p.goToLabeling}>
+          {p.notYetText}
+        </Prereq>
       )}
-      {results.isError && !notYet && <Notice kind="error">{(results.error as Error).message}</Notice>}
+      {results.isError && <Notice kind="error">{(results.error as Error).message}</Notice>}
       {results.data && (
         <>
-          <h2>Label Propagation Results</h2>
-          <div className="stats">
+          <div className="stats pe-stats">
             <div className="stat">
-              <span>Labeled cells</span>
+              <span>{p.labeledCells}</span>
               <b>{results.data.total}</b>
             </div>
             <div className="stat">
-              <span>Propagated labels</span>
+              <span>{p.propagatedLabels}</span>
               <b>{results.data.propagated_total}</b>
             </div>
           </div>
           <Card>
-            <p>Below are the cells that were labeled and how their labels were propagated to other cells.</p>
-            {(results.data.labeled_cells as Labeled[]).map((cell, i) => (
-              <LabeledRow key={`${offset}-${i}`} cell={cell} />
-            ))}
-            <div className="pager">
+            <p className="pe-intro">{p.intro}</p>
+            {results.data.labeled_cells.length === 0 && <p className="pe-empty">{p.empty}</p>}
+            <ul className="pe-list">
+              {(results.data.labeled_cells as Labeled[]).map((cell, i) => (
+                <LabeledRow key={`${offset}-${i}`} cell={cell} />
+              ))}
+            </ul>
+            <div className={`pager${results.data.total <= PAGE ? ' pager-single' : ''}`}>
               <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>
-                Previous page
+                {p.prevPage}
               </button>
-              <span>{`${offset + 1}–${Math.min(offset + PAGE, results.data.total)} of ${results.data.total}`}</span>
+              <span>{p.range(offset + 1, Math.min(offset + PAGE, results.data.total), results.data.total)}</span>
               <button disabled={offset + PAGE >= results.data.total} onClick={() => setOffset(offset + PAGE)}>
-                Next page
+                {p.nextPage}
               </button>
             </div>
           </Card>
         </>
       )}
       <div className="nav-row">
-        <Link className="btn btn-ghost" to="/labeling">
-          Back
+        <Link className="btn btn-ghost" to="/labeling-stats">
+          {p.back}
         </Link>
-        <Link className="btn btn-primary" to="/error-detection">
-          Next → Error Detection
-        </Link>
+        <StepSlot />
+        {results.data ? (
+          <Link className="btn btn-primary" to="/error-detection">
+            {p.continue}
+          </Link>
+        ) : (
+          <span className="btn btn-primary" role="link" aria-disabled="true" title={p.notYetTitle}>
+            {p.continue}
+          </span>
+        )}
       </div>
-    </>
+    </div>
   )
 }

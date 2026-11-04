@@ -8,6 +8,7 @@ import {
 } from 'motion/react'
 import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ReactNode, Ref } from 'react'
+import { useT } from '../i18n'
 
 export type Direction = 'left' | 'right'
 
@@ -23,6 +24,8 @@ interface Props<T extends { key: string }> {
   renderCard: (item: T, depth: number) => ReactNode
   onSwipe: (direction: Direction, item: T) => void
   disabled?: boolean
+  /** Cards cannot be dragged (e.g. while the player inspects the card's content); buttons and keys still swipe. */
+  dragLocked?: boolean
   /**
    * When the index goes back, the card that returns slides in from the side it was swiped to.
    * Return the direction it was swiped (undefined = a plain fade-in).
@@ -84,14 +87,14 @@ function DeckCard({
     x,
     [-140, -20, 0, 20, 140],
     [
-      'rgba(231, 76, 60, 0.75)',
-      'rgba(231, 76, 60, 0)',
+      'rgba(255, 59, 48, 0.6)',
+      'rgba(255, 59, 48, 0)',
       'rgba(0, 0, 0, 0)',
-      'rgba(46, 204, 113, 0)',
-      'rgba(46, 204, 113, 0.75)',
+      'rgba(52, 199, 89, 0)',
+      'rgba(52, 199, 89, 0.6)',
     ],
   )
-  const ring = useMotionTemplate`0 14px 34px rgba(0, 0, 0, 0.22), 0 0 0 4px ${glow}`
+  const ring = useMotionTemplate`0 18px 48px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 0 3px ${glow}`
 
   return (
     <motion.div
@@ -144,9 +147,11 @@ export function SwipeDeck<T extends { key: string }>({
   renderCard,
   onSwipe,
   disabled = false,
+  dragLocked = false,
   enterFrom,
   ref,
 }: Props<T>) {
+  const tr = useT().shell
   const reduced = useReducedMotion() ?? false
   const [direction, setDirection] = useState<Direction>('right')
   const [mounted, setMounted] = useState(false)
@@ -185,7 +190,7 @@ export function SwipeDeck<T extends { key: string }>({
 
   const visible = items.slice(index, index + VISIBLE)
   return (
-    <div className="deck" role="group" aria-label="Cards to label">
+    <div className="deck" role="group" aria-label={tr.cardsToLabel}>
       <AnimatePresence custom={{ direction, reduced, back: wentBack }}>
         {visible
           .map((item, depth) => ({ item, depth }))
@@ -194,7 +199,7 @@ export function SwipeDeck<T extends { key: string }>({
             <DeckCard
               key={item.key}
               depth={depth}
-              draggable={depth === 0 && !disabled}
+              draggable={depth === 0 && !disabled && !dragLocked}
               fresh={mounted}
               enterFrom={wentBack && depth === 0 ? enterFrom?.(item) : undefined}
               reduced={reduced}

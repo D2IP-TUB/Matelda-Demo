@@ -3,153 +3,530 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Matelda</title>
+<title>Matelda · Live</title>
+<script>
+  // Theme before first paint: ?theme=light|dark wins, then the saved choice (same key as the app), else the system.
+  (function () {
+    var t = new URLSearchParams(location.search).get("theme");
+    try { t = t || localStorage.getItem("matelda-theme"); } catch (e) {}
+    // A projector stage, like the landing page: dark unless light was picked explicitly.
+    document.documentElement.dataset.theme = t === "light" ? "light" : "dark";
+    // Language before first paint: ?lang=de|en wins, then the saved choice (same key as the app), else English.
+    var l = new URLSearchParams(location.search).get("lang");
+    try { l = l || localStorage.getItem("matelda-lang"); } catch (e) {}
+    document.documentElement.lang = l === "de" ? "de" : "en";
+  })();
+</script>
 <style>
-  /* Demo palette (.streamlit/config.toml): navy #002f67, amber #f4b11c, grey #e6e6e6 */
+  /*
+   * Matelda live dashboard. Same design system as the React app (frontend/src/styles/tokens.css,
+   * docs/style-guide.md) and styled like its working pages (frontend/src/styles/app.css).
+   * PocketBase serves this page on its own, so the tokens are inlined here. Keep them in sync.
+   */
   :root {
-    --bg: #00162f; --panel: #002350; --line: #0d4286; --text: #e6e6e6; --muted: #8fa9cc;
-    --accent: #f4b11c; --accent2: #f4b11c; --good: #3ddc97; --name-mix: 0%;
+    color-scheme: light dark;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, 'Segoe UI', Roboto, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+    --text-caption: 0.75rem; --text-footnote: 0.8125rem; --text-body: 1rem; --text-callout: 1.0625rem;
+    --text-title3: 1.25rem; --text-title2: 1.5rem; --text-title1: 2rem; --text-display: clamp(2rem, 4vw + 1rem, 3rem);
+    --lh-tight: 1.15; --lh-body: 1.5; --track-tight: -0.022em;
+    --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem; --s-5: 1.5rem; --s-6: 2rem; --s-7: 3rem;
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 24px; --r-pill: 999px;
+    --hit: 44px; /* minimum touch target */
+    --panel-r: var(--r-xl); --panel-pad: var(--s-5); --panel-shadow: var(--shadow-1);
+    --tile-r: var(--r-lg); --tile-pad: var(--s-4); --tile-shadow: var(--shadow-1);
+    --hero-r: var(--r-xl); --hero-pad: var(--s-6); --hero-shadow: var(--shadow-2);
+    --dur-fast: 120ms; --dur-base: 220ms; --dur-slow: 380ms;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1); --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+    /* light: the landing's daylight twin */
+    --bg: #f4f5fa; --surface: #ffffff; --surface-2: #eceef6;
+    --fill: rgb(40 50 90 / 8%); --fill-hover: rgb(40 50 90 / 14%);
+    --label: #0b0d16; --label-2: #565b70; --label-3: #8a8fa3;
+    --separator: rgb(11 13 22 / 12%);
+    --accent: #1a62c9; --accent-tint: rgb(26 98 201 / 10%); --accent-ring: rgb(26 98 201 / 35%);
+    --accent-fill: #1a62c9; --on-accent: #ffffff; --accent-text: var(--accent);
+    --cta-bg: var(--accent-fill); --cta-fg: #ffffff;
+    --good: #1a7f37; --good-tint: rgb(26 127 55 / 12%); --bad: #c9231a; --bad-tint: rgb(201 35 26 / 10%);
+    --warn: #8a5a00; --warn-tint: rgb(255 159 10 / 16%);
+    --brand-gradient: linear-gradient(100deg, #4f9bf0, #1a62c9 55%, #134a99);
+    --cta-glow: 0 6px 20px -4px rgb(26 98 201 / 18%);
+    --aurora: radial-gradient(900px 500px at 78% -5%, rgb(47 127 230 / 12%), transparent 60%),
+      radial-gradient(700px 420px at 5% 30%, rgb(26 98 201 / 8%), transparent 60%);
+    --material: rgb(244 245 250 / 74%);
+    --shadow-1: 0 1px 2px rgb(11 13 22 / 5%), 0 1px 1px rgb(11 13 22 / 3%);
+    --shadow-2: 0 1px 4px rgb(11 13 22 / 4%), 0 6px 20px rgb(11 13 22 / 4%);
   }
-  :root[data-theme="light"] {
-    --bg: #e6e6e6; --panel: #ffffff; --line: #d3d8e0; --text: #002f67; --muted: #5d7799;
-    --accent: #f4b11c; --accent2: #002f67; --good: #1f9d63; --name-mix: 35%;
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #07080d; --surface: #12141d; --surface-2: #1a1d29;
+      --fill: rgb(255 255 255 / 10%); --fill-hover: rgb(255 255 255 / 16%);
+      --label: #f5f5f7; --label-2: #a9adbd; --label-3: #6b7085;
+      --separator: rgb(255 255 255 / 10%);
+      --accent: #3b99ff; --accent-tint: rgb(59 153 255 / 16%); --accent-ring: rgb(59 153 255 / 50%);
+      --accent-fill: #0b72e0; --on-accent: #ffffff; --accent-text: var(--label); /* never blue text on black */
+      --cta-bg: #ffffff; --cta-fg: #07080d;
+      --warn: #ffb340; --warn-tint: rgb(255 159 10 / 20%);
+      --cta-glow: 0 6px 20px -4px rgb(59 153 255 / 18%);
+      --good: #30d158; --good-tint: rgb(48 209 88 / 18%); --bad: #ff6b61; --bad-tint: rgb(255 107 97 / 18%);
+      --brand-gradient: linear-gradient(100deg, #ffffff, #e3f0ff 55%, #b4d6fa);
+      --aurora: radial-gradient(900px 500px at 78% -5%, rgb(170 210 255 / 10%), transparent 60%),
+        radial-gradient(700px 420px at 5% 30%, rgb(150 195 245 / 6%), transparent 60%);
+      --material: rgb(7 8 13 / 72%);
+      --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 7%);
+      --shadow-2: 0 0 0 0.5px rgb(255 255 255 / 8%), 0 6px 20px rgb(0 0 0 / 28%);
+    }
   }
-  .theme-btn { background: var(--panel); color: var(--text); border: 1px solid var(--line);
-               border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
-  .theme-btn:hover { border-color: var(--accent); }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #07080d; --surface: #12141d; --surface-2: #1a1d29;
+    --fill: rgb(255 255 255 / 10%); --fill-hover: rgb(255 255 255 / 16%);
+    --label: #f5f5f7; --label-2: #a9adbd; --label-3: #6b7085;
+    --separator: rgb(255 255 255 / 10%);
+    --accent: #3b99ff; --accent-tint: rgb(59 153 255 / 16%); --accent-ring: rgb(59 153 255 / 50%);
+      --accent-fill: #0b72e0; --on-accent: #ffffff; --accent-text: var(--label); /* never blue text on black */
+      --cta-bg: #ffffff; --cta-fg: #07080d;
+      --warn: #ffb340; --warn-tint: rgb(255 159 10 / 20%);
+      --cta-glow: 0 6px 20px -4px rgb(59 153 255 / 18%);
+    --good: #30d158; --good-tint: rgb(48 209 88 / 18%); --bad: #ff6b61; --bad-tint: rgb(255 107 97 / 18%);
+    --brand-gradient: linear-gradient(100deg, #ffffff, #e3f0ff 55%, #b4d6fa);
+    --aurora: radial-gradient(900px 500px at 78% -5%, rgb(170 210 255 / 10%), transparent 60%),
+      radial-gradient(700px 420px at 5% 30%, rgb(150 195 245 / 6%), transparent 60%);
+    --material: rgb(7 8 13 / 72%);
+    --shadow-1: 0 0 0 0.5px rgb(255 255 255 / 7%);
+      --shadow-2: 0 0 0 0.5px rgb(255 255 255 / 8%), 0 6px 20px rgb(0 0 0 / 28%);
+  }
+  :root[data-theme='light'] { color-scheme: light; }
+  /* card padding shrinks on phones so content keeps its width (as in the app) */
+  @media (max-width: 480px) { :root { --panel-pad: var(--s-4); --tile-pad: var(--s-3); --hero-pad: var(--s-5); } }
+
+  /* ---------- base ---------- */
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 16px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 24px;
-           padding: 24px 40px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
-  .brand { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-  .logo { height: 44px; width: auto; background: #fff; border-radius: 10px; padding: 8px 14px; }
-  .join { color: var(--muted); font-size: 18px; }
-  .join b { color: var(--text); font-size: 22px; }
-  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: #e5484d; }
-  .dot.live { background: var(--good); box-shadow: 0 0 0 0 rgba(61,220,151,.6); animation: pulse 2s infinite; }
-  @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(61,220,151,0); } 100% { box-shadow: 0 0 0 0 rgba(61,220,151,0); } }
-  .totals { display: flex; gap: 12px; padding: 16px 40px 0; flex-wrap: wrap; }
-  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-          padding: 8px 16px; min-width: 110px; }
-  .tile .n { font-size: 26px; line-height: 1.15; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .tile .l { color: var(--muted); font-size: 12px; }
-  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 24px; padding: 24px 40px 40px; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; }
-  h2 { margin: 0 0 4px; font-size: 20px; }
-  .sub { color: var(--muted); font-size: 14px; margin-bottom: 16px; }
-  .board { position: relative; }
-  .row { position: absolute; left: 0; right: 0; display: grid; padding: 3px 0;
-         grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px;
-         transition: transform .6s cubic-bezier(.2,.8,.2,1); }
-  .rank { font-size: 17px; font-weight: 700; color: var(--muted); text-align: center; }
-  .row:nth-child(1) .rank { color: var(--accent); }
-  .name { color: color-mix(in srgb, var(--team, var(--text)), #000 var(--name-mix)); font-size: 16px; line-height: 1.2; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .meta { color: var(--muted); font-size: 11px; line-height: 1.2; }
-  .bar { height: 4px; border-radius: 2px; background: var(--line); margin-top: 3px; overflow: hidden; }
-  .bar > i { display: block; height: 100%; background: var(--team, var(--accent2));
-             transition: width .6s cubic-bezier(.2,.8,.2,1); }
-  .score { font-size: 21px; line-height: 1.1; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
-  .score small { display: block; font-size: 10px; font-weight: 400; color: var(--muted); }
-  section.wide { grid-column: 1 / -1; }
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th, td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { color: var(--muted); font-size: 13px; font-weight: 400; }
-  td.num { text-align: right; }
-  th:nth-child(n+4) { text-align: right; }
-  td.f1 { font-weight: 700; }
-  .name, .meta { min-width: 0; }
-  .meta { overflow-wrap: anywhere; }
-  @media (max-width: 600px) {
-    header { padding: 16px; gap: 12px; }
-    h1 { font-size: 22px; }
-    .logo { height: 32px; padding: 6px 10px; }
-    .join, .join b { font-size: 16px; }
-    .totals { padding: 12px 16px 0; gap: 8px; }
-    .tile { flex: 1 1 80px; min-width: 0; padding: 6px 10px; }
-    .tile .n { font-size: 22px; }
-    main { padding: 16px; gap: 16px; }
-    section { padding: 16px; }
-    .row { grid-template-columns: 24px 1fr auto; gap: 8px; }
-    .name { font-size: 15px; }
-    .score { font-size: 18px; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg) var(--aurora) fixed no-repeat; color: var(--label);
+    font-family: var(--font-sans); font-size: var(--text-body); line-height: var(--lh-body);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }
-  .empty { color: var(--muted); padding: 24px 0; }
+  h1, h2 { margin: 0; letter-spacing: var(--track-tight); line-height: var(--lh-tight); }
+  :focus-visible { outline: 3px solid var(--accent-ring); outline-offset: 2px; border-radius: var(--r-sm); }
+  .num, .score, .stat b, td { font-variant-numeric: tabular-nums; }
+
+  /* ---------- top bar: the app's own (frontend/src/styles/app.css .topbar) ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+    min-height: 64px; padding: 0 max(var(--s-5), env(safe-area-inset-left));
+    background: var(--material); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 0.5px solid var(--separator); font-size: var(--text-footnote);
+  }
+  .brand { display: flex; align-items: center; gap: var(--s-4); min-width: 0; }
+  .wordmark { font-weight: 800; font-size: var(--text-title2); line-height: 1.15; letter-spacing: var(--track-tight); color: var(--accent-text); }
+  .logo { height: 32px; width: auto; padding: 6px 12px; border-radius: var(--r-pill); background: #fff; box-shadow: var(--shadow-1); }
+  .bar-end { display: flex; align-items: center; gap: var(--s-2); }
+  .status {
+    display: inline-flex; align-items: center; gap: var(--s-2); min-height: 32px; padding: 0 var(--s-3);
+    border-radius: var(--r-pill); background: var(--fill); color: var(--label-2); font-weight: 600;
+  }
+  .status.live { color: var(--label); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); flex: none; }
+  .status.live .dot { background: var(--good); animation: dot-pulse 2s ease-out infinite; }
+  @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 var(--good-tint); } 70%, 100% { box-shadow: 0 0 0 8px transparent; } }
+  .theme-toggle, .lang-toggle {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0;
+    border: 0; border-radius: 50%; background: var(--fill); color: var(--label); cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+    transition: background var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .theme-toggle:hover, .lang-toggle:hover { background: var(--fill-hover); }
+  .theme-toggle:active, .lang-toggle:active { transform: scale(0.92); }
+  /* touch: at least --hit (44px) to press, without making the bar look heavier */
+  @media (pointer: coarse) {
+    .lang-toggle::after, .theme-toggle::after { content: ''; position: absolute; inset: calc((36px - var(--hit)) / 2); }
+  }
+
+  /* ---------- page ----------
+   * A keynote stage built from the landing page's pieces: aurora glow, one gradient headline, huge numerals,
+   * hairline panels that rise in one after another. Compact: on a wide screen everything fits one viewport.
+   */
+  .page { position: relative; isolation: isolate; max-width: min(1600px, 100%); margin: 0 auto; padding: var(--s-5) max(var(--s-5), env(safe-area-inset-left)) var(--s-5); }
+  /* the landing's aurora, drifting slowly behind the hero (the lobby's motion) */
+  .aurora {
+    position: absolute; z-index: -1; inset: -120px -10% auto; height: 560px; pointer-events: none;
+    background: var(--aurora); filter: blur(24px); animation: drift 16s ease-in-out infinite alternate;
+  }
+  @keyframes drift { from { transform: translate3d(-3%, 0, 0) scale(1); } to { transform: translate3d(3%, 16px, 0) scale(1.08); } }
+
+  /* entrance: one block after the other (the landing's 160 ms stagger) */
+  .rise { animation: rise 0.8s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 160ms + 80ms); }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- hero: headline left, keynote numerals right ---------- */
+  .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s-5) var(--s-6); flex-wrap: wrap; margin: 0 var(--s-1) var(--s-5); }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: var(--s-2); margin: 0 0 var(--s-2);
+    font-size: var(--text-footnote); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-text);
+  }
+  .headline {
+    margin: 0; padding-bottom: 0.08em; font-size: clamp(2rem, 2.2vw + 1.1rem, 3.25rem); font-weight: 700; line-height: 1.05; letter-spacing: -0.04em;
+    background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; text-wrap: balance;
+  }
+  .stats { display: flex; align-items: flex-end; margin: 0; }
+  .stat { display: flex; flex-direction: column; align-items: flex-start; padding: 0 var(--s-6); border-left: 0.5px solid var(--separator); }
+  .stat:first-child { padding-left: 0; border-left: 0; }
+  .stat:last-child { padding-right: 0; }
+  .stat b {
+    order: -1; font-size: clamp(2.5rem, 2.4vw + 1.4rem, 4rem); font-weight: 700; line-height: 1; letter-spacing: -0.045em; color: var(--label);
+  }
+  .stat span { margin-top: var(--s-2); color: var(--label-2); font-size: var(--text-footnote); font-weight: 600; }
+
+  /* ---------- panels ---------- */
+  .card {
+    position: relative; background: var(--surface); border-radius: var(--r-xl); padding: var(--s-5) var(--s-4) var(--s-4); min-width: 0;
+    box-shadow: 0 0 0 1px var(--separator), var(--shadow-2), inset 0 1px 0 rgb(255 255 255 / 5%);
+  }
+  .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px var(--s-3); margin: 0 var(--s-2) var(--s-4); }
+  .card-head:has(.sort) { align-items: center; }
+  /* "Sort by" menu: a quiet pill that opens a small floating panel (the browser's own select list cannot be styled) */
+  .sort { position: relative; display: inline-flex; align-items: center; gap: var(--s-2); color: var(--label-2); font-size: var(--text-footnote); }
+  .sort-btn {
+    display: inline-flex; align-items: center; gap: var(--s-2); min-height: 34px; padding: 0 var(--s-3) 0 var(--s-4);
+    border: 0; border-radius: var(--r-pill); background: var(--fill); color: var(--label); font: inherit; font-weight: 600; cursor: pointer;
+    box-shadow: inset 0 0 0 1px var(--separator);
+    transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+  }
+  .sort-btn:hover { background: var(--fill-hover); }
+  .sort-btn:active { transform: scale(0.97); }
+  .sort-btn[aria-expanded='true'] { background: var(--surface); box-shadow: inset 0 0 0 1px var(--accent-ring), 0 0 0 3px var(--accent-tint); }
+  .sort-btn svg { width: 12px; height: 12px; color: var(--label-2); transition: transform var(--dur-base) var(--ease-out); }
+  .sort-btn[aria-expanded='true'] svg { transform: rotate(180deg); }
+  .sort-list {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; min-width: 190px; margin: 0; padding: 6px; list-style: none;
+    background: var(--surface); border-radius: var(--r-md);
+    box-shadow: 0 0 0 1px var(--separator), 0 12px 32px rgb(0 0 0 / 28%), 0 2px 6px rgb(0 0 0 / 12%);
+    transform-origin: top right; animation: sort-pop var(--dur-base) var(--ease-spring);
+  }
+  .sort-list[hidden] { display: none; }
+  @keyframes sort-pop { from { opacity: 0; transform: translateY(-4px) scale(0.96); } }
+  .sort-list li {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); min-height: 36px; padding: 0 var(--s-3);
+    border-radius: var(--r-sm); color: var(--label); font-size: var(--text-footnote); font-weight: 500; cursor: pointer; white-space: nowrap;
+  }
+  .sort-list li .hint { color: var(--label-2); font-size: var(--text-caption); font-weight: 500; }
+  .sort-list li:hover, .sort-list li.active { background: var(--fill); }
+  .sort-list li[aria-selected='true'] { color: var(--accent-text); font-weight: 700; }
+  .sort-list li .check { width: 14px; height: 14px; flex: none; visibility: hidden; color: var(--accent-text); }
+  .sort-list li[aria-selected='true'] .check { visibility: visible; }
+  .sort-list li .opt { display: flex; align-items: center; gap: var(--s-2); }
+  @media (pointer: coarse) { .sort-btn, .sort-list li { min-height: var(--hit, 44px); } }
+  .card h2 { font-size: var(--text-title2); font-weight: 700; letter-spacing: -0.03em; }
+  .sub { margin: 0; color: var(--label-2); font-size: var(--text-footnote); line-height: 1.35; }
+  .empty { padding: var(--s-6) 0; color: var(--label-2); text-align: center; font-size: var(--text-footnote); }
+
+  /* boards + latest results: 1 column on phones, 2 on tablets, 3 side by side on wide screens */
+  .dash { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); align-items: start; }
+  @media (min-width: 760px) {
+    .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card.latest { grid-column: 1 / -1; }
+  }
+  @media (min-width: 1280px) {
+    .dash { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr); }
+    .card.latest { grid-column: auto; }
+    /* the narrow third column: tighter cells and P / R instead of Precision / Recall, so F1 stays in view */
+    .latest th, .latest td { padding-left: var(--s-2); padding-right: var(--s-2); }
+    .latest th[data-short] { font-size: 0; }
+    .latest th[data-short]::after { content: attr(data-short); font-size: var(--text-caption); }
+  }
+  /* laptops: the third column is still too narrow for all seven columns; Budget is the one to give up */
+  @media (min-width: 1280px) and (max-width: 1499px) {
+    .latest .budget { display: none; }
+    .latest td.room-cell { font-size: var(--text-footnote); }
+    .latest td.f1 { font-size: var(--text-body); }
+    .latest td.time { padding-left: var(--s-3); }
+  }
+  /* short screens (1280×720): a smaller hero keeps the boards in view */
+  @media (min-width: 760px) and (max-height: 820px) {
+    .page { padding-top: var(--s-4); }
+    .hero { margin-bottom: var(--s-4); }
+    .headline { font-size: clamp(1.75rem, 1.6vw + 1rem, 2.5rem); }
+    .stat b { font-size: clamp(2.25rem, 1.8vw + 1.2rem, 3rem); }
+    .card { padding-top: var(--s-4); }
+    .card-head { margin-bottom: var(--s-3); }
+  }
+
+  /* ---------- leaderboard: a plain list split by hairlines ---------- */
+  .board { position: relative; }
+  .row {
+    position: absolute; left: 0; right: 0; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) auto; align-items: center; gap: var(--s-3);
+    padding: var(--s-3) var(--s-2) var(--s-3) var(--s-3); border-radius: var(--r-md);
+    transition: transform 0.6s var(--ease-out), background var(--dur-base) var(--ease-out);
+  }
+  .row:not(.last)::after { content: ''; position: absolute; left: var(--s-2); right: var(--s-2); bottom: 0; border-bottom: 0.5px solid var(--separator); }
+  .rank {
+    display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%;
+    background: var(--fill); color: var(--label-2); font-weight: 700; font-size: var(--text-footnote);
+  }
+  .row.first .rank { background: var(--cta-bg); color: var(--cta-fg); }
+  .who { min-width: 0; }
+  .name {
+    display: flex; align-items: center; gap: var(--s-2); font-weight: 600; font-size: var(--text-body); line-height: 1.3; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .name span { flex: 0 1 auto; min-width: 3em; overflow: hidden; text-overflow: ellipsis; }
+  .row.first .name { font-weight: 700; }
+  /* room colour: a stripe on the row's left edge and, for players, a tag with the room's name.
+     Players of one room share the colour of that room's row in Top rooms and of its dots in Latest results. */
+  .row::before {
+    content: ''; position: absolute; left: 0; top: var(--s-2); bottom: var(--s-2); width: 3px; border-radius: var(--r-pill);
+    background: var(--team, transparent);
+  }
+  .room-tag {
+    flex: 0 4 auto; min-width: 2.5em; max-width: 55%; overflow: hidden; text-overflow: ellipsis; /* gives way before the player's name */
+    padding: 1px var(--s-2); border-radius: var(--r-pill); font-style: normal; font-size: var(--text-caption); font-weight: 600; letter-spacing: 0;
+    color: var(--label); background: color-mix(in srgb, var(--team) 22%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--team) 45%, transparent);
+  }
+  .room-tag:empty { display: none; }
+  .meta { color: var(--label-2); font-size: var(--text-caption); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { height: 4px; margin-top: var(--s-2); border-radius: var(--r-pill); background: var(--fill); overflow: hidden; }
+  .track > i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--label-3); transition: width 0.9s var(--ease-out); }
+  .row.first .track > i { background: var(--brand-gradient); }
+  .score { text-align: right; font-size: var(--text-title3); font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+  .row.first .score > span {
+    font-size: var(--text-title2);
+    background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .score small { display: block; font-size: var(--text-caption); font-weight: 500; letter-spacing: 0; color: var(--label-2); }
+
+  /* ---------- latest results: drawn like the boards (no frame, hairline rows, room stripe) ---------- */
+  .table-wrap { overflow: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-footnote); }
+  th, td { padding: 0 var(--s-3); text-align: left; white-space: nowrap; }
+  th {
+    height: 28px; vertical-align: top; color: var(--label-2); font-size: var(--text-caption); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 0.5px solid var(--separator);
+  }
+  td { height: 55px; border-bottom: 0.5px solid var(--separator); color: var(--label-2); }
+  tbody tr:last-child td { border-bottom: 0; }
+  /* the room's colour runs down the row's left edge, as on the boards */
+  td:first-child { position: relative; }
+  tbody tr:not(.empty-row) td:first-child::before {
+    content: ''; position: absolute; left: 0; top: var(--s-2); bottom: var(--s-2); width: 3px; border-radius: var(--r-pill); background: var(--team, transparent);
+  }
+  th.num, td.num { text-align: right; }
+  td.num { color: var(--label); }
+  td.f1 { font-size: var(--text-title3); font-weight: 700; letter-spacing: -0.03em; color: var(--label); }
+  td.room-cell { font-size: var(--text-body); font-weight: 600; color: var(--label); }
+  td.time { padding-left: var(--s-4); font-variant-numeric: tabular-nums; }
+  td.empty { white-space: normal; }
+
+  @media (max-width: 600px) {
+    .topbar { padding: 0 var(--s-4); }
+    .wordmark { font-size: var(--text-title3); }
+    .logo { height: 26px; padding: 4px 10px; }
+    .page { padding: var(--s-4) var(--s-3) var(--s-5); }
+    .hero { gap: var(--s-4); margin-bottom: var(--s-4); }
+    .headline { font-size: 2rem; }
+    .stats { width: 100%; }
+    .stat { flex: 1; padding: 0 var(--s-3); }
+    .stat b { font-size: 2.25rem; }
+    .stat span { font-size: var(--text-caption); }
+    .card { padding: var(--s-4) var(--s-2) var(--s-2); border-radius: var(--r-lg); }
+    .card h2 { font-size: var(--text-title3); }
+    .row { gap: var(--s-2); padding: var(--s-3) var(--s-2); }
+    .sort-label { display: none; } /* the dropdown's own text says what it sorts by */
+    th, td { padding: var(--s-2); }
+  }
+  @media (max-width: 380px) {
+    .logo { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="brand"><img class="logo" src="bifold_logo.png" alt="BIFOLD"><h1>Matelda</h1></div>
-  <div class="join" id="join"></div>
-  <div class="status"><button class="theme-btn" id="theme" type="button"></button>
-    <span class="dot" id="dot"></span><span id="state">connecting…</span></div>
+<header class="topbar">
+  <div class="brand">
+    <span class="wordmark">Matelda</span>
+    <img class="logo" src="bifold_logo.png" alt="BIFOLD">
+  </div>
+  <div class="bar-end">
+    <span class="status" id="status" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span><span class="status-label" id="state"></span>
+    </span>
+    <!-- Language switch hidden for now.
+    <button class="lang-toggle" id="lang" type="button"></button>
+    -->
+    <button class="theme-toggle" id="theme" type="button"></button>
+  </div>
 </header>
-<div class="totals">
-  <div class="tile"><div class="n" id="t-rooms">0</div><div class="l">rooms</div></div>
-  <div class="tile"><div class="n" id="t-players">0</div><div class="l">players</div></div>
-  <div class="tile"><div class="n" id="t-labels">0</div><div class="l">labels</div></div>
-</div>
-<main>
-  <section>
-    <h2>Top rooms</h2>
-    <div class="sub">Ranked by correct labels (labels × accuracy)</div>
-    <div class="board" id="rooms"></div>
-  </section>
-  <section>
-    <h2>Top players</h2>
-    <div class="sub">Ranked by correct labels (labels × accuracy)</div>
-    <div class="board" id="players"></div>
-  </section>
-  <section class="wide">
-    <h2>Latest results</h2>
-    <div class="sub">Precision, recall and F1 of the most recent pipeline runs</div>
-    <div class="table-wrap"><table id="runs">
-      <thead><tr><th>Time</th><th>Room</th><th>Player</th><th>Budget</th>
-        <th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-  </section>
+
+<main class="page">
+  <div class="aurora" aria-hidden="true"></div>
+  <header class="hero">
+    <div class="rise" style="--i:0">
+      <p class="eyebrow" data-i18n="eyebrow"></p>
+      <h1 class="headline" data-i18n="headline"></h1>
+    </div>
+    <div class="stats rise" style="--i:1">
+      <div class="stat"><span data-i18n="statRooms"></span><b id="t-rooms">0</b></div>
+      <div class="stat"><span data-i18n="statPlayers"></span><b id="t-players">0</b></div>
+      <div class="stat"><span data-i18n="statLabels"></span><b id="t-labels">0</b></div>
+    </div>
+  </header>
+
+  <div class="dash">
+    <section class="card rise" style="--i:2">
+      <div class="card-head"><h2 data-i18n="topRooms"></h2>
+        <div class="sort" data-board="rooms"><span class="sort-label" id="sort-rooms-label" data-i18n="sortBy"></span>
+          <button class="sort-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-rooms-label sort-rooms-btn" id="sort-rooms-btn"></button>
+          <ul class="sort-list" role="listbox" id="sort-rooms-list" aria-labelledby="sort-rooms-label" tabindex="-1" hidden></ul></div></div>
+      <div class="board" id="rooms"></div>
+    </section>
+    <section class="card rise" style="--i:3">
+      <div class="card-head"><h2 data-i18n="topPlayers"></h2>
+        <div class="sort" data-board="players"><span class="sort-label" id="sort-players-label" data-i18n="sortBy"></span>
+          <button class="sort-btn" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sort-players-label sort-players-btn" id="sort-players-btn"></button>
+          <ul class="sort-list" role="listbox" id="sort-players-list" aria-labelledby="sort-players-label" tabindex="-1" hidden></ul></div></div>
+      <div class="board" id="players"></div>
+    </section>
+    <section class="card latest rise" style="--i:4">
+      <div class="card-head"><h2 data-i18n="latest"></h2><p class="sub" data-i18n="latestSub"></p></div>
+      <div class="table-wrap"><table id="runs">
+        <thead><tr><th data-i18n="thTime"></th><th data-i18n="thRoom"></th><th data-i18n="thPlayer"></th><th class="num budget" data-i18n="thBudget"></th>
+          <th class="num" data-i18n="thPrecision" data-short="P"></th><th class="num" data-i18n="thRecall" data-short="R"></th><th class="num" data-i18n="thF1"></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+  </div>
 </main>
 <script>
 const PB = location.origin;
 
-// Theme: ?theme=light|dark wins, then the saved choice, default dark
-function applyTheme(t) {
-  document.documentElement.dataset.theme = t;
-  document.getElementById("theme").textContent = t === "light" ? "🌙 Dark mode" : "☀️ Light mode";
+// Language: same storage key and toggle look as the app. The head script already set <html lang>.
+// Technical terms (Labels, Pipeline, Budget, Precision, Recall, F1) stay English in German, as in the app.
+const LANG_KEY = "matelda-lang";
+const I18N = {
+  en: {
+    connecting: "Connecting…", live: "Live", reconnecting: "Reconnecting…",
+    eyebrow: "Leaderboard · all rooms", headline: "Clean data, together.",
+    statRooms: "rooms", statPlayers: "players", statLabels: "labels",
+    topRooms: "Top rooms", topPlayers: "Top players",
+    sortBy: "Sort by",
+    m_correct: "Correct labels", m_labels: "Labels", m_accuracy: "Accuracy", m_players: "Players", m_speed: "Speed",
+    u_correct: "correct", u_labels: "labels", u_accuracy: "accurate", u_players: "players", u_speed: "per label",
+    h_speed: "fastest first", h_run: "best run",
+    m_f1: "F1", m_precision: "Precision", m_recall: "Recall", u_f1: "F1", u_precision: "precision", u_recall: "recall",
+    latest: "Latest results", latestSub: "most recent pipeline runs",
+    thTime: "Time", thRoom: "Room", thPlayer: "Player", thBudget: "Budget",
+    thPrecision: "Precision", thRecall: "Recall", thF1: "F1",
+    correct: "correct",
+    emptyBoard: "Waiting for the first labels…",
+    emptyRuns: "No finished runs yet. Results appear here as rooms finish the pipeline.",
+    themeTo: mode => `Switch to ${mode} mode`,
+    langSwitch: "Auf Deutsch umschalten",
+  },
+  de: {
+    connecting: "Verbinde …", live: "Live", reconnecting: "Verbindung wird wiederhergestellt …",
+    eyebrow: "Rangliste · alle Räume", headline: "Daten bereinigen – gemeinsam.",
+    statRooms: "Räume", statPlayers: "Personen", statLabels: "Labels",
+    topRooms: "Beste Räume", topPlayers: "Beste Personen",
+    sortBy: "Sortieren nach",
+    m_correct: "Richtige Labels", m_labels: "Labels", m_accuracy: "Trefferquote", m_players: "Personen", m_speed: "Tempo",
+    u_correct: "richtig", u_labels: "Labels", u_accuracy: "richtig", u_players: "Personen", u_speed: "pro Label",
+    h_speed: "schnellste zuerst", h_run: "bester Run",
+    m_f1: "F1", m_precision: "Precision", m_recall: "Recall", u_f1: "F1", u_precision: "Precision", u_recall: "Recall",
+    latest: "Neueste Ergebnisse", latestSub: "zuletzt abgeschlossene Pipeline-Durchläufe",
+    thTime: "Zeit", thRoom: "Raum", thPlayer: "Person", thBudget: "Budget",
+    thPrecision: "Precision", thRecall: "Recall", thF1: "F1",
+    correct: "richtig",
+    emptyBoard: "Warten auf die ersten Labels …",
+    emptyRuns: "Noch keine abgeschlossenen Durchläufe. Die Ergebnisse erscheinen hier, sobald Räume die Pipeline abgeschlossen haben.",
+    themeTo: mode => (mode === "dark" ? "Zum dunklen Modus wechseln" : "Zum hellen Modus wechseln"),
+    langSwitch: "Switch to English",
+  },
+};
+function getLang() { return document.documentElement.lang === "de" ? "de" : "en"; }
+function T(key, ...args) {
+  const v = I18N[getLang()][key];
+  return typeof v === "function" ? v(...args) : v;
 }
-{
-  let t = new URLSearchParams(location.search).get("theme");
-  try { t = t || localStorage.getItem("theme"); } catch (e) {}
-  applyTheme(t === "light" ? "light" : "dark");
-  document.getElementById("theme").onclick = () => {
-    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    applyTheme(next);
-    try { localStorage.setItem("theme", next); } catch (e) {}
-  };
+let statusKey = "connecting"; // connecting | live | reconnecting
+function paintStatus() {
+  document.getElementById("state").textContent = T(statusKey);
 }
-const MAX_ROWS = 8;
-const TEAM_COLORS = ["#f4b11c", "#4cc9f0", "#3ddc97", "#ff6b6b", "#b388ff", "#ff8fab", "#7bd88f", "#ff9f43", "#5aa9ff", "#e6e65a"];
-// Same hash/palette as room_color() in components/room_store.py
+function paintLang() {
+  const btn = document.getElementById("lang");
+  if (!btn) return; // the language switch is hidden for now
+  btn.textContent = getLang().toUpperCase();
+  btn.setAttribute("aria-label", T("langSwitch"));
+  btn.title = T("langSwitch");
+}
+function applyLang() {
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = T(el.dataset.i18n); });
+  paintStatus();
+  paintLang();
+  paintToggle();
+  document.querySelectorAll("#runs td.empty").forEach(el => { el.textContent = T("emptyRuns"); });
+  document.querySelectorAll(".board .empty").forEach(el => { el.textContent = T("emptyBoard"); });
+  paintSorts();
+}
+document.getElementById("lang")?.addEventListener("click", () => {
+  const next = getLang() === "en" ? "de" : "en";
+  document.documentElement.lang = next;
+  try { localStorage.setItem(LANG_KEY, next); } catch (e) {}
+  applyLang();
+  refresh();
+});
+
+// Theme toggle: sun in dark mode, moon in light mode (same icons as the app's ThemeToggle)
+const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+function currentTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t === "light" || t === "dark") return t;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function paintToggle() {
+  const t = currentTheme(), next = t === "dark" ? "light" : "dark";
+  const btn = document.getElementById("theme");
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (t === "dark" ? SUN : MOON) + "</svg>";
+  btn.setAttribute("aria-label", T("themeTo", next));
+  btn.title = T("themeTo", next);
+}
+applyLang();
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", paintToggle);
+document.getElementById("theme").onclick = () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("matelda-theme", next); } catch (e) {}
+  paintToggle();
+};
+
+// Top 8 on wide screens, top 5 on phones so the page stays short.
+const narrow = matchMedia("(max-width: 600px)");
+const maxRows = () => (narrow.matches ? 5 : 8);
+// Every room gets its own colour: rooms in creation order step around the colour wheel by the golden angle
+// (~137.5°), so neighbours never land close together; the lightness alternates for a second cue.
+// A room keeps its colour for as long as it exists (new rooms only append). Rooms the list does not know
+// (e.g. a run of a deleted room) fall back to a hash of the name.
+let roomColors = new Map();
+function hueColor(i) {
+  const h = Math.round((215 + i * 137.508) % 360), l = [58, 70, 48][i % 3];
+  return `hsl(${h} 72% ${l}%)`;
+}
+function assignRoomColors(rooms) {
+  const order = [...rooms].sort((a, b) => (a.created || "").localeCompare(b.created || "") || a.name.localeCompare(b.name));
+  roomColors = new Map(order.map((r, i) => [r.name, hueColor(i)]));
+}
 function teamColor(room) {
+  if (roomColors.has(room)) return roomColors.get(room);
   let h = 0;
   for (const ch of room) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return TEAM_COLORS[h % TEAM_COLORS.length];
+  return hueColor(h % 360);
 }
 const COLLECTIONS = ["rooms", "players", "labels", "runs"];
-
-// Optional: ?join=http://192.168.1.10:8501/Lobby shows how to join
-const joinUrl = new URLSearchParams(location.search).get("join");
-if (joinUrl) {
-  const el = document.getElementById("join");
-  el.append("Join at ");
-  const b = document.createElement("b");
-  b.textContent = joinUrl;
-  el.append(b);
-}
 
 async function fetchAll(collection, fields) {
   const out = [];
@@ -162,11 +539,27 @@ async function fetchAll(collection, fields) {
   }
 }
 
-function compute(rooms, players, labels) {
+// The best run of each room and each player: the one with the highest F1 (on a tie the later one). Its precision and
+// recall go with it, so the three numbers on the board always belong to the same run.
+function bestRuns(runs, keyOf) {
+  const out = new Map();
+  for (const r of runs) {
+    const k = keyOf(r), had = out.get(k);
+    const better = !had || Number(r.f1) > Number(had.f1) || (Number(r.f1) === Number(had.f1) && (r.created || "") > (had.created || ""));
+    if (k && better) out.set(k, r);
+  }
+  return out;
+}
+const scoresOf = run => (run
+  ? { f1: Number(run.f1), precision: Number(run.precision), recall: Number(run.recall) }
+  : { f1: null, precision: null, recall: null });
+
+function compute(rooms, players, labels, allRuns = []) {
+  const runByRoom = bestRuns(allRuns, r => r.room), runByPlayer = bestRuns(allRuns, r => r.player);
   const byPlayer = new Map(), byRoom = new Map();
   for (const l of labels) {
-    const p = byPlayer.get(l.player) || { n: 0, ok: 0 };
-    p.n++; if (l.is_correct) p.ok++;
+    const p = byPlayer.get(l.player) || { n: 0, ok: 0, ms: 0 };
+    p.n++; if (l.is_correct) p.ok++; p.ms += Number(l.latency_ms) || 0;
     byPlayer.set(l.player, p);
     const r = byRoom.get(l.room) || { n: 0, ok: 0 };
     r.n++; if (l.is_correct) r.ok++;
@@ -174,21 +567,17 @@ function compute(rooms, players, labels) {
   }
   const playersPerRoom = new Map();
   for (const p of players) playersPerRoom.set(p.room, (playersPerRoom.get(p.room) || 0) + 1);
-
+  const values = s => ({ correct: s.ok, labels: s.n, accuracy: s.n ? (100 * s.ok) / s.n : 0 });
   const roomRows = rooms.map(r => {
     const s = byRoom.get(r.name) || { n: 0, ok: 0 };
-    const acc = s.n ? Math.round(100 * s.ok / s.n) : 0;
-    return { key: r.name, title: r.name, score: s.ok, color: teamColor(r.name),
-             meta: `${playersPerRoom.get(r.name) || 0} players${r.dataset ? " · " + r.dataset : ""} · ${s.n} labels · ${acc}% accurate`,
-             unit: "correct" };
-  }).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-
+    return { key: r.name, title: r.name, color: teamColor(r.name),
+             v: { ...values(s), players: playersPerRoom.get(r.name) || 0, ...scoresOf(runByRoom.get(r.name)) } };
+  });
   const playerRows = players.map(p => {
-    const s = byPlayer.get(p.id) || { n: 0, ok: 0 };
-    const acc = s.n ? Math.round(100 * s.ok / s.n) : 0;
-    return { key: p.id, title: p.name, score: s.ok, color: teamColor(p.room),
-             meta: `${p.room} · ${s.n} labels · ${acc}% accurate`, unit: "correct" };
-  }).filter(p => p.meta.indexOf(" 0 labels") < 0).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+    const s = byPlayer.get(p.id) || { n: 0, ok: 0, ms: 0 };
+    return { key: p.id, title: p.name, color: teamColor(p.room), room: p.room,
+             v: { ...values(s), speed: s.n && s.ms ? s.ms / s.n : null, ...scoresOf(runByPlayer.get(p.id)) } };
+  }).filter(p => p.v.labels > 0);
 
   return { roomRows, playerRows, totals: { rooms: rooms.length, players: players.length, labels: labels.length } };
 }
@@ -196,7 +585,7 @@ function compute(rooms, players, labels) {
 // Latest pipeline runs (collection may not exist yet on an older setup)
 async function fetchRuns() {
   try {
-    const r = await fetch(`${PB}/api/collections/runs/records?perPage=10&sort=-created`);
+    const r = await fetch(`${PB}/api/collections/runs/records?perPage=${maxRows()}&sort=-created`);
     return r.ok ? (await r.json()).items : [];
   } catch (e) { return []; }
 }
@@ -204,40 +593,160 @@ function renderRuns(runs) {
   const body = document.querySelector("#runs tbody");
   body.textContent = "";
   if (!runs.length) {
-    const td = document.createElement("td");
-    td.colSpan = 7; td.className = "empty"; td.textContent = "No finished runs yet…";
     const tr = document.createElement("tr");
+    tr.className = "empty-row";
+    const td = document.createElement("td");
+    td.colSpan = 7; td.className = "empty"; td.textContent = T("emptyRuns");
     tr.append(td);
     body.append(tr);
     return;
   }
   for (const r of runs) {
     const tr = document.createElement("tr");
-    const cells = [
-      [(r.created || "").slice(11, 19), ""],
-      ["● " + r.room, ""], [r.player_name, ""], [r.budget, "num"],
-      [Number(r.precision).toFixed(2), "num"], [Number(r.recall).toFixed(2), "num"],
-      [Number(r.f1).toFixed(2), "num f1"],
-    ];
-    cells.forEach(([text, cls], i) => {
+    tr.style.setProperty("--team", teamColor(r.room || ""));
+    const add = (text, cls) => {
       const td = document.createElement("td");
       td.textContent = text; td.className = cls;
-      if (i === 1) td.style.color = teamColor(r.room);
       tr.append(td);
-    });
+      return td;
+    };
+    add((r.created || "").slice(11, 19), "time");
+    add(r.room, "room-cell");
+    add(r.player_name, "");
+    add(r.budget, "num budget");
+    add(Number(r.precision).toFixed(2), "num");
+    add(Number(r.recall).toFixed(2), "num");
+    add(Number(r.f1).toFixed(2), "num f1");
     body.append(tr);
   }
 }
 
 // --- animated leaderboard: keyed rows move with CSS transforms ---
 const boards = {};
-function render(boardId, rows) {
+const GAP = 9; // px between rows
+// --- what a board ranks by: picked in its dropdown, remembered per browser; only that value is shown ---
+const METRICS = {
+  rooms: ["correct", "labels", "accuracy", "players", "f1", "precision", "recall"],
+  players: ["correct", "labels", "accuracy", "speed", "f1", "precision", "recall"],
+};
+const RUN_METRICS = ["f1", "precision", "recall"]; // from the best run; rooms and players without one go last
+const FORMAT = {
+  correct: v => String(Math.round(v)), labels: v => String(Math.round(v)), players: v => String(Math.round(v)),
+  accuracy: v => `${Math.round(v)}%`,
+  speed: v => (v == null ? "–" : `${(v / 1000).toFixed(1)} s`),
+  f1: v => (v == null ? "–" : v.toFixed(2)), precision: v => (v == null ? "–" : v.toFixed(2)), recall: v => (v == null ? "–" : v.toFixed(2)),
+};
+const sortBy = {};
+for (const id of Object.keys(METRICS)) {
+  let saved = null;
+  try { saved = localStorage.getItem(`matelda-dash-sort-${id}`); } catch (e) {}
+  sortBy[id] = METRICS[id].includes(saved) ? saved : "correct";
+}
+const CHEVRON = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHECK = '<svg class="check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5 6.5 11.5 12.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function paintSorts() {
+  if (!sortsReady) return; // applyLang() runs once before the sort settings below exist
+  for (const [id, metrics] of Object.entries(METRICS)) {
+    const btn = document.getElementById(`sort-${id}-btn`), list = document.getElementById(`sort-${id}-list`);
+    btn.innerHTML = "";
+    btn.append(T(`m_${sortBy[id]}`));
+    btn.insertAdjacentHTML("beforeend", CHEVRON);
+    list.innerHTML = "";
+    for (const m of metrics) {
+      const li = document.createElement("li");
+      li.id = `sort-${id}-${m}`; li.role = "option"; li.dataset.metric = m;
+      li.setAttribute("aria-selected", String(m === sortBy[id]));
+      const opt = document.createElement("span"); opt.className = "opt";
+      opt.insertAdjacentHTML("beforeend", CHECK);
+      opt.append(T(`m_${m}`));
+      li.append(opt);
+      const hintKey = m === "speed" ? "h_speed" : RUN_METRICS.includes(m) ? "h_run" : null; // speed runs the other way
+      if (hintKey) {
+        const hint = document.createElement("span"); hint.className = "hint";
+        hint.textContent = T(hintKey);
+        li.append(hint);
+      }
+      list.append(li);
+    }
+  }
+}
+function pickSort(id, m) {
+  sortBy[id] = m;
+  try { localStorage.setItem(`matelda-dash-sort-${id}`, m); } catch (e) {}
+  paintSorts();
+  if (boards[id]?.rows) render(id, boards[id].rows);
+}
+// one menu open at a time; outside click, Escape and Tab close it; arrows move, Enter / Space pick
+let openSort = null;
+function setActive(list, li) {
+  list.querySelectorAll("li").forEach(x => x.classList.toggle("active", x === li));
+  if (li) list.setAttribute("aria-activedescendant", li.id);
+}
+function openMenu(id) {
+  closeMenu();
+  const btn = document.getElementById(`sort-${id}-btn`), list = document.getElementById(`sort-${id}-list`);
+  list.hidden = false; btn.setAttribute("aria-expanded", "true");
+  setActive(list, list.querySelector('[aria-selected="true"]'));
+  list.focus();
+  openSort = id;
+}
+function closeMenu(refocus) {
+  if (!openSort) return;
+  const btn = document.getElementById(`sort-${openSort}-btn`), list = document.getElementById(`sort-${openSort}-list`);
+  list.hidden = true; btn.setAttribute("aria-expanded", "false");
+  if (refocus) btn.focus();
+  openSort = null;
+}
+document.querySelectorAll(".sort").forEach(box => {
+  const id = box.dataset.board, list = box.querySelector(".sort-list");
+  box.querySelector(".sort-btn").addEventListener("click", () => (openSort === id ? closeMenu() : openMenu(id)));
+  list.addEventListener("click", e => {
+    const li = e.target.closest("li");
+    if (li) { closeMenu(true); pickSort(id, li.dataset.metric); }
+  });
+  list.addEventListener("mousemove", e => { const li = e.target.closest("li"); if (li) setActive(list, li); });
+  list.addEventListener("keydown", e => {
+    const items = [...list.querySelectorAll("li")], cur = items.findIndex(x => x.classList.contains("active"));
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive(list, items[(cur + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length]);
+    } else if (e.key === "Home" || e.key === "End") {
+      e.preventDefault(); setActive(list, items[e.key === "Home" ? 0 : items.length - 1]);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (items[cur]) { closeMenu(true); pickSort(id, items[cur].dataset.metric); }
+    } else if (e.key === "Escape") { e.preventDefault(); closeMenu(true); }
+    else if (e.key === "Tab") closeMenu();
+  });
+});
+document.addEventListener("pointerdown", e => { if (openSort && !e.target.closest(".sort")) closeMenu(); });
+var sortsReady = true; // a var: applyLang() may read it before this line has run
+paintSorts();
+// Speed: less time per label is better, so it ranks ascending and players without a time go last.
+function ranked(boardId, rows) {
+  const m = sortBy[boardId], asc = m === "speed";
+  const val = r => r.v[m];
+  return [...rows].sort((a, b) => {
+    const x = val(a), y = val(b);
+    if (x == null || y == null) { if (x != y) return x == null ? 1 : -1; }
+    else if (x !== y) return asc ? x - y : y - x;
+    return b.v.correct - a.v.correct || a.title.localeCompare(b.title);
+  }).map(r => ({ ...r, score: val(r), metric: m, unit: T(`u_${m}`) }));
+}
+
+function render(boardId, rawRows) {
   const root = document.getElementById(boardId);
   const state = boards[boardId] || (boards[boardId] = { els: new Map() });
-  const shown = rows.slice(0, MAX_ROWS);
-  const max = Math.max(1, ...shown.map(r => r.score));
+  state.rows = rawRows;
+  const rows = ranked(boardId, rawRows);
+  const shown = rows.slice(0, maxRows());
+  // the bar: share of the best value (for speed the fastest is the full bar)
+  const nums = shown.map(r => r.score).filter(v => v != null);
+  const best = sortBy[boardId] === "speed" ? Math.min(...nums) : Math.max(1, ...nums);
+  const max = best;
   if (!shown.length && !root.querySelector(".empty")) {
-    root.innerHTML = '<div class="empty">Waiting for the first labels…</div>';
+    root.innerHTML = '<div class="empty"></div>';
+    root.firstChild.textContent = T("emptyBoard");
   }
   if (shown.length) root.querySelector(".empty")?.remove();
 
@@ -248,8 +757,8 @@ function render(boardId, rows) {
     if (!el) {
       el = document.createElement("div");
       el.className = "row";
-      el.innerHTML = '<div class="rank"></div><div><div class="name"></div><div class="meta"></div>' +
-                     '<div class="bar"><i></i></div></div><div class="score"><span></span><small></small></div>';
+      el.innerHTML = '<div class="rank"></div><div class="who"><div class="name"><span></span><em class="room-tag"></em></div>' +
+                     '<div class="track"><i></i></div></div><div class="score"><span></span><small></small></div>';
       el.style.transform = "translateY(2000px)"; // enter from below
       root.append(el);
       state.els.set(r.key, el);
@@ -258,6 +767,7 @@ function render(boardId, rows) {
     } else {
       place(el, r, i, max);
     }
+    el.classList.toggle("last", i === shown.length - 1);
   });
   state.order = shown.map(r => r.key);
   for (const [key, el] of state.els) {
@@ -274,30 +784,36 @@ function layout(boardId) {
     const el = state.els.get(key);
     if (!el) continue;
     el.style.transform = `translateY(${y}px)`;
-    y += el.offsetHeight + 2;
+    y += el.offsetHeight + GAP;
   }
-  root.style.height = Math.max(y, 1) + "px";
+  root.style.height = Math.max(y - GAP, 1) + "px";
 }
 window.addEventListener("resize", () => Object.keys(boards).forEach(layout));
+narrow.addEventListener?.("change", () => Object.entries(boards).forEach(([id, b]) => b.rows && render(id, b.rows)));
 function place(el, r, i, max) {
   el.style.setProperty("--team", r.color);
+  el.classList.toggle("first", i === 0 && r.score != null && r.score > 0);
   el.querySelector(".rank").textContent = i + 1;
-  el.querySelector(".name").textContent = r.title;
-  el.querySelector(".meta").textContent = r.meta;
-  el.querySelector(".bar > i").style.width = (100 * r.score / max) + "%";
-  countTo(el.querySelector(".score span"), r.score, r.suffix || "");
+  el.querySelector(".name span").textContent = r.title;
+  el.querySelector(".room-tag").textContent = r.room || "";
+  el.querySelector(".name").title = r.room ? `${r.title} · ${r.room}` : r.title;
+  const share = r.score == null ? 0 : r.metric === "speed" ? max / r.score : r.score / max;
+  el.querySelector(".track > i").style.width = (100 * Math.min(1, share)) + "%";
+  countTo(el.querySelector(".score span"), r.score, FORMAT[r.metric]);
   el.querySelector(".score small").textContent = r.unit;
 }
 
-// --- count-up numbers ---
-function countTo(el, target, suffix = "") {
-  const from = Number(el.dataset.v ?? 0);
-  el.dataset.v = target;
-  if (from === target) { el.textContent = target + suffix; return; }
+// --- count-up numbers (instant under reduced motion) ---
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+function countTo(el, target, fmt = v => String(Math.round(v))) {
+  const from = Number(el.dataset.v ?? 0), run = (el.dataset.run = String(Number(el.dataset.run || 0) + 1));
+  el.dataset.v = target ?? 0;
+  if (target == null || from === target || reduceMotion.matches) { el.textContent = fmt(target); return; }
   const t0 = performance.now();
   (function step(t) {
+    if (el.dataset.run !== run) return; // a newer count (e.g. another sort) took over
     const k = Math.min(1, (t - t0) / 500);
-    el.textContent = Math.round(from + (target - from) * k) + suffix;
+    el.textContent = k < 1 ? fmt(from + (target - from) * k) : fmt(target);
     if (k < 1) requestAnimationFrame(step);
   })(t0);
 }
@@ -307,13 +823,15 @@ async function refresh() {
   if (refreshing) { again = true; return; }
   refreshing = true;
   try {
-    const [rooms, players, labels, runs] = await Promise.all([
-      fetchAll("rooms", "name,dataset"),
+    const [rooms, players, labels, runs, allRuns] = await Promise.all([
+      fetchAll("rooms", "name,dataset,created"),
       fetchAll("players", "id,room,name"),
-      fetchAll("labels", "room,player,is_correct"),
+      fetchAll("labels", "room,player,is_correct,latency_ms"),
       fetchRuns(),
+      fetchAll("runs", "room,player,precision,recall,f1,created").catch(() => []), // older setups have no runs yet
     ]);
-    const d = compute(rooms, players, labels);
+    assignRoomColors(rooms);
+    const d = compute(rooms, players, labels, allRuns);
     render("rooms", d.roomRows);
     render("players", d.playerRows);
     renderRuns(runs);
@@ -327,13 +845,19 @@ async function refresh() {
     if (again) { again = false; refresh(); }
   }
 }
+// Bursts of events (a room filling up, everyone labeling) become one refresh 150 ms after the first event. The timer
+// is not restarted by later events: a steady stream must not keep pushing the refresh back for ever.
 let timer = null;
-function scheduleRefresh() { clearTimeout(timer); timer = setTimeout(refresh, 150); }
+function scheduleRefresh() {
+  if (timer) return;
+  timer = setTimeout(() => { timer = null; refresh(); }, 150);
+}
 
 // --- PocketBase realtime (SSE); reconnects automatically ---
 function setLive(on) {
-  document.getElementById("dot").classList.toggle("live", on);
-  document.getElementById("state").textContent = on ? "live" : "reconnecting…";
+  document.getElementById("status").classList.toggle("live", on);
+  statusKey = on ? "live" : "reconnecting";
+  paintStatus();
 }
 function connect() {
   const es = new EventSource(`${PB}/api/realtime`);

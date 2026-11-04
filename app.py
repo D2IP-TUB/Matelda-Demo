@@ -8,7 +8,7 @@ import base64
 st.set_page_config(
     page_title="Matelda",
     layout="wide",
-    page_icon="🔧",
+    page_icon="frontend/public/favicon.png",
     initial_sidebar_state="expanded",
 )
 

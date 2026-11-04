@@ -414,6 +414,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pipelines/{name}/cell-folds/move-fold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cell Fold Move Fold */
+        post: operations["cell_fold_move_fold_api_pipelines__name__cell_folds_move_fold_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/merge-domain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cell Fold Merge Domain */
+        post: operations["cell_fold_merge_domain_api_pipelines__name__cell_folds_merge_domain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pipelines/{name}/cell-folds/split-domain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cell Fold Split Domain */
+        post: operations["cell_fold_split_domain_api_pipelines__name__cell_folds_split_domain_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pipelines/{name}/cell-folds/label": {
         parameters: {
             query?: never;
@@ -896,6 +947,13 @@ export interface components {
             /** Folds */
             folds: string[];
         };
+        /** MergeDomainBody */
+        MergeDomainBody: {
+            /** Domain */
+            domain: string;
+            /** Into */
+            into: string;
+        };
         /** Metrics */
         Metrics: {
             /** Precision */
@@ -915,6 +973,13 @@ export interface components {
             cell: components["schemas"]["CellRef"];
             /** To Fold */
             to_fold: string;
+        };
+        /** MoveFoldBody */
+        MoveFoldBody: {
+            /** Fold */
+            fold: string;
+            /** To Domain */
+            to_domain: string;
         };
         /** PipelineConfig */
         PipelineConfig: {
@@ -1043,6 +1108,13 @@ export interface components {
             fold: string;
             /** After */
             after: components["schemas"]["CellRef"][];
+        };
+        /** SplitDomainBody */
+        SplitDomainBody: {
+            /** Domain */
+            domain: string;
+            /** After Fold */
+            after_fold: string;
         };
         /** TablePage */
         TablePage: {
@@ -1888,6 +1960,111 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SplitBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_move_fold_api_pipelines__name__cell_folds_move_fold_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveFoldBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_merge_domain_api_pipelines__name__cell_folds_merge_domain_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeDomainBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FoldSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cell_fold_split_domain_api_pipelines__name__cell_folds_split_domain_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitDomainBody"];
             };
         };
         responses: {

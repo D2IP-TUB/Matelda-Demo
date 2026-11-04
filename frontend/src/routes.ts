@@ -6,11 +6,11 @@ export interface Page {
 // Step order of the Streamlit sidebar.
 export const PAGES: Page[] = [
   { path: '/lobby', title: 'Lobby' },
-  { path: '/intro', title: 'Intro' },
   { path: '/configuration', title: 'Configurations' },
   { path: '/domain-folding', title: 'Domain Folding' },
   { path: '/quality-folding', title: 'Quality Folding' },
   { path: '/labeling', title: 'Labeling' },
+  { path: '/labeling-stats', title: 'Labeling Stats' },
   { path: '/propagated-errors', title: 'Propagated Errors' },
   { path: '/error-detection', title: 'Error Detection' },
   { path: '/results', title: 'Results' },

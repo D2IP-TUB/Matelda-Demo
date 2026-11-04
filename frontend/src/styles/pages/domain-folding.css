@@ -1,0 +1,102 @@
+/* Domain Folding page — scoped under .domain-page */
+.domain-page { max-width: 1100px; margin-inline: auto; padding-bottom: var(--s-6); }
+
+.domain-page .dp-head { position: relative; margin-bottom: var(--s-5); padding-bottom: var(--s-4); }
+.domain-page .dp-eyebrow {
+  margin: 0 0 var(--s-2); font-size: var(--text-caption); font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent-text);
+}
+
+/* run card: gradient hairline edge + soft aurora glow */
+.domain-page > .card {
+  position: relative; isolation: isolate; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-4);
+  padding: var(--s-4) var(--panel-pad); border: 0; border-radius: var(--panel-r);
+  box-shadow: 0 0 0 1px var(--separator), var(--shadow-2), 0 14px 44px -28px var(--accent-ring);
+  background: radial-gradient(500px 160px at 0% 0%, var(--accent-tint), transparent 70%), var(--surface);
+}
+.domain-page > .card::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: var(--brand-gradient); opacity: 0.55;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.domain-page > .card .notice { margin: 0; flex: 1 1 240px; }
+.domain-page > .card .btn-primary { min-height: var(--hit); padding-inline: var(--s-5); border-radius: var(--r-pill); box-shadow: var(--cta-glow); }
+
+.domain-page > .notice-info::before { display: none; }
+.domain-page > .notice-info {
+  display: block;
+  padding: var(--s-7) var(--s-5); text-align: center; border-radius: var(--panel-r);
+  border: 1px dashed var(--separator); background: var(--surface); color: var(--label-2); font-size: var(--text-callout);
+  box-shadow: inset 0 0 80px -40px var(--accent-ring);
+}
+.domain-page .hint { margin: var(--s-5) 0 var(--s-3); line-height: var(--lh-body); max-width: 80ch; }
+
+/* board */
+.domain-page .dp-board { gap: var(--s-4); margin-top: var(--s-5); }
+.domain-page .fold-box {
+  position: relative; padding: var(--s-4) var(--s-5); border-radius: var(--tile-r); border: 1px solid var(--separator);
+  background: var(--surface); color: var(--label); box-shadow: var(--tile-shadow);
+  transition: transform var(--dur-base) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base);
+}
+.domain-page .fold-box:hover { transform: translateY(-3px); border-color: var(--accent-ring); box-shadow: var(--shadow-2), 0 12px 32px var(--accent-tint); }
+.domain-page .fold-box.over {
+  border-color: var(--accent); background: linear-gradient(var(--accent-tint), var(--accent-tint)), var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-ring), 0 14px 36px -16px var(--accent-ring); transform: translateY(-2px);
+}
+.domain-page .fold-box .fold-head { gap: var(--s-2); align-items: center; }
+.domain-page .fold-head h3 {
+  margin: 0; font-size: var(--text-body); font-weight: 700; letter-spacing: var(--track-tight);
+  line-height: var(--lh-tight); overflow-wrap: anywhere;
+}
+.domain-page .handle {
+  display: inline-flex; align-items: center; justify-content: center; min-width: var(--hit); min-height: var(--hit);
+  margin: calc(var(--s-2) * -1) 0 calc(var(--s-2) * -1) calc(var(--s-3) * -1);
+  border-radius: var(--r-md); color: var(--label-2); font-size: var(--text-title3); cursor: grab;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.domain-page .handle:hover { background: var(--fill); color: var(--accent-text); }
+.domain-page .handle:focus-visible, .domain-page .chip:focus-visible, .domain-page .tool-toggle:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+.domain-page .chips { margin: var(--s-4) 0 0; gap: var(--s-2) var(--s-1); }
+.domain-page .chip {
+  min-height: var(--hit); padding: 0 var(--s-4); border: 0; border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--label); box-shadow: inset 0 0 0 1px var(--separator);
+  font-size: var(--text-footnote); font-weight: 500; cursor: grab; touch-action: manipulation;
+  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.domain-page .chip::before {
+  content: ''; display: inline-block; width: 6px; height: 12px; margin-right: var(--s-2); vertical-align: -1px;
+  background: radial-gradient(circle, var(--label-2) 1.2px, transparent 1.6px) 0 0 / 6px 6px;
+  opacity: 0.7;
+}
+.domain-page .chip:hover { background: var(--accent-tint); box-shadow: inset 0 0 0 1px var(--accent-ring); }
+.domain-page .chip:active { cursor: grabbing; transform: scale(0.97); }
+.domain-page .cut-tools + .dp-board { margin-top: var(--s-4); }
+/* keep everything still while aiming at a line */
+.domain-page .dp-board.cutting .fold-box:hover { transform: none; }
+.domain-page .dp-board.cutting .chip { cursor: pointer; }
+
+/* actions: a floating bar like the Configurations page, staying over the folds while scrolling */
+.domain-page .dp-nav {
+  position: sticky; bottom: var(--bar-lift); z-index: var(--z-bar);
+  align-items: center; gap: var(--s-3); margin: var(--s-5) calc(var(--s-2) * -1) 0;
+  padding: var(--s-3) var(--s-4); border-radius: var(--panel-r);
+  background: var(--material); -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6);
+  box-shadow: var(--bar-shadow);
+}
+.domain-page .dp-nav .row { display: flex; flex: none; gap: var(--s-3); justify-content: flex-end; }
+.domain-page .dp-nav .btn { min-height: var(--hit); }
+.domain-page .dp-nav .row .btn:last-child { padding-inline: var(--s-6); border-radius: var(--r-pill); box-shadow: var(--cta-glow); }
+
+@media (max-width: 600px) {
+  .domain-page .dp-nav .row { gap: var(--s-2); }
+  .domain-page .dp-nav .row .btn:last-child { padding-inline: var(--s-4); }
+  .domain-page > .card { padding: var(--s-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .domain-page *, .domain-page *::before { transition: none !important; animation-duration: 1ms !important; }
+  .domain-page .fold-box.over { transform: none; }
+}

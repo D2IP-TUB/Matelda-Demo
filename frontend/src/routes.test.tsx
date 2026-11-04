@@ -37,8 +37,9 @@ describe('routes', () => {
     expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument()
   })
 
-  it('redirects / to the lobby', async () => {
+  it('shows the landing page at / with a way into the demo', async () => {
     renderAt('/')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Lobby' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /hiding mistakes/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /play the demo/i })[0]).toHaveAttribute('href', '/lobby')
   })
 })

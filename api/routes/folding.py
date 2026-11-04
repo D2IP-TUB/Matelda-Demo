@@ -16,7 +16,10 @@ from api.folds import (
     fold_cells,
     merge_folds,
     move_cell,
+    merge_domains,
+    move_fold_to_domain,
     set_label,
+    split_domain,
     split_fold,
     summarize,
     validate_domain_folds,
@@ -149,6 +152,21 @@ class MergeBody(BaseModel):
     folds: list[str]
 
 
+class MoveFoldBody(BaseModel):
+    fold: str
+    to_domain: str
+
+
+class MergeDomainBody(BaseModel):
+    domain: str
+    into: str
+
+
+class SplitDomainBody(BaseModel):
+    domain: str
+    after_fold: str
+
+
 class SplitBody(BaseModel):
     fold: str
     after: list[CellRef]
@@ -227,6 +245,21 @@ def cell_fold_merge(name: str, body: MergeBody, settings: Settings = Depends(get
 @router.post("/pipelines/{name}/cell-folds/split", response_model=list[FoldSummary])
 def cell_fold_split(name: str, body: SplitBody, settings: Settings = Depends(get_settings)):
     return _edit(settings, name, lambda f, l: split_fold(f, l, body.fold, body.after))
+
+
+@router.post("/pipelines/{name}/cell-folds/move-fold", response_model=list[FoldSummary])
+def cell_fold_move_fold(name: str, body: MoveFoldBody, settings: Settings = Depends(get_settings)):
+    return _edit(settings, name, lambda f, l: move_fold_to_domain(f, l, body.fold, body.to_domain))
+
+
+@router.post("/pipelines/{name}/cell-folds/merge-domain", response_model=list[FoldSummary])
+def cell_fold_merge_domain(name: str, body: MergeDomainBody, settings: Settings = Depends(get_settings)):
+    return _edit(settings, name, lambda f, l: merge_domains(f, l, body.domain, body.into))
+
+
+@router.post("/pipelines/{name}/cell-folds/split-domain", response_model=list[FoldSummary])
+def cell_fold_split_domain(name: str, body: SplitDomainBody, settings: Settings = Depends(get_settings)):
+    return _edit(settings, name, lambda f, l: split_domain(f, l, body.domain, body.after_fold))
 
 
 @router.put("/pipelines/{name}/cell-folds/label", response_model=list[FoldSummary])

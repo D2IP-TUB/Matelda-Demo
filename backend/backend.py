@@ -340,7 +340,10 @@ def backend_sample_labeling(
         # Calculate how much extra budget we can distribute
         freed_budget = originally_selected_from_bulk
         total_available_budget = originally_selected_from_available + freed_budget
-        effective_budget = min(total_available_budget, labeling_budget)
+        # The whole labeling budget is used whenever there are enough cells: cells that quality folding did not
+        # pre-select top up the sample below, so a small pre-selection never shrinks the number of cards.
+        available_cells = sum(len(c) for folds in available_folds.values() for c in folds.values())
+        effective_budget = min(labeling_budget, available_cells)
 
         logging.info("Budget analysis:")
         logging.info(f"  - Original budget: {labeling_budget}")

@@ -48,11 +48,11 @@ describe('Layout moves the room on when the host starts', () => {
     expect(await screen.findByText('CONFIG PAGE')).toBeInTheDocument()
   })
 
-  it('sends a helper from the lobby to the waiting screen on the configuration step', async () => {
+  it('sends a helper from the lobby to their next step, Labeling, where they wait for the cells', async () => {
     const pb = setup({ token: 't2' })
     await screen.findByText('LOBBY PAGE')
     await start(pb)
-    expect(await screen.findByText(/Waiting for labeling/)).toBeInTheDocument()
+    expect(await screen.findByText('LABELING PAGE')).toBeInTheDocument()
     expect(screen.queryByText('CONFIG PAGE')).toBeNull()
   })
 

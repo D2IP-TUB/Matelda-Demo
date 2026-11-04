@@ -70,8 +70,10 @@ def _json_default(obj: Any) -> Any:
 
 
 def save_config(pipeline_dir: Path, config: dict[str, Any]) -> None:
+    # compact on purpose: the file holds every cell fold (megabytes), and it is rewritten on each fold edit;
+    # indented it took ~6x longer to write, which made every drag on the folding board lag
     (pipeline_dir / "configurations.json").write_text(
-        json.dumps(config, indent=4, default=_json_default)
+        json.dumps(config, separators=(",", ":"), default=_json_default)
     )
     with _cache_lock:
         path = str(pipeline_dir / "configurations.json")

@@ -1,0 +1,88 @@
+/* Labeling stats: the landing's stage look. Dark-feeling surfaces with hairlines, gradient numerals, aurora glow. */
+.lstats-page { display: block; position: relative; }
+.lstats-page h2 {
+  margin: var(--s-7) 0 var(--s-4); font-size: var(--text-title1); font-weight: 800; letter-spacing: -0.025em; line-height: 1.1;
+}
+.lstats-page h2::after {
+  content: ''; display: block; width: 44px; height: 3px; margin-top: var(--s-3); border-radius: var(--r-pill); background: var(--brand-gradient);
+}
+.lstats-page section > h2 { margin-top: var(--s-6); }
+
+/* stat tiles with gradient numerals */
+.lstats-page .stats { gap: var(--s-4); margin: var(--s-4) 0; }
+.lstats-page .stat {
+  flex: 1 1 180px; padding: var(--s-5); border-radius: var(--tile-r); background: var(--surface);
+  border: 1px solid var(--separator); box-shadow: var(--hero-shadow);
+  color: var(--label-2); font-size: var(--text-footnote); font-weight: 600; letter-spacing: 0.02em;
+}
+.lstats-page .stat b {
+  margin-top: var(--s-2); font-size: var(--text-display); font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; padding-right: 0.1em;
+  background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+/* leaderboard */
+.lstats-page .rank { list-style: none; margin: var(--s-4) 0; padding: 0; display: grid; gap: var(--s-3); }
+.lstats-page .rank li {
+  display: grid; grid-template-columns: 1.75rem 2.75rem minmax(0, 1fr) minmax(0, 1fr) auto; align-items: center; gap: var(--s-4);
+  padding: var(--s-3) var(--s-5); min-height: 64px; border-radius: var(--tile-r); background: var(--surface);
+  border: 1px solid var(--separator); box-shadow: var(--hero-shadow);
+}
+.lstats-page .rank li.me {
+  background: linear-gradient(var(--accent-tint), var(--accent-tint)), var(--surface);
+  border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--cta-glow);
+}
+.lstats-page .rank-n { font-weight: 800; font-size: var(--text-callout); color: var(--label-2); font-variant-numeric: tabular-nums; text-align: center; }
+.lstats-page .avatar {
+  width: 2.75rem; height: 2.75rem; border-radius: var(--r-pill); display: grid; place-items: center; font-weight: 800; font-size: var(--text-footnote);
+  background: var(--accent-fill); color: var(--on-accent); box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.lstats-page .rank-name { font-weight: 700; font-size: var(--text-callout); overflow-wrap: anywhere; }
+.lstats-page .you {
+  margin-left: var(--s-2); font-style: normal; font-size: var(--text-caption); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 2px var(--s-3); border-radius: var(--r-pill); background: var(--cta-bg); color: var(--cta-fg); box-shadow: var(--cta-glow);
+}
+.lstats-page .rank-bar { height: 10px; border-radius: var(--r-pill); background: var(--fill); overflow: hidden; }
+.lstats-page .rank-bar i { display: block; height: 100%; background: var(--brand-gradient); border-radius: var(--r-pill); transform-origin: left; animation: ls-grow 0.9s var(--ease-out) 0.3s both; }
+@keyframes ls-grow { from { transform: scaleX(0); } to { transform: none; } }
+.lstats-page .rank-acc { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 700; }
+
+/* table: hairline frame, deep shadow, green/red wash on rows (the check / cross text still says it too) */
+.lstats-page .table-wrap {
+  border-radius: var(--tile-r); border: 1px solid var(--separator); box-shadow: var(--hero-shadow); background: var(--surface); max-height: 480px;
+}
+.lstats-page .table-wrap th { background: var(--surface-2); color: var(--label-2); font-weight: 700; letter-spacing: 0.02em; }
+.lstats-page tr.row-right td { background: var(--good-tint); }
+.lstats-page tr.row-wrong td { background: var(--bad-tint); }
+.lstats-page tr.row-right td:last-child { color: var(--good); font-weight: 700; }
+.lstats-page tr.row-wrong td:last-child { color: var(--bad); font-weight: 700; }
+
+/* pager */
+.lstats-page .pager { justify-content: center; gap: var(--s-4); margin-top: var(--s-4); flex-wrap: wrap; }
+.lstats-page .pager button, .lstats-page .pager a {
+  min-height: 44px; display: inline-flex; align-items: center; padding: 0 var(--s-5); border-radius: var(--r-pill);
+  border: 1px solid var(--separator); background: var(--surface); color: var(--label); font-weight: 600;
+}
+.lstats-page .pager button:hover:not(:disabled) { background: var(--fill-hover); }
+.lstats-page .pager button:disabled { opacity: 0.45; }
+
+/* navigation */
+.lstats-page button:not(.info-btn), .lstats-page .btn { min-height: 44px; }
+.lstats-page .nav-row { margin-top: var(--s-7); align-items: center; }
+.lstats-page .nav-row .btn-primary { min-height: 52px; padding: 0 var(--s-6); border-radius: var(--r-pill); font-weight: 700; font-size: var(--text-callout); box-shadow: var(--cta-glow); }
+.lstats-page :is(button, a, [tabindex]):focus-visible { outline: 3px solid var(--accent-ring); outline-offset: 3px; }
+
+@media (max-width: 640px) {
+  .lstats-page .rank li {
+    grid-template-columns: 1.5rem 2.75rem minmax(0, 1fr); grid-template-areas: 'n av name' 'bar bar bar' 'acc acc acc';
+    gap: var(--s-2) var(--s-3); padding: var(--s-3) var(--s-4);
+  }
+  .lstats-page .rank-n { grid-area: n; }
+  .lstats-page .avatar { grid-area: av; }
+  .lstats-page .rank-name { grid-area: name; }
+  .lstats-page .rank-bar { grid-area: bar; }
+  .lstats-page .rank-acc { grid-area: acc; color: var(--label-2); font-size: var(--text-footnote); }
+  .lstats-page .stat { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lstats-page .rank-bar i { animation: none; }
+}

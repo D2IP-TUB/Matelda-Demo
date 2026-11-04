@@ -120,3 +120,20 @@ def test_label_accuracy_endpoints(env):
         r = client.get(url)
         assert r.status_code == 409 and "user labels" in r.json()["detail"].lower()
     assert client.get("/api/pipelines/p1/label-accuracy", params={"limit": 201}).status_code == 422
+
+
+def test_comparison_rows_does_not_reparse_unchanged_pipelines(tmp_path, monkeypatch):
+    import api.results as results_mod
+
+    write_pipeline(tmp_path, "cached-a", "d", 10, [{"Time": "2025-01-01 10:00:00", "metrics": {"f1": 0.4}}])
+    write_pipeline(tmp_path, "cached-b", "d", 20, [{"Time": "2025-03-01 10:00:00", "metrics": {"f1": 0.8}}])
+    first = comparison_rows(tmp_path, "d")
+    parsed = []
+    real = results_mod.json.loads
+    monkeypatch.setattr(results_mod.json, "loads", lambda *a, **k: parsed.append(1) or real(*a, **k))
+    assert comparison_rows(tmp_path, "d") == first
+    assert parsed == []  # the pipelines' big config files are not parsed again
+    # a changed pipeline is picked up
+    write_pipeline_file = tmp_path / "cached-a" / "configurations.json"
+    write_pipeline_file.write_text(json.dumps({"selected_dataset": "d", "labeling_budget": 99, "results": []}))
+    assert [r["pipeline"] for r in comparison_rows(tmp_path, "d")] == ["cached-b"]

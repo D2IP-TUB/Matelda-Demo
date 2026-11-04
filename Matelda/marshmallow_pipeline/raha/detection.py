@@ -282,12 +282,12 @@ class Detection:
                             ]
                         )
                 random.shuffle(algorithm_and_configurations)
-                pool = multiprocessing.Pool()
-                strategy_profiles_list = pool.map(
-                    self._strategy_runner_process, algorithm_and_configurations
-                )
-                # pool.close()
-                # pool.join()
+                # Closed on exit (a leaked pool keeps its forked copies of the process alive),
+                # and capped: each worker is a fork of a possibly multi-GB process.
+                with multiprocessing.Pool(min(os.cpu_count() or 1, 4)) as pool:
+                    strategy_profiles_list = pool.map(
+                        self._strategy_runner_process, algorithm_and_configurations
+                    )
         else:
             for dd in self.HISTORICAL_DATASETS + [d.dictionary]:
                 raha.utilities.dataset_profiler(dd)

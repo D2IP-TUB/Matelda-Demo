@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { setLang } from '../i18n'
+import { de } from '../i18n/de'
 import * as api from '../lib/api'
 import { SessionProvider } from '../session/SessionProvider'
 import { SessionService } from '../session/sessionService'
@@ -57,29 +59,41 @@ beforeEach(() => {
 })
 
 describe('ErrorDetection', () => {
+  it('shows the spinner inside the Run button while detection runs, and nowhere else', async () => {
+    m.fetchErrorDetection.mockResolvedValue(null)
+    m.fetchJob.mockResolvedValue({ id: 'job1', state: 'running' })
+    renderPage()
+    const run = await screen.findByRole('button', { name: 'Run error detection' })
+    fireEvent.click(run)
+    await waitFor(() => expect(run).toHaveAttribute('aria-busy', 'true'))
+    expect(run.querySelector('.spinner')).not.toBeNull()
+    expect(screen.queryByText('Running…')).toBeNull()
+  })
+
   it('asks to configure a pipeline first', async () => {
     renderPage({})
     expect(await screen.findByRole('alert')).toHaveTextContent('Pipeline not configured')
   })
 
-  it('without a result offers to run detection and disables Next', async () => {
+  it('without a result offers to run detection and disables Continue', async () => {
     m.fetchErrorDetection.mockResolvedValue(null)
     renderPage()
     expect(await screen.findByRole('button', { name: 'Run error detection' })).toBeInTheDocument()
     expect(screen.queryByText('Precision')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Next: View results' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
   })
 
-  it('runs detection and shows the metrics and the tables when the job is done', async () => {
+  it('runs detection and shows the tables, without detection metrics, when the job is done', async () => {
     m.fetchErrorDetection.mockResolvedValueOnce(null).mockResolvedValue(SUMMARY as any)
     renderPage()
     fireEvent.click(await screen.findByRole('button', { name: 'Run error detection' }))
     expect(m.startErrorDetection).toHaveBeenCalledWith('p1')
-    expect(await screen.findByText('0.800')).toBeInTheDocument()
-    expect(screen.getByText('0.600')).toBeInTheDocument()
-    expect(screen.getByText('0.690')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /t1 \(150 potential errors\)/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Next: View results' })).toHaveAttribute('href', '/results')
+    expect(await screen.findByRole('button', { name: /t1.*150 potential errors/ })).toBeInTheDocument()
+    expect(screen.queryByText('Detection metrics')).toBeNull()
+    for (const label of ['Precision', 'Recall', 'F1 Score', '0.800', '0.600', '0.690']) {
+      expect(screen.queryByText(label)).toBeNull()
+    }
+    expect(screen.getByRole('link', { name: 'Continue' })).toHaveAttribute('href', '/results')
   })
 
   it('shows the message of a failed job', async () => {
@@ -99,26 +113,43 @@ describe('ErrorDetection', () => {
     expect(screen.getByRole('link', { name: /Propagated Errors/ })).toHaveAttribute('href', '/propagated-errors')
   })
 
-  it('expands a table: first 100 rows shaded by confidence, plus the error list', async () => {
+  it('opens a table in a popup: first 100 rows shaded by confidence, plus the error list', async () => {
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: /t1 \(150 potential errors\)/ }))
-    expect(await screen.findByText('v0')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /t1.*150 potential errors/ }))
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByText('v0')).toBeInTheDocument()
     expect(m.fetchDirtyPage).toHaveBeenCalledTimes(1)
     expect(m.fetchDirtyPage).toHaveBeenCalledWith('demo', 't1', 0, 100)
     expect(m.fetchDetectedErrors).toHaveBeenCalledWith('p1', 't1', 0, 200)
     expect(m.fetchDetectedErrors).toHaveBeenCalledWith('p1', 't1', 0, 100)
     await waitFor(() => {
       const shaded = Array.from(document.querySelectorAll('.table-wrap td')).filter((td) =>
-        /244,\s*177,\s*28/.test(td.getAttribute('style') ?? ''),
+        /10,\s*132,\s*255/.test(td.getAttribute('style') ?? ''),
       )
       expect(shaded).toHaveLength(2)
       expect(shaded[1].getAttribute('style')).toMatch(/0\.87/)
     })
   })
 
+  it('does not unfold anything on the page; the table opens only in the popup and closes again', async () => {
+    renderPage()
+    const tile = await screen.findByRole('button', { name: /t1.*150 potential errors/ })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(m.fetchDirtyPage).not.toHaveBeenCalled()
+    fireEvent.click(tile)
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: 't1' })).toBeInTheDocument()
+    expect(document.querySelector('.card .table-wrap')).toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(tile)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('lists the errors with confidence and source, 100 per page', async () => {
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: /t1 \(150 potential errors\)/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /t1.*150 potential errors/ }))
     expect(await screen.findByText(/Confidence: 87%/)).toBeInTheDocument()
     expect(screen.getAllByText(/Source: Typo Detector/).length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
@@ -129,5 +160,36 @@ describe('ErrorDetection', () => {
     m.fetchErrorDetection.mockResolvedValue({ ...SUMMARY, tables: {} } as any)
     renderPage()
     expect(await screen.findByText(/No errors detected/)).toBeInTheDocument()
+  })
+})
+
+describe('ErrorDetection (German)', () => {
+  beforeEach(() => act(() => setLang('de')))
+  afterEach(() => act(() => setLang('en')))
+  const d = de.errorDetection
+
+  it('shows the German lead, run button and table tiles, with data unchanged', async () => {
+    renderPage()
+    expect(await screen.findByText(d.lead)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Error Detection' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: d.rerun })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: new RegExp(`t1.*${d.potentialErrors(150)}`) })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: d.continue })).toHaveAttribute('href', '/results')
+  })
+
+  it('translates the table pop-up but keeps detector names and values', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: /^t1/ }))
+    const dialog = await screen.findByRole('dialog', { name: d.modalLabel('t1') })
+    expect(await within(dialog).findByText(d.heatNote)).toBeInTheDocument()
+    expect(await within(dialog).findByText('v0')).toBeInTheDocument()
+    expect(await within(dialog).findAllByText(/Quelle: Typo Detector/)).not.toHaveLength(0)
+    expect(within(dialog).getByText(d.errorDetails)).toBeInTheDocument()
+  })
+
+  it('says so in German when nothing was detected', async () => {
+    m.fetchErrorDetection.mockResolvedValue({ ...SUMMARY, tables: {} } as any)
+    renderPage()
+    expect(await screen.findByText(d.noneDetected)).toBeInTheDocument()
   })
 })

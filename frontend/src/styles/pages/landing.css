@@ -1,0 +1,88 @@
+/* Landing page: always dark so the hero feels like a stage, independent of the app theme. */
+.lp {
+  --lp-bg: #07080d; --lp-surface: #12141d; --lp-surface-2: #1a1d29; --lp-text: #f5f5f7; --lp-muted: #a9adbd;
+  --lp-line: rgb(255 255 255 / 10%); --lp-accent: #3b99ff; --lp-ok: #30d158; --lp-err: #ff6b61;
+  background: var(--lp-bg); color: var(--lp-text); min-height: 100vh; overflow-x: clip;
+  background-image: radial-gradient(900px 500px at 78% -5%, rgb(170 210 255 / 10%), transparent 60%),
+    radial-gradient(700px 420px at 5% 30%, rgb(150 195 245 / 6%), transparent 60%);
+}
+.lp h1, .lp h2, .lp h3 { color: var(--lp-text); }
+.lp a { color: inherit; }
+.lp-hero { width: min(1120px, 100% - 2 * var(--s-5)); margin-inline: auto; }
+.lp-hero { position: relative; }
+/* The landing is always dark, so the toggle uses the landing's own variables (documented exception to the token rule). */
+.lp-lang { position: absolute; top: var(--s-4); right: max(var(--s-4), env(safe-area-inset-right)); z-index: 2; background: var(--lp-surface-2); color: var(--lp-text); box-shadow: inset 0 0 0 1px var(--lp-line); }
+.lp-lang:hover { background: var(--lp-surface); }
+@media (pointer: coarse) { .lp-lang { width: 44px; height: 44px; } }
+.lp-hero { min-height: 100vh; align-content: center; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: var(--s-6); align-items: center; padding: var(--s-7) 0 var(--s-6); }
+.lp-title { margin: 0 0 var(--s-4); font-size: clamp(1.75rem, 3vw + 0.75rem, 2.5rem); font-weight: 800; letter-spacing: var(--track-tight); }
+.lp-hero h1 { font-size: clamp(2.25rem, 5vw + 0.5rem, 4rem); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 var(--s-4); text-wrap: balance; }
+.lp-gradient { background: linear-gradient(100deg, #ffffff, #e3f0ff 55%, #b4d6fa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lp-lead { color: var(--lp-muted); font-size: var(--text-title3); max-width: 38ch; line-height: 1.45; margin: 0 0 var(--s-5); }
+.lp-cta-row { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+.lp-cta {
+  display: inline-flex; align-items: center; gap: var(--s-2); min-height: 52px; padding: 0 var(--s-5); border-radius: var(--r-pill);
+  background: #fff; color: #07080d !important; font-weight: 700; font-size: var(--text-callout); text-decoration: none !important;
+  box-shadow: 0 0 0 0 rgb(108 182 255 / 60%), 0 10px 30px rgb(59 153 255 / 30%);
+  transition: transform var(--dur-base) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out);
+  animation: lp-pulse 2.8s ease-out infinite;
+}
+.lp-cta:hover { transform: translateY(-2px) scale(1.02); }
+.lp-cta:active { transform: scale(0.98); }
+.lp-cta:focus-visible { outline: 3px solid var(--lp-accent); outline-offset: 3px; }
+@keyframes lp-pulse { 0% { box-shadow: 0 0 0 0 rgb(108 182 255 / 55%), 0 10px 30px rgb(59 153 255 / 30%); } 70%, 100% { box-shadow: 0 0 0 18px rgb(108 182 255 / 0%), 0 10px 30px rgb(59 153 255 / 30%); } }
+
+/* demo card that swipes itself */
+.lp-demo { width: 100%; max-width: 400px; margin-inline: auto; }
+.lp-stage { position: relative; height: 400px; max-width: 400px; width: 100%; margin-inline: auto; }
+.lp-card { position: absolute; inset: 0; border-radius: var(--r-xl); background: var(--lp-surface); border: 1px solid var(--lp-line); box-shadow: 0 30px 80px rgb(0 0 0 / 55%); padding: var(--s-5); }
+.lp-card-b1 { transform: translateY(14px) scale(0.96); opacity: 0.8; }
+.lp-card-b2 { transform: translateY(28px) scale(0.92); opacity: 0.55; }
+.lp-card-value { font-size: 2.1rem; font-weight: 800; letter-spacing: var(--track-tight); margin: var(--s-6) 0 var(--s-2); }
+.lp-card-meta { color: var(--lp-muted); font-size: var(--text-footnote); margin: 0 0 var(--s-3); }
+.lp-pills { display: flex; flex-wrap: wrap; gap: var(--s-2); justify-content: center; margin-bottom: var(--s-4); }
+.lp-pill { padding: 3px var(--s-3); border-radius: var(--r-pill); background: rgb(255 255 255 / 10%); font-size: var(--text-caption); font-weight: 600; }
+.lp-mini { width: 100%; border-collapse: collapse; font-size: var(--text-caption); background: var(--lp-surface-2); border-radius: var(--r-md); overflow: hidden; }
+.lp-mini td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--lp-line); }
+.lp-mini td.lp-hot { background: rgb(108 182 255 / 22%); font-weight: 700; }
+.lp-stamp { position: absolute; top: var(--s-4); padding: 2px var(--s-3); border: 3px solid; border-radius: var(--r-md); font-weight: 800; letter-spacing: 0.08em; opacity: 0; }
+
+/* text enters one block after the other */
+.lp-in { opacity: 0; transform: translateY(18px); animation: lp-rise 0.8s var(--ease-out) forwards; animation-delay: calc(var(--i, 0) * 160ms + 100ms); }
+@keyframes lp-rise { to { opacity: 1; transform: none; } }
+.lp-demo { animation: lp-fade 1s var(--ease-out) 0.3s both; }
+@keyframes lp-fade { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 860px) {
+  .lp-hero { grid-template-columns: 1fr; }
+  .lp-stage { height: 380px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-cta, .lp-demo { animation: none; }
+  .lp-in { animation: none; opacity: 1; transform: none; }
+  .lp-cta { transition: none; }
+}
+
+/* the top card: pops in, then flies off to the side it was judged to */
+.lp-card-top { text-align: center; animation: lp-enter 0.5s var(--ease-spring); transition: transform 0.52s var(--ease-out), opacity 0.52s var(--ease-out); }
+@keyframes lp-enter { from { opacity: 0; transform: translateY(18px) scale(0.94); } to { opacity: 1; transform: none; } }
+.lp-go-ok { transform: translateX(520px) rotate(20deg); opacity: 0; }
+.lp-go-err { transform: translateX(-520px) rotate(-20deg); opacity: 0; }
+.lp-stamp { transition: opacity 0.2s; }
+.lp-stamp-ok { left: var(--s-4); color: var(--lp-ok); transform: rotate(-12deg); }
+.lp-stamp-err { right: var(--s-4); color: var(--lp-err); transform: rotate(12deg); }
+.lp-go-ok .lp-stamp-ok, .lp-go-err .lp-stamp-err { opacity: 1; }
+
+.lp-buttons { display: flex; justify-content: center; gap: var(--s-6); margin-top: var(--s-6); }
+.lp-round {
+  width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--lp-surface);
+  border: 2px solid currentColor; transition: transform 0.2s var(--ease-spring), background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.lp-round-err { color: var(--lp-err); }
+.lp-round-ok { color: var(--lp-ok); }
+.lp-round-err.lp-pressed { background: var(--lp-err); color: #07080d; transform: scale(1.14); box-shadow: 0 0 28px rgb(255 107 97 / 55%); }
+.lp-round-ok.lp-pressed { background: var(--lp-ok); color: #07080d; transform: scale(1.14); box-shadow: 0 0 28px rgb(48 209 88 / 55%); }
+@media (prefers-reduced-motion: reduce) {
+  .lp-card-top { animation: none; transition: none; }
+  .lp-round { transition: none; }
+}

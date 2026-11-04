@@ -1,0 +1,159 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Matelda Style Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a picker on top, one live mock of the real Quality Folding + Labeling screens below, a reference list under it. */
+:root{--bg:#f4f4f2;--fg:#1c1c1e;--sub:#5f5f66;--line:#dcdcd8;--card:#fff;--pick:#1c1c1e;--pickfg:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111113;--fg:#f2f2f4;--sub:#a0a0a8;--line:#2c2c30;--card:#1a1a1d;--pick:#f2f2f4;--pickfg:#111113;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111113;--fg:#f2f2f4;--sub:#a0a0a8;--line:#2c2c30;--card:#1a1a1d;--pick:#f2f2f4;--pickfg:#111113;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px));padding-block:32px 56px}
+main{max-width:1080px;margin:0 auto}
+h1{font-size:clamp(26px,4vw,38px);line-height:1.1;letter-spacing:-.025em;margin:0 0 8px;text-wrap:balance}
+.lede{color:var(--sub);max-width:62ch;margin:0 0 24px}
+.picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:20px}
+.picker button{font:inherit;text-align:left;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;min-height:44px}
+.picker button b{display:block;font-size:15px}
+.picker button span{color:var(--sub);font-size:13px}
+.picker button[aria-pressed="true"]{background:var(--pick);color:var(--pickfg);border-color:var(--pick)}
+.picker button[aria-pressed="true"] span{color:inherit;opacity:.75}
+.picker button:focus-visible{outline:3px solid #0a84ff;outline-offset:2px}
+
+/* ===== the mock; each direction only swaps these tokens + a few structural rules ===== */
+.mock{--m-font:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;border-radius:18px;overflow:hidden;background:var(--m-bg);color:var(--m-text);font-family:var(--m-font);border:1px solid var(--line)}
+.mock *{box-sizing:border-box}
+.mock[data-d="a"]{--m-bg:#f5f5f7;--m-surface:#fff;--m-text:#1d1d1f;--m-sub:#6e6e73;--m-line:rgba(60,60,67,.14);--m-accent:#0071e3;--m-onaccent:#fff;--m-fill:rgba(120,120,128,.12);--m-r:12px;--m-rl:20px;--m-shadow:none;--m-h1:34px;--m-h1w:700;--m-gap:20px}
+.mock[data-d="b"]{--m-font:Inter,-apple-system,system-ui,sans-serif;--m-bg:#0b0b0d;--m-surface:#141417;--m-text:#ececf0;--m-sub:#8b8b96;--m-line:#26262c;--m-accent:#7c83ff;--m-onaccent:#0b0b0d;--m-fill:#1d1d22;--m-r:6px;--m-rl:8px;--m-shadow:none;--m-h1:20px;--m-h1w:600;--m-gap:12px}
+.mock[data-d="c"]{--m-bg:#000;--m-surface:#1c1c1e;--m-text:#f5f5f7;--m-sub:#a1a1a6;--m-line:rgba(255,255,255,.08);--m-accent:#2997ff;--m-onaccent:#000;--m-fill:rgba(255,255,255,.1);--m-r:14px;--m-rl:28px;--m-shadow:none;--m-h1:56px;--m-h1w:700;--m-gap:16px}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-bottom:1px solid var(--m-line);font-size:13px}
+.mock[data-d="a"] .bar{background:rgba(245,245,247,.8);backdrop-filter:blur(20px)}
+.brand{font-weight:600;letter-spacing:-.01em}
+.mock[data-d="b"] .brand{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.02em}
+.pill{padding:5px 12px;border-radius:999px;background:var(--m-fill);color:var(--m-sub);font-size:12px;white-space:nowrap}
+.mock[data-d="b"] .pill{border-radius:5px;border:1px solid var(--m-line);background:transparent}
+
+.steps{display:flex;gap:6px;padding:16px 20px 0;flex-wrap:wrap}
+.step{font-size:12px;color:var(--m-sub);padding:6px 12px;border-radius:999px}
+.step.done{color:var(--m-text)}
+.step.cur{background:var(--m-text);color:var(--m-bg);font-weight:600}
+.mock[data-d="a"] .steps{justify-content:center}
+.mock[data-d="a"] .step.cur{background:var(--m-accent);color:#fff}
+.mock[data-d="b"] .steps{padding:0;gap:0;border-bottom:1px solid var(--m-line)}
+.mock[data-d="b"] .step{border-radius:0;padding:10px 16px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.mock[data-d="b"] .step.cur{background:none;color:var(--m-text);border-bottom-color:var(--m-accent)}
+.mock[data-d="c"] .steps{justify-content:center;padding-top:28px}
+.mock[data-d="c"] .step.cur{background:var(--m-fill);color:var(--m-text)}
+
+.body{padding:var(--m-gap) 20px 28px}
+.mock[data-d="a"] .body{padding-top:28px}
+.mock[data-d="c"] .body{padding:48px 24px 40px}
+h2.t{margin:0 0 6px;font-size:var(--m-h1);font-weight:var(--m-h1w);letter-spacing:-.03em;line-height:1.05}
+.mock[data-d="c"] h2.t{text-align:center;background:linear-gradient(90deg,#fff,#7ab8ff 60%,#bf8bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:0 0 var(--m-gap);color:var(--m-sub);font-size:14px;max-width:60ch}
+.mock[data-d="c"] .sub{text-align:center;margin-inline:auto;font-size:17px}
+.mock[data-d="b"] .sub{font-size:13px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--m-gap)}
+.box{background:var(--m-surface);border-radius:var(--m-rl);padding:16px;min-width:0}
+.mock[data-d="b"] .box{border:1px solid var(--m-line);padding:12px}
+.mock[data-d="c"] .box{padding:24px;background:linear-gradient(160deg,#232326,#161618)}
+.box h3{margin:0 0 10px;font-size:15px;font-weight:600;letter-spacing:-.01em;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.box h3 small{font-weight:400;color:var(--m-sub);font-size:12px}
+.mock[data-d="c"] .box h3{font-size:19px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.chip{background:var(--m-fill);border-radius:999px;padding:5px 12px;font-size:13px}
+.mock[data-d="b"] .chip{border-radius:4px;border:1px solid var(--m-line);background:transparent;padding:3px 8px;font-size:12px;font-family:"JetBrains Mono",ui-monospace,monospace}
+.chip.on{outline:2px solid var(--m-accent)}
+.btns{display:flex;gap:8px;margin-top:var(--m-gap);flex-wrap:wrap}
+.btn{font:inherit;font-size:14px;font-weight:500;min-height:44px;padding:0 20px;border-radius:999px;border:0;background:var(--m-fill);color:var(--m-text);cursor:pointer}
+.btn.p{background:var(--m-accent);color:var(--m-onaccent)}
+.mock[data-d="b"] .btn{min-height:32px;border-radius:6px;font-size:13px;padding:0 12px;border:1px solid var(--m-line)}
+.mock[data-d="b"] .btn.p{border-color:var(--m-accent)}
+.mock[data-d="c"] .btn{min-height:48px;padding:0 28px;font-size:17px}
+.mock[data-d="c"] .btns{justify-content:center}
+
+.label{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;gap:6px;margin-top:var(--m-gap)}
+.val{font-size:30px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.mock[data-d="b"] .val{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:22px}
+.meta{color:var(--m-sub);font-size:13px}
+.verdict{display:flex;gap:16px;margin-top:8px}
+.round{width:60px;height:60px;border-radius:50%;border:0;font-size:24px;font-weight:600;cursor:pointer}
+.round.no{background:rgba(255,69,58,.16);color:#ff6961}
+.round.ok{background:rgba(48,209,88,.16);color:#34c759}
+.mock[data-d="a"] .round.no{color:#d70015}.mock[data-d="a"] .round.ok{color:#1a7f37}
+.mock[data-d="b"] .round{border-radius:6px;width:auto;height:32px;font-size:12px;padding:0 12px;border:1px solid var(--m-line);background:none;color:var(--m-text)}
+.mock[data-d="b"] .round.ok::after{content:" Correct  C"}.mock[data-d="b"] .round.no::after{content:" Error  E"}
+.mock[data-d="b"] .round.ok,.mock[data-d="b"] .round.no{font-size:0}.mock[data-d="b"] .round::after{font-size:12px}
+.mock[data-d="c"] .round{width:72px;height:72px;font-size:30px}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:28px}
+.notes section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.notes h3{margin:0 0 6px;font-size:15px}
+.notes p,.notes li{color:var(--sub);font-size:14px;margin:0}
+.notes ul{padding-left:18px;margin:6px 0 0}
+h2.sec{font-size:20px;letter-spacing:-.02em;margin:36px 0 4px}
+@media (prefers-reduced-motion:no-preference){.mock{transition:opacity .2s}}
+</style>
+
+<main>
+  <h1>Three directions for Matelda</h1>
+  <p class="lede">The same two screens (Quality Folding and Labeling) rendered in three different styles. Pick the one that feels right and I'll apply it to the real app, tokens first.</p>
+
+  <div class="picker" role="group" aria-label="Style direction">
+    <button type="button" data-pick="a" aria-pressed="true"><b>A · Apple Settings</b><span>Light, grouped, friendly. Closest to what's built now, but tightened.</span></button>
+    <button type="button" data-pick="b" aria-pressed="false"><b>B · Linear precision</b><span>Dark, dense, hairlines, keyboard-first. Feels like a pro tool.</span></button>
+    <button type="button" data-pick="c" aria-pressed="false"><b>C · Apple.com showcase</b><span>Black, huge type, big rounded tiles. Best for a projector demo.</span></button>
+  </div>
+
+  <div class="mock" id="mock" data-d="a">
+    <div class="bar"><span class="brand" id="brand">Matelda</span><span class="pill">Room kiwi-42 · 3 players</span></div>
+    <nav class="steps" aria-label="Progress">
+      <span class="step done">Lobby</span><span class="step done">Configurations</span><span class="step done">Domain Folding</span><span class="step cur">Quality Folding</span><span class="step">Labeling</span><span class="step">Results</span>
+    </nav>
+    <div class="body">
+      <h2 class="t">Quality Folding</h2>
+      <p class="sub">Group columns that share the same kind of errors. Drag a column onto another fold, or tap to move it.</p>
+      <div class="grid">
+        <div class="box"><h3>Fold 1 <small>4 columns</small></h3>
+          <ul class="chips"><li class="chip">price_eur</li><li class="chip on">unit_cost</li><li class="chip">net_total</li><li class="chip">discount</li></ul></div>
+        <div class="box"><h3>Fold 2 <small>3 columns</small></h3>
+          <ul class="chips"><li class="chip">zip_code</li><li class="chip">city</li><li class="chip">country</li></ul></div>
+        <div class="box"><h3>Current cell <small>12 of 40</small></h3>
+          <div class="label"><div class="val">1,2O4.50</div><div class="meta">unit_cost · row 118 · orders.csv</div>
+            <div class="verdict"><button class="round no" type="button" aria-label="Error">✕</button><button class="round ok" type="button" aria-label="Correct">✓</button></div></div></div>
+      </div>
+      <div class="btns"><button class="btn" type="button">Back</button><button class="btn p" type="button">Start labeling</button></div>
+    </div>
+  </div>
+
+  <div class="notes" id="notes"></div>
+
+  <h2 class="sec">Real products to look at</h2>
+  <div class="notes">
+    <section><h3>For A</h3><ul><li>iOS Settings and macOS System Settings: grouped inset lists, one blue accent</li><li>apple.com/macos: calm light pages, generous space</li></ul></section>
+    <section><h3>For B</h3><ul><li>linear.app: hairlines, tiny type, one violet accent</li><li>vercel.com dashboard (Geist): monochrome, mono for data</li><li>raycast.com: dark surfaces, keyboard hints</li></ul></section>
+    <section><h3>For C</h3><ul><li>apple.com/iphone and apple.com/mac: huge headlines, tile grids</li><li>Apple Keynote-style demos: black stage, one gradient word</li></ul></section>
+  </div>
+</main>
+
+<script>
+(function(){
+  var notes={
+    a:[["What changes from today","Fewer shadows, larger headings, step tracker becomes a centered pill bar, inputs become grouped rows."],["Good for","Most users, laptops, daylight demos. Lowest risk and easiest to extend."],["Trade-off","Can look generic without a strong accent or custom illustrations."]],
+    b:[["What changes from today","Dense hairline layout, small type, mono for cell values, tabs replace the dot tracker, keyboard hints on verdict buttons (E / C)."],["Good for","Power users who label hundreds of cells. Fits the data-tool nature of Matelda."],["Trade-off","Less friendly for first-time visitors; touch targets need care on phones."]],
+    c:[["What changes from today","Pure black stage, display-size titles with a gradient word, big rounded tiles, one centered action."],["Good for","Conference demos and screenshots. Strongest Apple feel."],["Trade-off","Less information per screen, so tables and the folding board need extra care."]]
+  };
+  var mock=document.getElementById('mock'),nb=document.getElementById('notes');
+  function show(k){
+    mock.dataset.d=k;
+    document.querySelectorAll('[data-pick]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.pick===k?'true':'false')});
+    nb.innerHTML=notes[k].map(function(n){return '<section><h3>'+n[0]+'</h3><p>'+n[1]+'</p></section>'}).join('');
+    try{localStorage.setItem('dir',k)}catch(e){}
+  }
+  document.querySelectorAll('[data-pick]').forEach(function(b){b.addEventListener('click',function(){show(b.dataset.pick)})});
+  var s='a';try{s=localStorage.getItem('dir')||'a'}catch(e){}
+  show(notes[s]?s:'a');
+})();
+</script>

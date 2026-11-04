@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { setLang } from '../i18n'
+import { de } from '../i18n/de'
 import * as api from '../lib/api'
 import { SessionProvider } from '../session/SessionProvider'
 import { SessionService } from '../session/sessionService'
@@ -50,7 +52,7 @@ describe('PropagatedErrors', () => {
   })
 
   it('points to Labeling when propagation has not run', async () => {
-    m.fetchPropagation.mockRejectedValue(new Error('Run label propagation first'))
+    m.fetchPropagation.mockResolvedValue(null)
     renderPage()
     expect(await screen.findByText(/Run label propagation first/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Go to Labeling/ })).toHaveAttribute('href', '/labeling')
@@ -63,16 +65,21 @@ describe('PropagatedErrors', () => {
     expect(screen.getByText('Propagated labels')).toBeInTheDocument()
   })
 
-  it('expands a labeled cell to its details and the cells it was propagated to', async () => {
+  it('opens a labeled cell in a pop-up with its details and the cells it was propagated to', async () => {
     renderPage()
     const toggle = await screen.findByRole('button', { name: /Cell: x/ })
-    expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText(/Confidence: 85%/)).toBeNull()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByLabelText('Confidence: 85%')).toBeNull()
     fireEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText(/Confidence: 85%/)).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Labeled cell details' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Confidence: 85%')).toBeInTheDocument()
     expect(screen.getByText(/same cell fold/)).toBeInTheDocument()
-    expect(screen.getByText(/Domain fold: D0/)).toBeInTheDocument()
+    expect(screen.getByText('Domain fold')).toBeInTheDocument()
+    expect(screen.getByText('D0')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Reason' })).toBeInTheDocument()
+    expect(screen.getByText('Propagated to 1 cell')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('says so when nothing was propagated from a label', async () => {
@@ -92,7 +99,43 @@ describe('PropagatedErrors', () => {
   it('links back to Labeling and on to Error Detection', async () => {
     renderPage()
     await screen.findByRole('button', { name: /Cell: x/ })
-    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/labeling')
-    expect(screen.getByRole('link', { name: /Next/ })).toHaveAttribute('href', '/error-detection')
+    expect(screen.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/labeling-stats')
+    expect(screen.getByRole('link', { name: /Continue/ })).toHaveAttribute('href', '/error-detection')
+  })
+})
+
+describe('PropagatedErrors (German)', () => {
+  beforeEach(() => act(() => setLang('de')))
+  afterEach(() => act(() => setLang('en')))
+  const p = de.propagatedErrors
+
+  it('shows the German lead, totals and nav, with data unchanged', async () => {
+    renderPage()
+    expect(await screen.findByText(p.lead)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Propagated Errors' })).toBeInTheDocument()
+    expect(await screen.findByText(p.labeledCells)).toBeInTheDocument()
+    expect(screen.getByText(p.propagatedLabels)).toBeInTheDocument()
+    expect(screen.getByText(p.intro)).toBeInTheDocument()
+    expect(screen.getByText(p.range(1, 20, 45))).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: p.continue })).toHaveAttribute('href', '/error-detection')
+    expect(screen.getByText('t1 · a · Zeile 0')).toBeInTheDocument()
+    expect(screen.getByText(p.nPropagated(1))).toBeInTheDocument()
+  })
+
+  it('translates the pop-up but keeps dataset values', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: /Zelle: x/ }))
+    expect(screen.getByRole('dialog', { name: p.modalLabel })).toBeInTheDocument()
+    expect(screen.getByLabelText(p.confidenceAria(85))).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: p.colReason })).toBeInTheDocument()
+    expect(screen.getByText(p.propagatedTo(1))).toBeInTheDocument()
+    expect(screen.getByText('same cell fold')).toBeInTheDocument()
+    expect(screen.getByText('D0')).toBeInTheDocument()
+  })
+
+  it('explains the missing pipeline and missing propagation in German', async () => {
+    m.fetchPropagation.mockResolvedValue(null)
+    renderPage()
+    expect(await screen.findByText(p.notYetText)).toBeInTheDocument()
   })
 })

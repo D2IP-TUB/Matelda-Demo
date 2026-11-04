@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api import services
+from api import results, services
 from api.routes import detection as detection_routes
 from api.routes import folding as folding_routes
 from api.routes import jobs as jobs_routes
@@ -26,11 +26,19 @@ def _preload() -> None:
         logging.getLogger("api").exception("Preloading the ML backend failed")
 
 
+def _warm_results() -> None:
+    try:
+        results.warm_summaries(get_settings().pipelines_dir)
+    except Exception:
+        logging.getLogger("api").exception("Warming the results cache failed")
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # The first import of backend/ takes seconds; do it now so no request has to wait for it.
     if os.environ.get("API_PRELOAD", "1") != "0":
         threading.Thread(target=_preload, name="preload-backend", daemon=True).start()
+    threading.Thread(target=_warm_results, name="warm-results", daemon=True).start()
     yield
 
 

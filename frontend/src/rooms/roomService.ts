@@ -1,5 +1,6 @@
 import { randomToken } from '../lib/id'
-import { generatePlayerName, generateRoomName, pickWinningDataset } from './names'
+import { t } from '../i18n'
+import { generatePlayerName, generateRoomName } from './names'
 
 export interface Room {
   id: string
@@ -9,6 +10,10 @@ export interface Room {
   pipeline?: string
   pool?: string[]
   host?: string
+  /** Set when the host continued before every card was answered: nobody labels any more. */
+  labeling_closed?: boolean
+  /** The step the host is on right now (a route path), so helpers can see where the host is. */
+  host_path?: string
 }
 
 export interface Player {
@@ -73,7 +78,7 @@ export class RoomService {
         if (!isConflict(e)) throw e
       }
     }
-    throw new RoomError('Could not allocate a room name')
+    throw new RoomError(t().lobby.allocRoom)
   }
 
   async getRoom(name: string): Promise<Room | null> {
@@ -100,7 +105,7 @@ export class RoomService {
         if (!isConflict(e)) throw e
       }
     }
-    throw new RoomError('No free player names left in this room')
+    throw new RoomError(t().lobby.noPlayerNames)
   }
 
   async listPlayers(roomName: string): Promise<Player[]> {
@@ -109,16 +114,9 @@ export class RoomService {
       .getFullList({ filter: eq('room', roomName), sort: 'created' })
   }
 
-  async setVote(player: Player, dataset: string): Promise<void> {
-    await this.pb.collection('players').update(player.id, { vote: dataset })
-  }
-
   async startRoom(room: Room): Promise<Room> {
     if (room.phase !== 'lobby') return room
-    const players = await this.listPlayers(room.name)
-    const dataset = pickWinningDataset(players.map((p) => p.vote))
-    if (!dataset) throw new RoomError('Nobody picked a dataset yet')
-    return this.pb.collection('rooms').update(room.id, { phase: 'labeling', dataset })
+    return this.pb.collection('rooms').update(room.id, { phase: 'labeling' })
   }
 
   async subscribe(roomName: string, onChange: () => void): Promise<() => Promise<void>> {
@@ -148,28 +146,62 @@ export class RoomService {
 
   async publishPool(room: Room, hostPlayerId: string, pipeline: string, keys: string[]): Promise<Room> {
     const fresh = (await this.getRoom(room.name)) ?? room
-    if (fresh.host !== hostPlayerId) throw new RoomError('Only the host can publish the pool')
+    if (fresh.host !== hostPlayerId) throw new RoomError(t().lobby.onlyHostPublish)
     if (fresh.pool && fresh.pool.length > 0) return fresh
     return this.pb.collection('rooms').update(room.id, { pipeline, pool: keys, host: hostPlayerId })
   }
 
-  async endRoom(room: Room, hostId: string): Promise<Room> {
-    if (room.host !== hostId) throw new RoomError('Only the host can end the room')
-    return this.pb.collection('rooms').update(room.id, { phase: 'ended' })
+  /**
+   * The room follows the host's pipeline. Choosing a different one drops what belonged to the old one (the cell pool,
+   * the labels, the claims, the "labeling closed" flag) so nobody sees its cards again; the same pipeline is left alone.
+   */
+  async switchPipeline(room: Room, hostPlayerId: string, pipeline: string): Promise<Room> {
+    const fresh = (await this.getRoom(room.name)) ?? room
+    if (fresh.host !== hostPlayerId) throw new RoomError(t().lobby.onlyHostPipeline)
+    if (fresh.pipeline === pipeline) return fresh
+    for (const collection of ['labels', 'claims']) {
+      const rows = await this.pb.collection(collection).getFullList({ filter: eq('room', room.name) })
+      for (const row of rows) {
+        try {
+          await this.pb.collection(collection).delete(row.id)
+        } catch (e) {
+          if ((e as { status?: number })?.status !== 404) throw e
+        }
+      }
+    }
+    return this.pb.collection('rooms').update(room.id, { pipeline, pool: [], labeling_closed: false })
+  }
+
+  /** The host is back on Labeling: everyone may label the cells that are still open again. */
+  async reopenLabeling(room: Room, hostPlayerId: string): Promise<Room> {
+    const fresh = (await this.getRoom(room.name)) ?? room
+    if (fresh.host !== hostPlayerId || !fresh.labeling_closed) return fresh
+    return this.pb.collection('rooms').update(room.id, { labeling_closed: false })
+  }
+
+  /** Tell the room which step the host is on. */
+  async setHostPath(room: Room, path: string): Promise<Room> {
+    return this.pb.collection('rooms').update(room.id, { host_path: path })
+  }
+
+  /** The host continues with the cells labeled so far: everyone else stops labeling. */
+  async closeLabeling(room: Room, hostPlayerId: string): Promise<Room> {
+    const fresh = (await this.getRoom(room.name)) ?? room
+    if (fresh.host !== hostPlayerId) throw new RoomError(t().lobby.onlyHostClose)
+    if (fresh.labeling_closed) return fresh
+    return this.pb.collection('rooms').update(room.id, { labeling_closed: true })
   }
 
   async leaveRoom(room: Room, player: Player): Promise<void> {
     await this.releasePlayerClaims(room.name, player.id)
     await this.pb.collection('players').delete(player.id)
-    if (player.id === room.host) {
-      const rest = (await this.listPlayers(room.name)).filter((p) => p.id !== player.id)
-      await this.pb.collection('rooms').update(room.id, { host: rest[0]?.id ?? '' })
-    }
+    // The host leaving ends the room for everyone; the others are dropped by their live room view.
+    if (player.id === room.host) await this.pb.collection('rooms').update(room.id, { phase: 'ended' })
   }
 
   async kickPlayer(room: Room, hostId: string, target: Player): Promise<void> {
-    if (room.host !== hostId) throw new RoomError('Only the host can remove players')
-    if (target.id === hostId) throw new RoomError('The host cannot be removed')
+    if (room.host !== hostId) throw new RoomError(t().lobby.onlyHostRemove)
+    if (target.id === hostId) throw new RoomError(t().lobby.hostNotRemovable)
     await this.leaveRoom(room, target)
   }
 
@@ -275,6 +307,13 @@ export class RoomService {
 
   async roomLabels(roomName: string): Promise<RoomLabelRecord[]> {
     return this.pb.collection('labels').getFullList({ filter: eq('room', roomName) })
+  }
+
+  /** How many of the shared pool's cells have been labeled; the room is done when every one has. */
+  async progress(roomName: string, pool: string[]): Promise<{ total: number; labeled: number; done: boolean }> {
+    const inPool = new Set(pool)
+    const labeled = new Set((await this.roomLabels(roomName)).map((l) => l.cell_id).filter((id) => inPool.has(id)))
+    return { total: pool.length, labeled: labeled.size, done: pool.length > 0 && labeled.size === pool.length }
   }
 
   async playerStats(roomName: string): Promise<PlayerStat[]> {

@@ -1,6 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { setLang } from '../i18n'
+import { de } from '../i18n/de'
 import * as api from '../lib/api'
 import { RoomService } from '../rooms/roomService'
 import { SessionProvider } from '../session/SessionProvider'
@@ -43,7 +45,7 @@ function renderPage(session: Record<string, unknown> = { pipeline_path: 'p1' }, 
               path="/labeling"
               element={<Labeling roomService={new RoomService(pb as any)} pollMs={5} />}
             />
-            <Route path="/propagated-errors" element={<h1>Propagated Errors</h1>} />
+            <Route path="/labeling-stats" element={<h1>Labeling Stats</h1>} />
           </Routes>
         </MemoryRouter>
       </SessionProvider>
@@ -70,6 +72,16 @@ function seedLabeling() {
   const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
   pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|0|a', player: 'pl1', created: '1' }]
   return pb
+}
+/** The other player has labeled every pool cell that has no label yet, so the room is done once you answered. */
+function everyoneLabeled(pb: FakePocketBase) {
+  const have = new Set((pb.data.labels ?? []).map((l: any) => l.cell_id))
+  pb.data.labels = [
+    ...(pb.data.labels ?? []),
+    ...POOL.filter((k) => !have.has(k)).map((k) => ({
+      id: `x-${k}`, room: 'r1', cell_id: k, player: 'pl2', value: true, is_correct: true, latency_ms: 5,
+    })),
+  ]
 }
 const ROOM_SESSION = { pipeline_path: 'p1', room_name: 'r1', player_token: 'tok' }
 
@@ -102,10 +114,45 @@ describe('Labeling', () => {
     const { pb } = renderPage()
     expect(await screen.findByText('v0')).toBeInTheDocument()
     expect(screen.getByText('Typo Detector')).toBeInTheDocument()
-    expect(screen.getByText('Card 1 of 3')).toBeInTheDocument()
+    expect(screen.getByText('0/3 labeled')).toBeInTheDocument()
     await answer('Correct')
     expect(await screen.findByText('v1')).toBeInTheDocument()
     await waitFor(() => expect(sessionData(pb).labeling_results).toEqual({ 't1|0|a': true }))
+  })
+
+  it('Inspect table lets the player drag the table around, and the next card starts un-inspected', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    const button = screen.getByRole('button', { name: 'Inspect table' })
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByTestId('inspect-pad')).toBeNull()
+    fireEvent.click(button)
+    expect(screen.getByRole('button', { name: 'Done inspecting' })).toHaveAttribute('aria-pressed', 'true')
+    const pad = screen.getByTestId('inspect-pad')
+    const table = () => document.querySelector('.card-excerpt table') as HTMLElement
+    const before = table().style.transform
+    fireEvent.pointerDown(pad, { clientX: 100, clientY: 100, pointerId: 1 })
+    fireEvent(window, Object.assign(new Event('pointermove'), { clientX: 140, clientY: 90 }))
+    fireEvent(window, new Event('pointerup'))
+    await waitFor(() => expect(table().style.transform).not.toBe(before))
+    expect(table().style.transform).toContain('40px')
+    expect(screen.getByText(/Drag the table to look around/)).toBeInTheDocument()
+    // buttons still answer while inspecting, and the next card is back to normal
+    await answer('Correct')
+    expect(await screen.findByText('v1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Inspect table' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByTestId('inspect-pad')).toBeNull()
+  })
+
+  it('shows no running spinner after Continue while the propagation job runs', async () => {
+    m.fetchJob.mockResolvedValue({ id: 'job1', state: 'running' })
+    renderPage()
+    await screen.findByText('v0')
+    await answer('Correct')
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(m.startPropagation).toHaveBeenCalled())
+    expect(screen.queryByText('Running…')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
   })
 
   it('stacked back cards show their value, and the round buttons are disabled once all cards are answered', async () => {
@@ -119,7 +166,7 @@ describe('Labeling', () => {
     await answer('Correct')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Correct' })).toBeDisabled())
     expect(screen.getByRole('button', { name: 'Error' })).toBeDisabled()
-    expect(screen.getByText('Card 3 of 3')).toHaveClass('deck-progress')
+    expect(screen.getByText('3/3 labeled')).toHaveClass('deck-progress')
   })
 
   it('Go back lets the player overwrite a verdict', async () => {
@@ -159,6 +206,62 @@ describe('Labeling', () => {
     expect(top).toHaveAttribute('data-enter-from', side)
   })
 
+  it('Continue shows the spinner while the propagation job runs, and nowhere else', async () => {
+    m.fetchJob.mockResolvedValue({ id: 'job1', state: 'running' })
+    renderPage()
+    await screen.findByText('v0')
+    await answer('Correct')
+    const cont = screen.getByRole('button', { name: 'Continue' })
+    await waitFor(() => expect(cont).toBeEnabled())
+    fireEvent.click(cont)
+    await waitFor(() => expect(cont).toHaveAttribute('aria-busy', 'true'))
+    expect(cont.querySelector('.spinner')).not.toBeNull()
+    expect(screen.queryByText('Running…')).toBeNull()
+  })
+
+  it('solo: when every card is already answered it starts at the first card, not past the end', async () => {
+    renderPage({ pipeline_path: 'p1', labeling_results: { 't1|0|a': true, 't1|1|a': false, 't1|2|a': true } })
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+    expect(screen.getByText('3/3 labeled')).toBeInTheDocument()
+    expect(screen.queryByText(/All cards answered/)).toBeNull()
+  })
+
+  it('solo: part-way through a round it still resumes at the first unanswered card', async () => {
+    renderPage({ pipeline_path: 'p1', labeling_results: { 't1|0|a': true, 't1|1|a': false } })
+    expect(await screen.findByText('v2')).toBeInTheDocument()
+    expect(screen.getByText('2/3 labeled')).toBeInTheDocument()
+    expect(screen.queryByText('v0')).toBeNull() // the two answered cards are behind the player
+    expect(screen.queryByText('v1')).toBeNull()
+  })
+
+  it('full screen button toggles a full screen mode, and Esc leaves it', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    const page = document.querySelector('.labeling-page')!
+    expect(page).not.toHaveClass('is-full')
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    expect(page).toHaveClass('is-full')
+    expect(screen.getByRole('button', { name: 'Exit full screen' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument() // the bar stays reachable
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(page).not.toHaveClass('is-full')
+    fireEvent.click(screen.getByRole('button', { name: 'Full screen' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Exit full screen' }))
+    expect(page).not.toHaveClass('is-full')
+  })
+
+  it('the info panel closes when a button below it is used', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    fireEvent.click(screen.getByRole('button', { name: 'Info' }))
+    expect(screen.getByTestId('labeling-info')).toBeInTheDocument()
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Inspect table' }))
+    expect(screen.queryByTestId('labeling-info')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Info' }))
+    await answer('Correct') // answering (also by keys or swipes) closes it too
+    expect(screen.queryByTestId('labeling-info')).toBeNull()
+  })
+
   it('has no Previous button; the round go-back arrow does that job', async () => {
     renderPage()
     await screen.findByText('v0')
@@ -169,10 +272,9 @@ describe('Labeling', () => {
   it('the swipe hint is not shown below the cards, only in the info panel', async () => {
     renderPage()
     await screen.findByText('v0')
-    const hint = 'Drag the card right if the value is correct, left if it is wrong'
-    expect(screen.queryByText(new RegExp(hint))).toBeNull()
+    const hint = 'Swipe or drag the card right'
+    expect(document.body).not.toHaveTextContent(hint)
     fireEvent.click(screen.getByRole('button', { name: 'Info' }))
-    expect(screen.getAllByText(new RegExp(hint))).toHaveLength(1)
     expect(screen.getByTestId('labeling-info')).toHaveTextContent(hint)
   })
 
@@ -185,27 +287,27 @@ describe('Labeling', () => {
     fireEvent.click(info)
     expect(info).toHaveAttribute('aria-expanded', 'true')
     const panel = screen.getByTestId('labeling-info')
-    expect(panel).toHaveTextContent('Drag the card right if the value is correct, left if it is wrong')
+    expect(panel).toHaveTextContent('Swipe or drag the card right if the value is correct')
     expect(panel).toHaveTextContent('← → keys')
-    expect(panel).not.toHaveTextContent(/first-come-first-served/)
-    fireEvent.click(info)
+    expect(panel).not.toHaveTextContent(/first come, first served/)
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByTestId('labeling-info')).toBeNull()
   })
 
-  it('with no cards (all folds bulk annotated) Next still starts propagation', async () => {
+  it('with no cards (all folds bulk annotated) Continue still starts propagation', async () => {
     m.fetchLabelingSample.mockResolvedValue({ cards: [], bulk_annotated_folds: 2 } as any)
     renderPage()
     expect(await screen.findByText(/bulk-annotated! No individual labeling needed/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(m.startPropagation).toHaveBeenCalledWith('p1', { own: [] }))
   })
 
-  it('Next sends only swiped cards, inverted to is_error, and moves on when the job is done', async () => {
+  it('Continue sends only swiped cards, inverted to is_error, and moves on when the job is done', async () => {
     renderPage()
     await answer('Correct')
     await answer('Error')
-    fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
-    await screen.findByRole('heading', { name: 'Propagated Errors' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    await screen.findByRole('heading', { name: 'Labeling Stats' })
     expect(m.startPropagation).toHaveBeenCalledWith('p1', {
       own: [
         { table: 't1', row: 0, col: 'a', val: 'v0', is_error: false, domain_fold: 'D0', cell_fold: 'F0' },
@@ -217,10 +319,11 @@ describe('Labeling', () => {
   it('a failed propagation job shows its error and stays', async () => {
     m.fetchJob.mockResolvedValue({ id: 'job1', state: 'failed', error: 'no labeled cells' })
     renderPage()
-    await screen.findByText('v0') // Next is disabled until the cards have loaded
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await screen.findByText('v0') // Continue is disabled until the cards have loaded
+    await answer('Correct')
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     expect(await screen.findByText(/no labeled cells/)).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Propagated Errors' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Labeling Stats' })).toBeNull()
   })
 })
 
@@ -229,14 +332,49 @@ describe('Labeling in a room', () => {
     const pb = seedLabeling()
     renderPage(ROOM_SESSION, pb)
     await screen.findByText('v0')
-    expect(screen.queryByText(/first-come-first-served/)).toBeNull()
+    expect(screen.queryByText(/first come, first served/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Info' }))
     const panel = screen.getByTestId('labeling-info')
-    expect(panel).toHaveTextContent('Room r1')
-    expect(panel).toHaveTextContent('you are Blue Otter')
-    expect(panel).toHaveTextContent('Cells are shared out first-come-first-served from one shared budget')
-    expect(panel).toHaveTextContent("everyone's labels are shared when the host continues")
-    expect(panel).toHaveTextContent('Drag the card right if the value is correct')
+    expect(panel).toHaveTextContent('room r1')
+    expect(panel).toHaveTextContent('as Blue Otter')
+    expect(panel).toHaveTextContent('Cells are handed out first come, first served from one shared budget')
+    expect(panel).toHaveTextContent("everyone's labels are combined")
+    expect(panel).toHaveTextContent('Swipe or drag the card right if the value is correct')
+  })
+
+  it('alone in a room with every cell already answered: starts at the first card, not past the end', async () => {
+    const pool = ['t1|0|a', 't1|1|a', 't1|2|a']
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool })
+    pb.data.claims = pool.map((k, i) => ({ id: `c${i}`, room: 'r1', cell_id: k, player: 'pl1', created: String(i + 1) }))
+    pb.data.labels = pool.map((k, i) => ({ id: `l${i}`, room: 'r1', cell_id: k, player: 'pl1', value: true, is_correct: true, latency_ms: 5 }))
+    renderPage(ROOM_SESSION, pb)
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+    expect(screen.getByText(/^3\/\d+ labeled$/)).toBeInTheDocument()
+    expect(screen.queryByText(/All cards answered/)).toBeNull()
+    // the deck is usable from there: answering again moves to the next card
+    await answer('Error')
+    expect(await screen.findByText('v1')).toBeInTheDocument()
+  })
+
+  it('a helper who has answered everything keeps the "you\'re done" end state when reopening', async () => {
+    const pool = ['t1|0|a', 't1|1|a']
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool })
+    pb.data.claims = pool.map((k, i) => ({ id: `c${i}`, room: 'r1', cell_id: k, player: 'pl2', created: String(i + 1) }))
+    pb.data.labels = pool.map((k, i) => ({ id: `l${i}`, room: 'r1', cell_id: k, player: 'pl2', value: true, is_correct: true, latency_ms: 5 }))
+    renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+    expect(await screen.findByText(/You.re done/)).toBeInTheDocument()
+    expect(screen.queryByText('v0')).toBeNull()
+  })
+
+  it('in a room, part-way through a round it still resumes at the next unanswered card', async () => {
+    const pool = [0, 1, 2, 3, 4].map((k) => `t1|${k}|a`) // 2 players share 5 cells: the host gets 3
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool })
+    pb.data.claims = [0, 1].map((i) => ({ id: `c${i}`, room: 'r1', cell_id: pool[i], player: 'pl1', created: String(i + 1) }))
+    pb.data.labels = [0, 1].map((i) => ({ id: `l${i}`, room: 'r1', cell_id: pool[i], player: 'pl1', value: true, is_correct: true, latency_ms: 5 }))
+    renderPage(ROOM_SESSION, pb)
+    expect(await screen.findByText('2/3 labeled')).toBeInTheDocument()
+    expect(screen.queryByText('v0')).toBeNull() // the two answered cards are behind the player
+    expect(screen.queryByText('v1')).toBeNull()
   })
 
   it('warns when the room has not started', async () => {
@@ -299,13 +437,14 @@ describe('Labeling in a room', () => {
     vi.restoreAllMocks()
   })
 
-  it('room mode ignores stale solo labeling_results: cards unanswered and Next sends no stale verdicts', async () => {
+  it('room mode ignores stale solo labeling_results: cards unanswered and Continue sends no stale verdicts', async () => {
     const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: POOL })
     pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|3|a', player: 'pl1', created: '1' }]
+    everyoneLabeled(pb)
     renderPage({ ...ROOM_SESSION, labeling_results: { 't1|3|a': false, 't1|1|a': true } }, pb)
     expect(await screen.findByText('v3')).toBeInTheDocument()
-    expect(screen.getByText('Card 1')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByText(/^0\/\d+ labeled$/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(m.startPropagation).toHaveBeenCalled())
     expect(m.startPropagation.mock.calls[0][1].own).toEqual([])
   })
@@ -343,7 +482,7 @@ describe('Labeling in a room', () => {
     await waitFor(() => expect(pb.data.claims).toHaveLength(2))
     await waitFor(() => expect(m.fetchCards).toHaveBeenCalledTimes(2))
     expect(m.fetchCards.mock.calls[1][1]).toHaveLength(1)
-    expect(await screen.findByText('Card 2')).toBeInTheDocument()
+    expect(await screen.findByText(/^1\/\d+ labeled$/)).toBeInTheDocument()
     expect(screen.queryByText(firstText as string)).toBeNull()
   })
 
@@ -365,15 +504,15 @@ describe('Labeling in a room', () => {
     expect(m.fetchCards).toHaveBeenCalledWith('p1', ['t1|3|a'])
     const other = pb.data.claims[1].cell_id as string
     expect(await screen.findByText(`v${other.split('|')[1]}`)).toBeInTheDocument()
-    expect(screen.getByText('Card 2')).toBeInTheDocument()
+    expect(screen.getByText(/^1\/\d+ labeled$/)).toBeInTheDocument()
   })
 
-  it('an exhausted pool shows the claimed notice and Next stays enabled', async () => {
+  it('an exhausted pool shows the claimed notice and Continue stays enabled', async () => {
     const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
     renderPage(ROOM_SESSION, pb)
     await answer('Correct')
     expect(await screen.findByText(/All cells are claimed/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
   })
 
   it('has no release or check-again buttons, for the host or for helpers', async () => {
@@ -391,7 +530,7 @@ describe('Labeling in a room', () => {
     renderPage(ROOM_SESSION, pb)
     expect(await screen.findByText(/No cells to label — go back to Quality Folding\./)).toBeInTheDocument()
     expect(pb.data.rooms[0].pool).toBeNull()
-    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
     expect(screen.getByRole('link', { name: 'Back' })).toBeInTheDocument()
   })
 
@@ -404,17 +543,42 @@ describe('Labeling in a room', () => {
     await screen.findByText('v0')
     fail()
     await answer('Correct')
-    expect(await screen.findByText('Card 2')).toBeInTheDocument()
+    expect(await screen.findByText(/^1\/\d+ labeled$/)).toBeInTheDocument()
     expect(pb.data.claims).toHaveLength(2)
     vi.restoreAllMocks()
   })
 
-  it('a helper who is done gets a notice instead of Next', async () => {
-    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a'] })
+  it('a helper who is done gets a done screen with no buttons: the host moves them on', async () => {
+    const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a', 't1|1|a'] })
     renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
     await answer('Correct')
-    expect(await screen.findByText(/You're done — the host will continue with the results/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+    expect(await screen.findByRole('heading', { name: "You're done!" })).toBeInTheDocument()
+    expect(screen.getByText(/You labeled 1 cell\. The host continues/)).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Correct' })).toBeNull() // no deck, no leftover notices
+    expect(screen.queryByText(/All cells are claimed/)).toBeNull()
+  })
+
+  it('shows the player\'s share of the budget as the total: 10 cells for 3 players is 4 + 3 + 3', async () => {
+    const pool = Array.from({ length: 10 }, (_, i) => `t1|${i}|a`)
+    const shares: number[] = []
+    for (const token of ['tok', 'tok2', 'tok3']) {
+      const pb = seedRoom('labeling', 10, { pipeline: 'p1', pool })
+      pb.data.players.push({ id: 'pl3', room: 'r1', token: 'tok3', name: 'Green Fox', budget: 10, vote: 'demo', created: '3' })
+      const view = renderPage({ ...ROOM_SESSION, player_token: token }, pb)
+      const text = (await screen.findByText(/^\d+\/\d+ labeled$/)).textContent!
+      shares.push(Number(text.split('/')[1].split(' ')[0]))
+      view.unmount()
+    }
+    expect(shares).toEqual([4, 3, 3])
+  })
+
+  it('a single player in a room labels the whole budget', async () => {
+    const pool = Array.from({ length: 10 }, (_, i) => `t1|${i}|a`)
+    const pb = seedRoom('labeling', 10, { pipeline: 'p1', pool })
+    pb.data.players = [pb.data.players[0]]
+    renderPage(ROOM_SESSION, pb)
+    expect(await screen.findByText('0/10 labeled')).toBeInTheDocument()
   })
 
   it('saves each verdict to the room with its ground-truth check, one record per cell', async () => {
@@ -440,13 +604,14 @@ describe('Labeling in a room', () => {
     await waitFor(() => expect(sessionData(pb).labeling_results).toEqual({ 't1|0|a': true }))
   })
 
-  it('Next passes the room labels and player id, and stores the disputed cells', async () => {
+  it('Continue passes the room labels and player id, and stores the disputed cells', async () => {
     const pb = seedLabeling()
     pb.data.labels = [{ id: 'l1', room: 'r1', cell_id: 't1|0|a', player: 'pl2', value: true, is_correct: true, latency_ms: 5 }]
+    everyoneLabeled(pb)
     renderPage(ROOM_SESSION, pb)
     await answer('Error')
-    fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
-    await screen.findByRole('heading', { name: 'Propagated Errors' })
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    await screen.findByRole('heading', { name: 'Labeling Stats' })
     const body = m.startPropagation.mock.calls[0][1]
     expect(body.player_id).toBe('pl1')
     expect(body.own).toHaveLength(1)
@@ -454,5 +619,253 @@ describe('Labeling in a room', () => {
       expect.arrayContaining([{ cell_id: 't1|0|a', player: 'pl2', value: true }]),
     )
     await waitFor(() => expect(sessionData(pb).room_disputed_cells).toEqual(['t1|0|a']))
+  })
+
+  it('later steps follow the pipeline the room labeled, even if the session switched pipelines', async () => {
+    // The host went back to Configurations and made a new pipeline after the room had published its pool.
+    const pb = seedRoom('labeling', 2, { pipeline: 'p-room', pool: POOL })
+    pb.data.claims = [{ id: 'c0', room: 'r1', cell_id: 't1|0|a', player: 'pl1', created: '1' }]
+    everyoneLabeled(pb)
+    renderPage({ ...ROOM_SESSION, pipeline_path: 'p-session' }, pb)
+    await answer('Error')
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    await screen.findByRole('heading', { name: 'Labeling Stats' })
+    expect(m.startPropagation.mock.calls[0][0]).toBe('p-room')
+    // Labeling Stats, Propagated Errors, Error Detection and Results read the session's pipeline: it must be the labeled one.
+    await waitFor(() => expect(sessionData(pb).pipeline_path).toBe('p-room'))
+  })
+
+  describe('waiting for the other players', () => {
+    it('lets the host continue after one label, but only after confirming, and shows how far the room is', async () => {
+      const pb = seedLabeling()
+      renderPage(ROOM_SESSION, pb)
+      await screen.findByRole('heading', { name: /^v\d$/ })
+      expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled() // nothing labeled yet
+      await answer('Correct')
+      expect(screen.queryByText(/Waiting for everyone/)).toBeNull()
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled())
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+      const dialog = await screen.findByRole('dialog')
+      expect(dialog).toHaveTextContent('stops labeling for everyone')
+      expect(m.startPropagation).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Keep labeling' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(pb.data.rooms[0].labeling_closed).toBeFalsy()
+    })
+
+    it('confirming closes labeling for the room and propagates the labels so far', async () => {
+      const pb = seedLabeling()
+      renderPage(ROOM_SESSION, pb)
+      await screen.findByRole('heading', { name: /^v\d$/ })
+      await answer('Correct')
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled())
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Continue for everyone' }))
+      await screen.findByRole('heading', { name: 'Labeling Stats' })
+      expect(pb.data.rooms[0].labeling_closed).toBe(true)
+      expect(m.startPropagation.mock.calls[0][1].own).toHaveLength(1)
+    })
+
+    it('continues without a dialog once everyone has finished', async () => {
+      const pb = seedLabeling()
+      everyoneLabeled(pb)
+      renderPage(ROOM_SESSION, pb)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled())
+      await new Promise((r) => setTimeout(r, 50)) // the room progress has loaded
+      expect(screen.queryByText(/Everyone has finished|All cards answered|Labeling closed with/)).toBeNull() // no hints
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      await screen.findByRole('heading', { name: 'Labeling Stats' })
+    })
+
+    it('reopens labeling when the host comes back to it, so the remaining cards can be swiped', async () => {
+      const pb = seedLabeling()
+      pb.data.rooms[0].labeling_closed = true // the host had continued before every card was answered
+      renderPage(ROOM_SESSION, pb)
+      await waitFor(() => expect(pb.data.rooms[0].labeling_closed).toBe(false))
+      expect(await screen.findByRole('heading', { name: /^v\d$/ })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Correct' })).toBeEnabled()
+    })
+
+    it('does not reopen labeling for a helper', async () => {
+      const pb = seedLabeling()
+      pb.data.rooms[0].labeling_closed = true
+      renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+      expect(await screen.findByRole('heading', { name: "You're done!" })).toBeInTheDocument()
+      expect(pb.data.rooms[0].labeling_closed).toBe(true)
+    })
+
+    it('stops a helper from labeling once the host has continued', async () => {
+      const pb = seedLabeling()
+      pb.data.rooms[0].labeling_closed = true
+      renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, pb)
+      expect(await screen.findByRole('heading', { name: "You're done!" })).toBeInTheDocument()
+      expect(screen.getByText(/The host has ended labeling/)).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Continue' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Correct' })).toBeNull()
+    })
+
+    it('shows a helper still labeling the same progress, with no buttons of their own', async () => {
+      renderPage({ ...ROOM_SESSION, player_token: 'tok2' }, seedLabeling())
+      await screen.findByRole('heading', { name: /^v\d$/ })
+      expect(screen.queryByText(/Waiting for everyone/)).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
+      expect(screen.queryByRole('link', { name: 'Continue' })).toBeNull()
+      expect(screen.queryByRole('link', { name: 'Back' })).toBeNull()
+    })
+
+    it('picks up a cell another player left behind, so the room cannot wait forever', async () => {
+      const pb = seedRoom('labeling', 2, { pipeline: 'p1', pool: ['t1|0|a', 't1|1|a'] })
+      pb.data.claims = [
+        { id: 'c0', room: 'r1', cell_id: 't1|0|a', player: 'pl1', created: '1' },
+        { id: 'c1', room: 'r1', cell_id: 't1|1|a', player: 'pl2', created: '2' },
+      ]
+      renderPage(ROOM_SESSION, pb)
+      await answer('Correct')
+      pb.data.claims = pb.data.claims.filter((c: any) => c.id !== 'c1') // pl2 left; their claim was released
+      await act(async () => {
+        await pb.collection('players').delete('pl2') // and the share grows to the whole budget
+      })
+      expect(await screen.findByRole('heading', { name: 'v1' })).toBeInTheDocument()
+    })
+
+    it('does not make a solo player wait', async () => {
+      renderPage()
+      await screen.findByRole('heading', { name: 'v0' })
+      await answer('Correct')
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled())
+      expect(screen.queryByText(/Waiting for everyone/)).toBeNull()
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+  })
+
+  describe('swiping never shows a loading spinner', () => {
+    const FAR = [10, 20, 30].map((i) => card(i)) // distinct table excerpts: rows 5.., 15.., 25..
+
+    it('does not show a spinner while the next card\'s table is still loading', async () => {
+      m.fetchLabelingSample.mockResolvedValue({ cards: FAR, bulk_annotated_folds: 0 } as any)
+      m.fetchDirtyPage.mockImplementation(((_d: string, _t: string, start: number) =>
+        start === 5 ? Promise.resolve({ columns: ['a'], rows: [['x']], total_rows: 99, offset: 5 }) : new Promise(() => {})) as any)
+      renderPage()
+      await screen.findByRole('heading', { name: 'v10' })
+      await answer('Correct')
+      await screen.findByRole('heading', { name: 'v20' })
+      expect(screen.queryByText('Loading table…')).toBeNull()
+      expect(document.querySelector('.spinner')).toBeNull()
+    })
+
+    it('fetches the next cards\' tables ahead of time', async () => {
+      m.fetchLabelingSample.mockResolvedValue({ cards: FAR, bulk_annotated_folds: 0 } as any)
+      renderPage()
+      await screen.findByRole('heading', { name: 'v10' })
+      await waitFor(() => {
+        expect(m.fetchDirtyPage).toHaveBeenCalledWith('demo', 't1', 15, 11)
+        expect(m.fetchDirtyPage).toHaveBeenCalledWith('demo', 't1', 25, 11)
+      })
+    })
+
+    it('does not show a spinner in a room while the next cell is being claimed', async () => {
+      m.fetchCards.mockReset()
+        .mockImplementationOnce((async (_n: string, keys: string[]) => keys.map((k) => card(Number(k.split('|')[1])))) as any)
+        .mockImplementation((() => new Promise(() => {})) as any)
+      renderPage(ROOM_SESSION, seedLabeling())
+      await screen.findByRole('heading', { name: /^v\d$/ })
+      await answer('Correct')
+      await new Promise((r) => setTimeout(r, 50))
+      expect(screen.queryByText('Loading the next cell…')).toBeNull()
+    })
+  })
+
+  it('centres the cell being labeled in the middle of the card', async () => {
+    const sizes: Record<string, number> = { clientWidth: 400, clientHeight: 500, offsetLeft: 10, offsetTop: 20, offsetWidth: 100, offsetHeight: 30 }
+    const restore = Object.keys(sizes).map((k) => {
+      const prev = Object.getOwnPropertyDescriptor(HTMLElement.prototype, k)
+      Object.defineProperty(HTMLElement.prototype, k, { configurable: true, get: () => sizes[k] })
+      return () => (prev ? Object.defineProperty(HTMLElement.prototype, k, prev) : delete (HTMLElement.prototype as any)[k])
+    })
+    try {
+      renderPage()
+      await screen.findByRole('heading', { name: 'v0' })
+      await waitFor(() => {
+        const table = document.querySelector('[data-testid="deck-card"] table') as HTMLElement
+        expect(table.style.transform).toBe('translate(140px, 215px)')
+      })
+    } finally {
+      restore.forEach((r) => r())
+    }
+  })
+
+  describe('strategy pills', () => {
+    const many = { ...card(0), strategies: ['Typo Detector', 'Pattern Check', 'Outlier Check'] }
+
+    it('shows one strategy and hides the rest behind a show-more button', async () => {
+      m.fetchLabelingSample.mockResolvedValue({ cards: [many, card(1), card(2)], bulk_annotated_folds: 0 } as any)
+      renderPage()
+      await screen.findByRole('heading', { name: 'v0' })
+      expect(screen.getByText('Typo Detector')).toBeInTheDocument()
+      expect(screen.queryByText('Pattern Check')).toBeNull()
+      expect(screen.queryByText('Outlier Check')).toBeNull()
+      const more = screen.getByRole('button', { name: '+2 more' })
+      expect(more).toHaveAttribute('aria-expanded', 'false')
+      fireEvent.click(more)
+      expect(screen.getByText('Pattern Check')).toBeInTheDocument()
+      expect(screen.getByText('Outlier Check')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true')
+    })
+
+    it('has no button when there is one strategy', async () => {
+      m.fetchLabelingSample.mockResolvedValue({ cards: [{ ...card(0), strategies: ['A'] }, card(1), card(2)], bulk_annotated_folds: 0 } as any)
+      renderPage()
+      await screen.findByRole('heading', { name: 'v0' })
+      expect(screen.queryByRole('button', { name: /more|Show less/ })).toBeNull()
+    })
+  })
+})
+
+describe('Labeling (German)', () => {
+  beforeEach(() => act(() => setLang('de')))
+  afterEach(() => act(() => setLang('en')))
+
+  it('shows the card in German while the verdict buttons stay Error and Correct', async () => {
+    renderPage()
+    expect(await screen.findByText('v0')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Labeling' })).toBeInTheDocument()
+    expect(screen.getByText(de.labeling.labeled(0, 3))).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Error' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Correct' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: de.labeling.inspectTable })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: de.labeling.goBack })).toBeInTheDocument()
+    expect(screen.getByText('Typo Detector')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: de.labeling.info }))
+    expect(screen.getByTestId('labeling-info')).toHaveTextContent(de.labeling.infoIntro)
+  })
+
+  it('keeps the same card (value and index) when the language changes', async () => {
+    renderPage()
+    await screen.findByText('v0')
+    await answer('Correct')
+    await screen.findByText('v1')
+    expect(screen.getByText(de.labeling.labeled(1, 3))).toBeInTheDocument()
+    const calls = m.fetchLabelingSample.mock.calls.length
+    act(() => setLang('en'))
+    expect(screen.getByText('1/3 labeled')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'v1' })).toBeInTheDocument()
+    act(() => setLang('de'))
+    expect(screen.getByText(de.labeling.labeled(1, 3))).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'v1' })).toBeInTheDocument()
+    expect(m.fetchLabelingSample.mock.calls.length).toBe(calls)
+  })
+
+  it('explains the missing pipeline in German', async () => {
+    renderPage({})
+    expect(await screen.findByText(de.labeling.prereqText)).toBeInTheDocument()
+  })
+
+  it('shows the room details in the info panel in German', async () => {
+    renderPage(ROOM_SESSION, seedLabeling())
+    await screen.findByText('v0')
+    fireEvent.click(screen.getByRole('button', { name: de.labeling.info }))
+    const panel = screen.getByTestId('labeling-info')
+    expect(panel).toHaveTextContent('Sie sind im Raum r1 als Blue Otter')
   })
 })

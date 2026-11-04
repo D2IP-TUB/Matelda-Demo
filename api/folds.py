@@ -206,6 +206,67 @@ def split_fold(
     return new, new_labels
 
 
+def move_fold_to_domain(
+    cell_folds: CellFolds, labels: Labels, fold: str, to_domain: str
+) -> tuple[CellFolds, Labels]:
+    """Move a whole cell fold (name, cells and label unchanged) to the end of another domain."""
+    source = _domain_of(cell_folds, fold)
+    if to_domain not in cell_folds:
+        raise FoldNotFound(f"Unknown domain '{to_domain}'")
+    new, new_labels = _copy(cell_folds), dict(labels)
+    if source == to_domain:
+        return new, new_labels
+    new[to_domain][fold] = new[source].pop(fold)
+    if not new[source]:
+        del new[source]
+    return new, new_labels
+
+
+def merge_domains(
+    cell_folds: CellFolds, labels: Labels, domain: str, into: str
+) -> tuple[CellFolds, Labels]:
+    """All cell folds of `domain` move (names, cells and labels unchanged) to the end of `into`; `domain` is gone."""
+    for d in (domain, into):
+        if d not in cell_folds:
+            raise FoldNotFound(f"Unknown domain '{d}'")
+    if domain == into:
+        raise ValueError("Pick another domain to merge into")
+    new = _copy(cell_folds)
+    new[into].update(new.pop(domain))
+    return new, dict(labels)
+
+
+def _free_domain_name(cell_folds: CellFolds, domain: str) -> str:
+    n = 1
+    while f"{domain} - Split {n}" in cell_folds:
+        n += 1
+    return f"{domain} - Split {n}"
+
+
+def split_domain(
+    cell_folds: CellFolds, labels: Labels, domain: str, after_fold: str
+) -> tuple[CellFolds, Labels]:
+    """The cell folds up to and including `after_fold` stay; the ones after it form a new domain
+    that is placed right behind the original. Fold names and labels do not change."""
+    if domain not in cell_folds:
+        raise FoldNotFound(f"Unknown domain '{domain}'")
+    names = list(cell_folds[domain])
+    if after_fold not in names:
+        raise FoldNotFound(f"Fold '{after_fold}' is not in domain '{domain}'")
+    cut = names.index(after_fold) + 1
+    if cut >= len(names):
+        raise ValueError("There is no cell fold after this one to split off")
+    new_name = _free_domain_name(cell_folds, domain)
+    out: CellFolds = {}
+    for name, folds in cell_folds.items():
+        if name != domain:
+            out[name] = {f: list(c) for f, c in folds.items()}
+            continue
+        out[name] = {f: list(folds[f]) for f in names[:cut]}
+        out[new_name] = {f: list(folds[f]) for f in names[cut:]}
+    return out, dict(labels)
+
+
 def set_label(labels: Labels, fold: str, label: str | None) -> Labels:
     out = dict(labels)
     if label is None:

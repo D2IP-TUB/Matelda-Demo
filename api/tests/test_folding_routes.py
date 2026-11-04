@@ -300,3 +300,40 @@ def test_cell_fold_endpoints_without_cell_folds_or_pipeline(folded):
     assert client.get("/api/pipelines/p2/cell-folds").status_code == 409
     assert client.get("/api/pipelines/nope/cell-folds").status_code == 404
     assert client.post("/api/pipelines/p2/cell-folds/merge", json={"folds": [F00, F01]}).status_code == 409
+
+
+def test_move_fold_to_domain_and_split_domain_routes(env):
+    client, pipelines = env
+    cfg = stored(pipelines, "p1")
+    cfg["cell_folds"] = {
+        "F0": {
+            "F0 / Cell Fold 0": [{"table": "t1", "row": 0, "col": "a", "val": "x"}],
+            "F0 / Cell Fold 1": [{"table": "t1", "row": 1, "col": "a", "val": "y"}],
+        },
+        "F1": {"F1 / Cell Fold 0": [{"table": "t3", "row": 0, "col": "a", "val": "z"}]},
+    }
+    (pipelines / "p1" / "configurations.json").write_text(json.dumps(cfg))
+
+    r = client.post("/api/pipelines/p1/cell-folds/split-domain", json={"domain": "F0", "after_fold": "F0 / Cell Fold 0"})
+    assert r.status_code == 200
+    assert {(f["name"], f["domain"]) for f in r.json()} == {
+        ("F0 / Cell Fold 0", "F0"), ("F0 / Cell Fold 1", "F0 - Split 1"), ("F1 / Cell Fold 0", "F1"),
+    }
+    assert list(stored(pipelines)["cell_folds"]) == ["F0", "F0 - Split 1", "F1"]
+
+    r = client.post("/api/pipelines/p1/cell-folds/move-fold", json={"fold": "F0 / Cell Fold 1", "to_domain": "F1"})
+    assert r.status_code == 200
+    assert list(stored(pipelines)["cell_folds"]) == ["F0", "F1"]  # the emptied domain is gone
+    assert list(stored(pipelines)["cell_folds"]["F1"]) == ["F1 / Cell Fold 0", "F0 / Cell Fold 1"]
+
+    assert client.post("/api/pipelines/p1/cell-folds/move-fold", json={"fold": "nope", "to_domain": "F1"}).status_code == 404
+    assert client.post("/api/pipelines/p1/cell-folds/move-fold", json={"fold": "F1 / Cell Fold 0", "to_domain": "nope"}).status_code == 404
+    assert client.post("/api/pipelines/p1/cell-folds/split-domain", json={"domain": "F0", "after_fold": "F0 / Cell Fold 0"}).status_code == 422
+    assert client.post("/api/pipelines/p1/cell-folds/split-domain", json={"domain": "nope", "after_fold": "x"}).status_code == 404
+
+    r = client.post("/api/pipelines/p1/cell-folds/merge-domain", json={"domain": "F0", "into": "F1"})
+    assert r.status_code == 200
+    assert list(stored(pipelines)["cell_folds"]) == ["F1"]
+    assert list(stored(pipelines)["cell_folds"]["F1"]) == ["F1 / Cell Fold 0", "F0 / Cell Fold 1", "F0 / Cell Fold 0"]
+    assert client.post("/api/pipelines/p1/cell-folds/merge-domain", json={"domain": "F1", "into": "F1"}).status_code == 422
+    assert client.post("/api/pipelines/p1/cell-folds/merge-domain", json={"domain": "nope", "into": "F1"}).status_code == 404

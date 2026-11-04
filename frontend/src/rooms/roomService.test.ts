@@ -54,23 +54,12 @@ describe('RoomService', () => {
     expect(b.room).toBe(r2.name)
   })
 
-  it('refuses to start without votes', async () => {
+  it('starts the room and is then a no-op', async () => {
     const { service } = setup()
     const room = await service.createRoom()
     await service.joinRoom(room.name)
-    await expect(service.startRoom(room)).rejects.toThrow(RoomError)
-  })
-
-  it('starts with the winning dataset and is then a no-op', async () => {
-    const { service } = setup()
-    const room = await service.createRoom()
-    const a = await service.joinRoom(room.name)
-    const b = await service.joinRoom(room.name)
-    await service.setVote(a, 'beers')
-    await service.setVote(b, 'beers')
     const started = await service.startRoom(room)
     expect(started.phase).toBe('labeling')
-    expect(started.dataset).toBe('beers')
     const again = await service.startRoom(started)
     expect(again).toEqual(started)
   })
@@ -212,6 +201,29 @@ describe('RoomService shared pool', () => {
     expect(await service.claimNext(room.name, a.id, ['k1', 'k2'])).toBeNull()
   })
 
+  describe('progress', () => {
+    const POOL = ['a', 'b', 'c']
+    const label = (cell: string, player = 'p1') => ({ room: 'r1', cell_id: cell, player, value: true, is_correct: true, latency_ms: 1 })
+
+    it('counts the pool cells that have a label and is done only when every one has', async () => {
+      const { pb, service } = setup()
+      pb.data.labels = [label('a'), label('b', 'p2')]
+      expect(await service.progress('r1', POOL)).toEqual({ total: 3, labeled: 2, done: false })
+      pb.data.labels.push(label('c'))
+      expect(await service.progress('r1', POOL)).toEqual({ total: 3, labeled: 3, done: true })
+    })
+
+    it('ignores labels of other rooms and cells outside the pool', async () => {
+      const { pb, service } = setup()
+      pb.data.labels = [label('a'), { ...label('b'), room: 'other' }, label('zzz')]
+      expect(await service.progress('r1', POOL)).toEqual({ total: 3, labeled: 1, done: false })
+    })
+
+    it('is never done for an empty pool', async () => {
+      expect(await setup().service.progress('r1', [])).toEqual({ total: 0, labeled: 0, done: false })
+    })
+  })
+
   it('releaseUnlabeledClaims deletes only unlabeled claims and counts them', async () => {
     const { pb, service, room, a, b } = await pooled()
     await service.claimNext(room.name, a.id, ['k1'])
@@ -251,7 +263,7 @@ describe('RoomService shared pool', () => {
     expect(seen).toEqual(['name="a\\\\\\"b"'])
   })
 
-  it('leaveRoom removes player and unlabeled claims, keeps labels, hands over host', async () => {
+  it('leaveRoom removes player and unlabeled claims, keeps labels', async () => {
     const { pb, service, room, a, b } = await pooled()
     await service.claimNext(room.name, a.id, ['k1'])
     await service.saveLabel(room.name, a.id, 'k1', true, true, 1)
@@ -260,15 +272,15 @@ describe('RoomService shared pool', () => {
     expect(pb.data.claims.map((c) => c.cell_id)).toEqual(['k1'])
     expect(pb.data.labels).toHaveLength(1)
     expect((await service.listPlayers(room.name)).map((p) => p.id)).toEqual([b.id])
-    expect((await service.getRoom(room.name))!.host).toBe(b.id)
-    await service.leaveRoom({ ...room, host: b.id }, b)
-    expect((await service.getRoom(room.name))!.host).toBe('')
+    expect((await service.getRoom(room.name))!.phase).toBe('ended')
   })
 
-  it('endRoom ends for host only', async () => {
+  it('keeps the room open when a non-host leaves, ends it when the host leaves', async () => {
     const { service, room, a, b } = await pooled()
-    await expect(service.endRoom(room, b.id)).rejects.toThrow(RoomError)
-    expect((await service.endRoom(room, a.id)).phase).toBe('ended')
+    await service.leaveRoom(room, b)
+    expect((await service.getRoom(room.name))!.phase).not.toBe('ended')
+    await service.leaveRoom(room, a)
+    expect((await service.getRoom(room.name))!.phase).toBe('ended')
   })
 
   it('kickPlayer rejects non-hosts and host-kick, otherwise cleans up', async () => {
