@@ -88,3 +88,6 @@ pocketbase/
 !.env.example
 .superpowers/
 node_modules/
+
+# Claude Code local skills/settings
+.claude/
